@@ -8,10 +8,10 @@
 Brand and site assets for Raffkin. Same convention as [praxen/graphics](https://github.com/open-agent-ai-security/praxen/tree/main/graphics)
 so the sister sites stay one family.
 
-> **Placeholder status.** Every Raffkin-specific asset here was drawn as vector shapes to mock up the site
-> and is meant to be **replaced by art-department artwork in the same poses and file names**: the lion mark,
-> the wordmark (uses live `<text>`, not outlined paths — a font dependency the real masters must not have),
-> and the hero mascot. The community and Exabeam logos are the real ones, copied verbatim from praxen.
+> **Placeholder status.** The Raffkin-specific assets are concept artwork for review and are meant to be
+> **replaced by Lauren's finished artwork from Exabeam Creative**. The wordmark uses live `<text>` rather
+> than outlined paths, and the hero is a generated raster illustration. The community and Exabeam logos
+> are the production assets copied from Praxen.
 
 **Convention**
 - **`graphics/brand/`** — the brand source set: SVG masters referenced directly by the site (nav, footer, docs top bar).
@@ -19,33 +19,30 @@ so the sister sites stay one family.
 - **`graphics/`** — other masters (the mascot, the social card) and the sponsor logo.
 - **`graphics/web/`** — raster copies for the surfaces that need them (favicons). Social/OG cards stay PNG for scraper compatibility.
 
-## The mascot: Leo
+## The mascot: raccoon investigator
 
-A lion — the SOC's hunter — in the community's black hoodie, holding a crosshair loupe up to a planted alert.
-Accent is **lion gold** (`#e6a23c` / `#f2bd5c` / `#c4841c` in `assets/raffkin-theme.css`) where Praxen is
-orange, Observra blue, and the community violet. The signal-teal (`#2fbf9f`) in the loupe is the theme's
-second hue. `leo-hunting.svg` is cropped tight (viewBox) so it fills the hero like Praxy does.
+A raccoon SOC investigator in the community's black hoodie works at a laptop with a magnifying glass,
+four abstract evidence panels, and a small robot companion. The illustration uses warm amber-gold against
+graphite black. `raffkin-investigator.webp` is a site-specific crop of the wider concept master: the unused
+headline space was removed so the character's visible center aligns with the site's right-hand hero column.
+
+The brand mark follows the sister-project system rather than depicting the mascot literally. A four-point
+signal star, two angular wedges, and a single symmetrical mask form suggest a raccoon's markings through
+negative space. That keeps it close to Praxen's geometric fox and Observra's geometric owl.
 
 | File | Form | Used by |
 |---|---|---|
-| `brand/raffkin-mark.svg` | lion head mark, gold | source for the favicon and wordmark |
-| `brand/raffkin-favicon.svg` | mark on a gold tile | master for `web/favicon-{32,180,256}.png` |
+| `brand/raffkin-mark.svg` | geometric raccoon-mask signal mark | source mark |
+| `brand/raffkin-favicon.svg` | mark on a graphite tile | master for `web/favicon-{32,180,256}.png` |
 | `brand/raffkin-wordmark-dark-background.svg` | mark + "raffkin" | landing nav + footer, docs top bar |
 | `brand/raffkin-wordmark-light-background.svg` | same, dark ink | available |
 | `brand/community-logo-{dark,light}-background.svg` | parent-org logo | footer "Part of the…" |
-| `leo-hunting.svg` | hero mascot | landing hero (referenced directly as SVG) |
-| `socxen-social.png` | 1280×640 OG / Twitter card | `<meta property="og:image">` |
+| `raffkin-investigator.webp` | centered hero mascot crop | landing hero |
+| `raffkin-social.png` | 1280×640 OG / Twitter card | `<meta property="og:image">` |
 | `exabeam-logo-white.svg` | sponsor logo | footer sponsor band |
 | `web/favicon-*.png` | 32 / 180 / 256 | `<link rel="icon">`, apple-touch-icon |
 
-## Regenerating the rasters
+## Raster notes
 
-Favicons and the social card are rendered with headless Chrome from the SVG masters (no ImageMagick in the
-build environment); `sips` resizes:
-
-```sh
-CH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-"$CH" --headless=new --hide-scrollbars --window-size=256,256 --default-background-color=00000000 \
-  --screenshot=graphics/web/favicon-256.png "file://$PWD/<wrapper.html showing brand/raffkin-favicon.svg at 256px>"
-for sz in 180 32; do sips -z $sz $sz graphics/web/favicon-256.png --out graphics/web/favicon-$sz.png; done
-```
+The favicon PNGs, social card, and WebP hero are checked-in exports for predictable GitHub Pages and
+social-crawler behavior. Regenerate them from Exabeam Creative's final masters when those arrive.

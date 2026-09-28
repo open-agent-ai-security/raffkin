@@ -33,7 +33,7 @@ THEME_CSS = ROOT / "assets" / "raffkin-theme.css"
 REPO = "https://github.com/open-agent-ai-security/socxen"
 RAW = "https://raw.githubusercontent.com/open-agent-ai-security/socxen/main"
 SITE_URL = "https://open-agent-ai-security.github.io/socxen/"
-SOCIAL_IMAGE = "graphics/socxen-social.png"
+SOCIAL_IMAGE = "graphics/raffkin-social.png"
 SITE_NAME = "Raffkin"
 
 # (source path from repo root, output name in guide/, nav label)
