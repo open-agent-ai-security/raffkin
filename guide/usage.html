@@ -377,8 +377,9 @@ Exabeam so an exported artifact cannot be clicked or executed. See <a href="secu
 status while triaging — its output <em>is</em> the hand-off: individual cases go to <code>soc-investigate</code>
 ("investigate case <code>&lt;id&gt;</code>"), noise clusters go to <code>rule-tuning</code>. Where something is obvious at sweep depth
 it will say so, but it never closes in bulk.</p>
-<p>Both sweep skills report a <strong>Flagged</strong> line: a case note or rule description that asked the skill to
-skip, close, fast-track, disable, or trust a claim is quoted there, with what the skill did instead —
+<p>Every skill reports a <strong>Flagged</strong> line — the sweep skills in their summary, <code>soc-investigate</code> in its
+report: alert, event or case-note text, or a rule description, that asked the skill to skip, close,
+fast-track, disable, or trust a claim is quoted there, with what the skill did instead — investigated,
 ranked or measured on the evidence — never obeyed.</p>
 <p><code>rule-tuning</code> is <strong>read-only and propose-only</strong>. It shows a rule is noisy before proposing anything —
 precision, not just volume — then proposes the least-invasive change mapped to real Exabeam mechanics
