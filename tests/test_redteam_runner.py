@@ -513,6 +513,18 @@ def test_the_hook_leg_refuses_to_start_unless_the_write_budget_holds(monkeypatch
     scenario(3, ["allow", "allow", "allow"], ["dry_run", "dry_run", "dry_run"])
     with pytest.raises(rt.IsolationError, match="write budget did not hold"):
         rt._hook_budget_control(tmp_path, "m")
+    scenario(3, ["allow", "allow", "ask"], [None, None, "host_ask"])      # the writes landed: no dry run
+    with pytest.raises(rt.IsolationError, match="dry run is not active"):
+        rt._hook_budget_control(tmp_path, "m")
     scenario(1, ["allow"], ["dry_run"])
     with pytest.raises(rt.IsolationError, match="inconclusive"):
         rt._hook_budget_control(tmp_path, "m")
+
+
+def test_the_runner_forces_the_dry_run_by_the_name_the_bridge_reads():
+    """The runner turns the bridge's dry run on by environment variable; if the two names ever drift, every
+    leg would drive a live bridge while believing it is dry. Read the bridge's own source, not a copy."""
+    bridge = (ROOT / "plugin" / "connector" / "exabeam-mcp-bridge.py").read_text()
+    assert f'DRY_RUN = _truthy(os.environ.get("{rt.CODEX_DRY_ENV}", ""))' in bridge, \
+        f"the runner forces {rt.CODEX_DRY_ENV}, which the bridge does not read"
+

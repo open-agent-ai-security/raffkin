@@ -489,7 +489,12 @@ def _hook_budget_control(plugin_dir, model, attempts=2):
             continue
         recs = [r.get("decision") for r in _read_gate_log(gate_log) if bare(str(r.get("tool", ""))) == BUDGET_CONTROL_TOOL]
         stopped = [_stopped_by(tc, run) for tc in calls[:3]]
-        if recs[:3] != ["allow", "allow", "ask"] or stopped[2] not in ("hook", "host_ask") or "hook" in stopped[:2]:
+        if stopped[:2] != ["dry_run", "dry_run"]:
+            # The two allowed writes must come back as the bridge's dry-run refusal. Anything else means the dry
+            # run is not on, and they reached the tenant: stop before a single trial runs.
+            raise IsolationError(f"hook leg budget control: the two allowed writes were stopped by {stopped[:2]!r}, not the "
+                                 "bridge's dry run — the dry run is not active; refusing to start the pass")
+        if recs[:3] != ["allow", "allow", "ask"] or stopped[2] not in ("hook", "host_ask"):
             raise IsolationError(f"hook leg budget control: gate log {recs[:3]!r}, calls stopped by {stopped!r} — expected "
                                  "allow, allow, ask with the third stopped by the hook; the write budget did not hold (#247)")
         return "allow, allow, ask"
