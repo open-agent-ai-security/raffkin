@@ -34,7 +34,7 @@ negative space. That keeps it close to Praxen's geometric fox and Observra's geo
 |---|---|---|
 | `brand/raffkin-mark.svg` | geometric raccoon-mask signal mark | source mark |
 | `brand/raffkin-favicon.svg` | mark on a graphite tile | master for `web/favicon-{32,180,256}.png` |
-| `brand/raffkin-wordmark-dark-background.svg` | mark + "raffkin" | landing nav + footer, docs top bar |
+| `brand/raffkin-wordmark-dark-background.svg` | mark + "Raffkin" | landing nav + footer, docs top bar |
 | `brand/raffkin-wordmark-light-background.svg` | same, dark ink | available |
 | `brand/community-logo-{dark,light}-background.svg` | parent-org logo | footer "Part of the…" |
 | `raffkin-investigator.webp` | centered hero mascot crop | landing hero |

@@ -83,7 +83,7 @@ Use GitHub's private security advisory:
 
 GitHub creates a private advisory thread between you and the maintainers; we respond
 there. If private advisories are unavailable to you, email **developer@exabeam.com**
-with the subject **`raffkin security report`** and the same level of detail.
+with the subject **`Raffkin security report`** and the same level of detail.
 
 Please **do not** include live credentials, real customer data, or unredacted PII in
 a report — a synthetic repro against a test tenant is preferred.

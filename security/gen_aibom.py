@@ -150,7 +150,7 @@ def build_bom(timestamp):
             "name": "Claude (Anthropic)",
             "description": ("Foundation model the skill runs on. Hosted API — weights are not distributed "
                             "with Raffkin. The specific member (e.g. Opus / Sonnet) is selected at runtime "
-                            "by Claude Code, not pinned by raffkin."),
+                            "by Claude Code, not pinned by Raffkin."),
             "supplier": {"name": "Anthropic", "url": ["https://www.anthropic.com"]},
             "externalReferences": [{"type": "website", "url": "https://www.anthropic.com/claude"}],
             "properties": [

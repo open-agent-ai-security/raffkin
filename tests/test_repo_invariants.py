@@ -1001,3 +1001,13 @@ def test_gen_identity_rewrites_the_install_key_in_the_shipped_prose_on_a_rekey(t
     # the prose was touched only where the key or repo appeared: the same lines changed, nothing else
     b, a = before.splitlines(), after.splitlines()
     assert len(b) == len(a) and all(x == y or ("open-agent-ai-security" in x) for x, y in zip(b, a))
+
+
+def test_no_tracked_text_file_carries_a_nul_byte():
+    """A NUL byte makes git and grep treat a text file as binary, so a corrupted doc drops out of every
+    diff and search silently (#274: a rename pass left placeholders in the Praxen README)."""
+    import subprocess
+    binary = (".png", ".webp", ".ico", ".jpg", ".jpeg", ".gif", ".woff", ".woff2", ".pdf")
+    files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
+    bad = [f for f in files if f and not f.lower().endswith(binary) and (ROOT / f).is_file() and b"\x00" in (ROOT / f).read_bytes()]
+    assert not bad, f"NUL bytes in tracked text files: {bad}"

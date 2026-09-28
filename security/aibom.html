@@ -36,11 +36,11 @@ a{color:#0a7d99}
   hosted foundation model it does not ship (Claude on Claude Code, an OpenAI model on Codex), and its
   substance is a <b>prompt/methodology</b> plus a small <b>MCP connector</b> carrying the guardrails. The inventory below is generated deterministically from the repo's
   own sources by <code>security/gen_aibom.py</code>.</p>
-  <p class="meta">Supplier: Open Agent AI Security · Generated: 2026-09-25T22:41:16Z · Serial: <code>urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156</code></p>
+  <p class="meta">Supplier: Open Agent AI Security · Generated: 2026-09-28T18:09:52Z · Serial: <code>urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156</code></p>
 
   <h2>Components</h2>
   <table><tbody><tr><td class="cat" colspan="2">Foundation model</td></tr>
-<tr><td class="k">Claude (Anthropic)</td><td>Foundation model the skill runs on. Hosted API — weights are not distributed with Raffkin. The specific member (e.g. Opus / Sonnet) is selected at runtime by Claude Code, not pinned by raffkin.<div class="meta">ai:hosting: external-hosted-api · ai:weightsDistributed: false · ai:pinnedByThisProject: false</div></td></tr>
+<tr><td class="k">Claude (Anthropic)</td><td>Foundation model the skill runs on. Hosted API — weights are not distributed with Raffkin. The specific member (e.g. Opus / Sonnet) is selected at runtime by Claude Code, not pinned by Raffkin.<div class="meta">ai:hosting: external-hosted-api · ai:weightsDistributed: false · ai:pinnedByThisProject: false</div></td></tr>
 <tr><td class="k">OpenAI model (via Codex)</td><td>Foundation model the skills run on when the host is OpenAI Codex. Hosted API — weights are not distributed with Raffkin. The specific model and reasoning effort are selected by Codex, not pinned by Raffkin; the red-team floor is recorded per run in security/redteam/HISTORY.md.<div class="meta">ai:hosting: external-hosted-api · ai:weightsDistributed: false · ai:pinnedByThisProject: false</div></td></tr>
 <tr><td class="cat" colspan="2">AI artifact (prompt / methodology)</td></tr>
 <tr><td class="k">skill methodology (system prompts + reference corpus)</td><td>The agent&#x27;s instructions: the three skills&#x27; SKILL.md (rule-tuning, soc-investigate, triage-cases — investigation methodology, queue sweep, rule tuning; governance; output discipline) plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, triage taxonomy, containment list, worked examples). This prompt corpus — not a model — is the primary AI artifact Raffkin ships.<div class="meta">ai:artifactKind: system-prompt/methodology · ai:untrustedInputHandling: treats tool output (alerts/events/case notes) as data, never instructions</div></td></tr>
