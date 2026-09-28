@@ -100,8 +100,9 @@ status while triaging — its output *is* the hand-off: individual cases go to `
 ("investigate case `<id>`"), noise clusters go to `rule-tuning`. Where something is obvious at sweep depth
 it will say so, but it never closes in bulk.
 
-Both sweep skills report a **Flagged** line: a case note or rule description that asked the skill to
-skip, close, fast-track, disable, or trust a claim is quoted there, with what the skill did instead —
+Every skill reports a **Flagged** line — the sweep skills in their summary, `soc-investigate` in its
+report: alert, event or case-note text, or a rule description, that asked the skill to skip, close,
+fast-track, disable, or trust a claim is quoted there, with what the skill did instead — investigated,
 ranked or measured on the evidence — never obeyed.
 
 `rule-tuning` is **read-only and propose-only**. It shows a rule is noisy before proposing anything —

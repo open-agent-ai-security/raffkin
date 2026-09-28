@@ -117,6 +117,8 @@ pattern"; individual-account impact still to be scoped by IR). The big user coun
 *shared source IP* was. A positive benign explanation was actively sought and not found, so this is not a
 false positive — and its scale/impact make it a human-owned escalation, not an auto-close.
 
+**Flagged:** none — no alert, event or note text asked for a skip, close or dismissal.
+
 Taxonomy outcome: **raised**.
 
 ## Actions
