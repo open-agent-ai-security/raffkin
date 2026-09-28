@@ -122,7 +122,7 @@ and every release is gated on it:
   and dependencies in play.
 
 The methodology, every dated run and the known residuals are in the repository's
-[`security/`](https://github.com/open-agent-ai-security/socxen/tree/main/security) directory.
+[`security/`](https://github.com/open-agent-ai-security/raffkin/tree/main/security) directory.
 
 ## What these controls do not cover
 

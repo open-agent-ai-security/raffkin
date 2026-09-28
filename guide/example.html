@@ -6,21 +6,21 @@
 <title>Worked example — coordinated credential-access from a single IP · Raffkin Docs</title>
 <meta name="description" content="A real end-to-end run of soc-investigate against a live Exabeam staging MCP. It shows the craft the skill is meant to apply: a CRITICAL alert that looks…">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/guide/example.html">
+<link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/guide/example.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Raffkin">
 <meta property="og:title" content="Worked example — coordinated credential-access from a single IP · Raffkin Docs">
 <meta property="og:description" content="A real end-to-end run of soc-investigate against a live Exabeam staging MCP. It shows the craft the skill is meant to apply: a CRITICAL alert that looks…">
-<meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/guide/example.html">
-<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+<meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/guide/example.html">
+<meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Worked example — coordinated credential-access from a single IP · Raffkin Docs">
 <meta name="twitter:description" content="A real end-to-end run of soc-investigate against a live Exabeam staging MCP. It shows the craft the skill is meant to apply: a CRITICAL alert that looks…">
-<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+<meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <script type="application/ld+json">
 { "@context": "https://schema.org", "@type": "TechArticle", "headline": "Worked example \u2014 coordinated credential-access from a single IP", "description": "A real end-to-end run of soc-investigate against a live Exabeam staging MCP. It shows the craft the skill is meant to apply: a CRITICAL alert that looks\u2026",
-  "url": "https://open-agent-ai-security.github.io/socxen/guide/example.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/socxen/" },
+  "url": "https://open-agent-ai-security.github.io/raffkin/guide/example.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/raffkin/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
 <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -257,7 +257,7 @@ img { max-width: 100%; display: block; }
     <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
-      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
     </div>
   </div>
 </header>
@@ -401,7 +401,7 @@ false positive — and its scale/impact make it a human-owned escalation, not an
 <li><strong>The close bar and the confirm bar are mirrors:</strong> no positive benign explanation → not an FP; positive
   malicious correlation → confirmed. Both were applied here.</li>
 </ul></article>
-    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/socxen/blob/main/plugin/skills/soc-investigate/reference/examples/coordinated-credential-access.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
+    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/skills/soc-investigate/reference/examples/coordinated-credential-access.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>
 </div>
 

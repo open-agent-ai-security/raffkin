@@ -9,7 +9,7 @@ body:
       value: >-
         Thanks for testing Raffkin. Two things before you file: **security problems**
         (gate bypass, token leakage, governance drift) go through a
-        [private security advisory](https://github.com/open-agent-ai-security/socxen/security/advisories/new),
+        [private security advisory](https://github.com/open-agent-ai-security/raffkin/security/advisories/new),
         not a public issue — see SECURITY.md. And since Raffkin works on SIEM data:
         **never paste real alert contents, usernames, hostnames, IPs, tokens, or credentials** —
         redact or substitute before posting.

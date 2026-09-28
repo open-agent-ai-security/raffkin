@@ -7,18 +7,14 @@
 **An agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex.**
 
 [![Project level: Incubator](https://img.shields.io/badge/project_level-incubator-d29922)](https://open-agent-ai-security.github.io/project-levels/)
-[![CI](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml)
-[![version](https://img.shields.io/badge/version-v0.9.0-blue)](.claude-plugin/plugin.json)
+[![CI](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml)
+[![version](https://img.shields.io/badge/version-v1.0.0-blue)](.claude-plugin/plugin.json)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-> 📘 **The user guide is at [open-agent-ai-security.github.io/socxen](https://open-agent-ai-security.github.io/socxen/)** —
+> 📘 **The user guide is at [open-agent-ai-security.github.io/raffkin](https://open-agent-ai-security.github.io/raffkin/)** —
 > installation, your first investigation, security, logging and support. This file is the same guide's
 > front door for readers arriving from the plugin itself.
-
-> ⚠️ **Pre-release software — for evaluation only.** Raffkin is under active development. Expect
-> breaking changes between versions, and do not rely on it for production SOC operations or point it
-> at alerts whose disposition matters without a human reviewing every action.
 
 Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
 skills work the tenant through the Exabeam MCP — one case, the whole queue, or the rules behind it —
@@ -77,10 +73,10 @@ The full five-minute quick start, with what to expect at each step, is in
 
 ## Status
 
-Pre-release, for evaluation. Every release is red-teamed on the weakest supported model of each host and
+Every release is red-teamed on the weakest supported model of each host and
 behavior-verified before it ships; the runs, the findings and any waivers are public in the repository's
-[`security/`](https://github.com/open-agent-ai-security/socxen/tree/main/security) directory. The version
-badge above and the [changelog](https://github.com/open-agent-ai-security/socxen/blob/main/CHANGELOG.md)
+[`security/`](https://github.com/open-agent-ai-security/raffkin/tree/main/security) directory. The version
+badge above and the [changelog](https://github.com/open-agent-ai-security/raffkin/blob/main/CHANGELOG.md)
 track the current release; `claude plugin list` (or `codex plugin list`) shows your installed version.
 
 ## Project sponsor

@@ -6,21 +6,21 @@
 <title>Security · Raffkin Docs</title>
 <meta name="description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html">
+<link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/guide/security-guardrails.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Raffkin">
 <meta property="og:title" content="Security · Raffkin Docs">
 <meta property="og:description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
-<meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html">
-<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+<meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/guide/security-guardrails.html">
+<meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Security · Raffkin Docs">
 <meta name="twitter:description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
-<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+<meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <script type="application/ld+json">
 { "@context": "https://schema.org", "@type": "TechArticle", "headline": "Security", "description": "Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and\u2026",
-  "url": "https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/socxen/" },
+  "url": "https://open-agent-ai-security.github.io/raffkin/guide/security-guardrails.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/raffkin/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
 <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -257,7 +257,7 @@ img { max-width: 100%; display: block; }
     <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
-      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
     </div>
   </div>
 </header>
@@ -276,8 +276,8 @@ assumes that content is there, and every control below exists so that it cannot 
 Raffkin.</p>
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/open-agent-ai-security/socxen/main/plugin/docs/diagram/guardrails-dark.png">
-    <img alt="Raffkin guardrail bridge: your agent (Claude Code or Codex) talks to a local bridge MCP that proxies to the remote Exabeam MCP. On writes, neutralize_output defangs formulas and links and redacts secrets/structured identifiers in free-text fields (fail-closed); on reads, canonicalize strips invisible smuggling before the agent reasons (fail-closed: a block it cannot process is withheld); observra records a metadata-only audit trail (never note text, evidence or payloads)." src="https://raw.githubusercontent.com/open-agent-ai-security/socxen/main/plugin/docs/diagram/guardrails-light.png" width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/open-agent-ai-security/raffkin/main/plugin/docs/diagram/guardrails-dark.png">
+    <img alt="Raffkin guardrail bridge: your agent (Claude Code or Codex) talks to a local bridge MCP that proxies to the remote Exabeam MCP. On writes, neutralize_output defangs formulas and links and redacts secrets/structured identifiers in free-text fields (fail-closed); on reads, canonicalize strips invisible smuggling before the agent reasons (fail-closed: a block it cannot process is withheld); observra records a metadata-only audit trail (never note text, evidence or payloads)." src="https://raw.githubusercontent.com/open-agent-ai-security/raffkin/main/plugin/docs/diagram/guardrails-light.png" width="100%">
   </picture>
 </p>
 
@@ -367,7 +367,7 @@ and every release is gated on it:</p>
   and dependencies in play.</li>
 </ul>
 <p>The methodology, every dated run and the known residuals are in the repository's
-<a href="https://github.com/open-agent-ai-security/socxen/tree/main/security"><code>security/</code></a> directory.</p>
+<a href="https://github.com/open-agent-ai-security/raffkin/tree/main/security"><code>security/</code></a> directory.</p>
 <h2 id="what-these-controls-do-not-cover">What these controls do not cover</h2>
 <ul>
 <li><strong>Your own screen.</strong> Redaction protects what Raffkin <em>persists</em>. A secret shown to you during an
@@ -397,7 +397,7 @@ as host permission rules, so the same tiers show up in your policy tooling. The 
 generated from its tier file, as <code>skills/soc-investigate/settings.snippet.json</code> inside the installed
 plugin. Applied through managed settings, the two layers agree on every tool because both come from one
 source. This adds nothing to the gate itself, which is on from install.</p></article>
-    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/socxen/blob/main/plugin/docs/security-guardrails.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
+    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/docs/security-guardrails.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>
 </div>
 

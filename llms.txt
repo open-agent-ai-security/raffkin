@@ -3,15 +3,15 @@
 > An open-source agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex. Three skills (soc-investigate, triage-cases, rule-tuning) over one guarded Exabeam MCP bridge. Engineered for the fact that SIEM data is untrusted input: deterministic guardrails on read and write, a human gate on dismiss/close, containment recommended but never executed, and a release process of behavior verification, red team, and an AI bill of materials. Apache-2.0, sponsored by Exabeam, part of the Open Agent and AI Security Community.
 
 ## User documentation
-- [Overview](https://open-agent-ai-security.github.io/socxen/guide/index.html)
-- [Installation & setup](https://open-agent-ai-security.github.io/socxen/guide/installation.html)
-- [Using the skills](https://open-agent-ai-security.github.io/socxen/guide/usage.html)
-- [Example investigation](https://open-agent-ai-security.github.io/socxen/guide/example.html)
-- [Security guardrails](https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html)
-- [Audit logging](https://open-agent-ai-security.github.io/socxen/guide/logging.html)
+- [Overview](https://open-agent-ai-security.github.io/raffkin/guide/index.html)
+- [Installation & setup](https://open-agent-ai-security.github.io/raffkin/guide/installation.html)
+- [Using the skills](https://open-agent-ai-security.github.io/raffkin/guide/usage.html)
+- [Example investigation](https://open-agent-ai-security.github.io/raffkin/guide/example.html)
+- [Security guardrails](https://open-agent-ai-security.github.io/raffkin/guide/security-guardrails.html)
+- [Audit logging](https://open-agent-ai-security.github.io/raffkin/guide/logging.html)
 
 ## Developer and assurance material (repository)
-- [Source](https://github.com/open-agent-ai-security/socxen)
-- [Red-team methodology and history](https://github.com/open-agent-ai-security/socxen/tree/main/security/redteam)
-- [Agent behavior verification (Praxen)](https://github.com/open-agent-ai-security/socxen/tree/main/security/praxen)
-- [AI bill of materials](https://github.com/open-agent-ai-security/socxen/blob/main/security/aibom.cdx.json)
+- [Source](https://github.com/open-agent-ai-security/raffkin)
+- [Red-team methodology and history](https://github.com/open-agent-ai-security/raffkin/tree/main/security/redteam)
+- [Agent behavior verification (Praxen)](https://github.com/open-agent-ai-security/raffkin/tree/main/security/praxen)
+- [AI bill of materials](https://github.com/open-agent-ai-security/raffkin/blob/main/security/aibom.cdx.json)

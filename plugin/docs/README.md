@@ -6,7 +6,7 @@
 # Raffkin documentation
 
 These pages are the user guide, published at
-**[open-agent-ai-security.github.io/socxen](https://open-agent-ai-security.github.io/socxen/)**.
+**[open-agent-ai-security.github.io/raffkin](https://open-agent-ai-security.github.io/raffkin/)**.
 Start with installation; the rest you reach for when you need it.
 
 - **[Overview](index.md)** — what Raffkin is, the three skills, and how it works in 90 seconds.
@@ -23,4 +23,4 @@ Start with installation; the rest you reach for when you need it.
 - **[Support](support.md)** — where to ask for help, and the terms this copy is supported under.
 
 Working on the code? The developer material — contributing, testing, the release gates and their
-ledgers — lives in the [repository](https://github.com/open-agent-ai-security/socxen#working-on-raffkin).
+ledgers — lives in the [repository](https://github.com/open-agent-ai-security/raffkin#working-on-raffkin).

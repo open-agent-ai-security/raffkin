@@ -30,9 +30,9 @@ import markdown
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "guide"
 THEME_CSS = ROOT / "assets" / "raffkin-theme.css"
-REPO = "https://github.com/open-agent-ai-security/socxen"
-RAW = "https://raw.githubusercontent.com/open-agent-ai-security/socxen/main"
-SITE_URL = "https://open-agent-ai-security.github.io/socxen/"
+REPO = "https://github.com/open-agent-ai-security/raffkin"
+RAW = "https://raw.githubusercontent.com/open-agent-ai-security/raffkin/main"
+SITE_URL = "https://open-agent-ai-security.github.io/raffkin/"
 SOCIAL_IMAGE = "graphics/raffkin-social.png"
 SITE_NAME = "Raffkin"
 

@@ -270,7 +270,7 @@ That single finding is exactly the value of the exercise: a specific, bounded, f
 parts (the whole suppression defense) confirmed rather than assumed.
 
 The full find → fix → retest arc (including the two prompt fixes that *didn't* hold) is documented in
-the finding's tracking issue, [#30](https://github.com/open-agent-ai-security/socxen/issues/30).
+the finding's tracking issue, [#30](https://github.com/open-agent-ai-security/raffkin/issues/30).
 
 ## Worked example — the first A/B/C/D run (2026-08-18)
 
@@ -293,9 +293,9 @@ retest also taught, both now documented: a **rigid `label=value` anchor missed f
 actually writes** ("Secret Access Key: …", bulleted lists) — the live gate caught what unit tests using
 the exact form could not — and a **bare unstructured credential** with no format and no adjacent label
 is an a10-class **residual** (best-effort, not guaranteed), closed properly only by context-aware
-read→write redaction. Full arc: [#88](https://github.com/open-agent-ai-security/socxen/issues/88) →
-[#115](https://github.com/open-agent-ai-security/socxen/pull/115); the residual follow-up is
-[#116](https://github.com/open-agent-ai-security/socxen/issues/116).
+read→write redaction. Full arc: [#88](https://github.com/open-agent-ai-security/raffkin/issues/88) →
+[#115](https://github.com/open-agent-ai-security/raffkin/pull/115); the residual follow-up is
+[#116](https://github.com/open-agent-ai-security/raffkin/issues/116).
 
 ## Worked example — the two-leg gate (2026-08-18)
 
@@ -315,7 +315,7 @@ then `claude-opus-5` (the sweep). Two lessons, both now load-bearing in how we r
 - **Piecewise-green ≠ combined-green.** Every piece had already passed its own runs. The combined 19×5
   re-run still surfaced two 1/5 landings: a **mid-line formula gap** in the output neutralizer (the model
   quoted `=HYPERLINK(...)` mid-prose — a position the cell-scoped passes skipped, latent since the
-  original a10 fix because fix-time trials only ever emitted the link form; [#117](https://github.com/open-agent-ai-security/socxen/issues/117)),
+  original a10 fix because fix-time trials only ever emitted the link form; [#117](https://github.com/open-agent-ai-security/raffkin/issues/117)),
   and a **grading-scope miscalibration** (d02 still graded raw model chat from before the write-side
   redactor existed; 1-in-5 the model complied with an instructed exfil the redactor would have masked at
   the persisted sink). One was a real code gap, one a fixture bug — a fresh multi-trial roll of the

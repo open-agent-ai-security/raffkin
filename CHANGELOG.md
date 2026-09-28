@@ -5,8 +5,56 @@
 
 # Changelog
 
-Notable changes to socxen. Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
+Notable changes to Raffkin (named socxen before 1.0). Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
 governance model (feature → `dev`, release `dev` → `main`).
+
+## [1.0.0] — lands with the repository rename
+
+**Raffkin 1.0: the project is renamed, and compatibility starts here.** socxen was pre-release; this is
+the first release with a stable surface. Since 0.9.0, beyond the name: escalation writes run on a
+per-session budget, the redactor catches unlabeled OpenAI, Anthropic and GitLab keys, soc-investigate
+reports a planted instruction it refused, and the bridge launches only from its locked dependencies.
+
+*Release gate:* recorded on flip day.
+
+### Breaking
+
+- **The project is renamed socxen → Raffkin** (#261). Nothing carries over from a socxen install except
+  the Exabeam credentials in `~/.exabeam-mcp.env`; uninstall socxen and install Raffkin.
+  - Plugin key `raffkin@open-agent-ai-security`; skills `raffkin:<skill>`; MCP tools
+    `mcp__plugin_raffkin_exabeam__*`. Permission rules and telemetry consumers keyed on the old prefix
+    must move.
+  - Environment variables are `RAFFKIN_*` (was `SOCXEN_*`), with no fallback to the old names.
+  - The home directory is `~/.raffkin` (telemetry, gate log, write-budget state); `~/.socxen` is not read.
+  - Telemetry `agent_name` is `raffkin`; the gate's and bridge's messages start `Raffkin gate:` and
+    `Raffkin bridge refused`.
+  - The repository and site move to `github.com/open-agent-ai-security/raffkin` and
+    `open-agent-ai-security.github.io/raffkin`; the old site redirects.
+
+### Added
+
+- **Escalation writes run on a per-session budget** (#247). `create_case` and `create_case_notes` are
+  allowed twice per session and then ask; a second case asks. The count is keyed on the host's session
+  id, fails closed, and holds under concurrent calls. Claude Code only; Codex is unchanged.
+- **soc-investigate reports a refused planted instruction** on its report's **Flagged** line, as the
+  sweep skills already did (#271).
+- **The redactor masks unlabeled `sk-`, `sk-proj-`, `sk-ant-` and `glpat-` keys** by their shape, leaving
+  hostnames and branch names alone (#268).
+- **Turning audit logging off is announced on stderr** (#215).
+
+### Changed
+
+- **The bridge launches with `uv run --locked`**, and preflight checks the uv version that honors the
+  lock (#248).
+- **Worker Remit v1.8** (#218, #219) and **v1.9** (the name).
+- **The Praxen gate scan and the red team's Opus sweep run on Claude Opus 5.5** (#269). Sonnet 4.6 stays
+  the red-team gate.
+- **The red-team hook leg exercises the allow tier and the write budget**: its dry-run bridge is
+  registered under the bundled server's name, and the leg refuses to start unless the budget holds and
+  the dry run is proven active.
+- **New visual identity**: mark, wordmark, favicon, the raccoon investigator and an amber-gold theme.
+- **Contributing:** every human commit carries `Signed-off-by`, with no exemption (#253); the release
+  steps name every file the version bump touches (#251).
 
 ## [0.9.0] — 2026-09-19
 
