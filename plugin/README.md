@@ -6,7 +6,7 @@
 # Raffkin
 **An agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex.**
 
-[![Project level: Incubator](https://img.shields.io/badge/project_level-incubator-d29922)](https://open-agent-ai-security.github.io/project-levels/)
+[![Project level: Production](https://img.shields.io/badge/project_level-production-3fb950)](https://open-agent-ai-security.github.io/project-levels/)
 [![CI](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml)
 [![version](https://img.shields.io/badge/version-v1.0.0-blue)](.claude-plugin/plugin.json)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)

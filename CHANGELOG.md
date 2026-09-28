@@ -53,6 +53,8 @@ reports a planted instruction it refused, and the bridge launches only from its 
   registered under the bundled server's name, and the leg refuses to start unless the budget holds and
   the dry run is proven active.
 - **New visual identity**: mark, wordmark, favicon, the raccoon investigator and an amber-gold theme.
+- **Project level: Production** (was Incubator), per the community's
+  [project levels](https://open-agent-ai-security.github.io/project-levels/).
 - **Contributing:** every human commit carries `Signed-off-by`, with no exemption (#253); the release
   steps name every file the version bump touches (#251).
 
