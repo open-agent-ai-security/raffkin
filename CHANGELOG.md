@@ -29,7 +29,7 @@ reports a planted instruction it refused, and the bridge launches only from its 
   - Telemetry `agent_name` is `raffkin`; the gate's and bridge's messages start `Raffkin gate:` and
     `Raffkin bridge refused`.
   - The repository and site move to `github.com/open-agent-ai-security/raffkin` and
-    `open-agent-ai-security.github.io/raffkin`; the old site redirects.
+    `open-agent-ai-security.github.io/raffkin`. The old site is retired, with no redirect.
 
 ### Added
 
