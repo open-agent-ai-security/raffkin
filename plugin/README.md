@@ -51,8 +51,8 @@ Each hands off to the others: a single case to `soc-investigate`, a noise cluste
 ## Get started
 
 1. Install: `claude plugin marketplace add open-agent-ai-security/plugins` then
-   `claude plugin install raffkin@open-agent-ai-security` (Codex: `codex plugin marketplace add …`,
-   `codex plugin add …`).
+   `claude plugin install raffkin@open-agent-ai-security` (Codex:
+   `codex plugin marketplace add open-agent-ai-security/plugins` then `codex plugin add raffkin@open-agent-ai-security`).
 2. Add your Exabeam API key and secret to `~/.exabeam-mcp.env`.
 3. Run `preflight.sh` from the installed plugin to check the connection and the gate.
 4. Say *"investigate alert `<id>`"*.
