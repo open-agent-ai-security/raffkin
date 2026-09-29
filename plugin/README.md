@@ -79,11 +79,13 @@ behavior-verified before it ships; the runs, the findings and any waivers are pu
 badge above and the [changelog](https://github.com/open-agent-ai-security/raffkin/blob/main/CHANGELOG.md)
 track the current release; `claude plugin list` (or `codex plugin list`) shows your installed version.
 
+<!-- community-only -->
 ## Project sponsor
 
 Raffkin is sponsored by [Exabeam](https://www.exabeam.com/). Exabeam contributed the initial code and
 continues to provide ongoing support and contributions to the project as part of its commitment to
 security in an increasingly agentic world.
+<!-- /community-only -->
 
 ## License
 
@@ -92,6 +94,7 @@ Apache-2.0 — see `LICENSE` / `NOTICE`. Raffkin is community supported, as is; 
 [Support](docs/support.md).
 <!-- /community-only -->
 <!-- distribution-only
-This copy is distributed under the terms in `LICENSE`; the software it includes is open source under the
-Apache License 2.0 — see `LICENSE-APACHE` and `NOTICE`. Support: [Support](docs/support.md).
+This copy is licensed under {{terms}}.
+It includes Raffkin, open-source software licensed under the Apache License 2.0 (see `LICENSE-APACHE` and
+`NOTICE`). Support: [Support](docs/support.md).
 /distribution-only -->
