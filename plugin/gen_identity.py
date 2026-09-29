@@ -172,6 +172,7 @@ _MARKER_LINE = re.compile(r"^[ \t]*(<!-- community-only -->|<!-- /community-only
 _COMMUNITY_BLOCK = re.compile(r"^[ \t]*<!-- community-only -->[ \t]*\n.*?^[ \t]*<!-- /community-only -->[ \t]*\n", re.S | re.M)
 _DISTRIBUTION_WRAP = re.compile(r"^[ \t]*(<!-- distribution-only|/distribution-only -->)[ \t]*\n", re.M)
 _BADGE_LINK = re.compile(r"(\[!\[License: [^\]]+\]\([^)]*badge/license-[^)]+\)\]\()LICENSE\)")
+_BADGE = re.compile(r"\[!\[License: [^\]]+\]\(https://img\.shields\.io/badge/license-[^)]+\)\]\(LICENSE\)")
 
 
 def check_markers(text):
@@ -199,6 +200,17 @@ def check_markers(text):
     return problems
 
 
+def terms_name(dist):
+    """The distribution's terms as a badge names them: "the Exabeam Enterprise Agreement" -> "Exabeam Enterprise
+    Agreement". Empty when the distribution names none."""
+    return re.sub(r"^the\s+", "", (dist or {}).get("terms", ""), flags=re.I)
+
+
+def terms_slug(terms):
+    """The terms as a shields.io badge path spells them: '--' is a literal hyphen, '_' a space."""
+    return terms.replace("-", "--").replace(" ", "_")
+
+
 def _switch_distribution_prose(text, dist=None):
     """Drop community-only blocks, unwrap distribution-only blocks, fill that prose's {{vendor}}, {{terms}} and
     {{support}} from the distribution block, point the license badge at the Apache text (LICENSE holds the
@@ -208,7 +220,11 @@ def _switch_distribution_prose(text, dist=None):
     text = _DISTRIBUTION_WRAP.sub("", text)
     for token, value in _distribution_tokens(dist or {}).items():
         text = text.replace(token, value)
-    text = _BADGE_LINK.sub(r"\1LICENSE-APACHE)", text)
+    terms = terms_name(dist)
+    if terms:       # the package's own terms lead: "License: Exabeam Enterprise Agreement", linked to its LICENSE
+        text = _BADGE.sub(lambda _m: f"[![License: {terms}](https://img.shields.io/badge/license-{terms_slug(terms)}-blue.svg)](LICENSE)", text)
+    else:           # no terms named: the badge still names the software's license, so it links the Apache text
+        text = _BADGE_LINK.sub(r"\1LICENSE-APACHE)", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.rstrip("\n") + "\n" if text.strip() else text
 
@@ -449,7 +465,9 @@ def main(argv):
             names.append(f"{len(wrong)} file(s) whose SPDX header does not name this distribution's license "
                          f"{lic!r}: {', '.join(wrong[:4])}{', …' if len(wrong) > 4 else ''}")
         readme = HERE / "README.md"
-        if readme.exists() and (lic not in readme.read_text() or f"badge/license-{badge_slug(lic)}-" not in readme.read_text()):
+        terms = terms_name(identity.get("distribution"))
+        named, badge = (terms, terms_slug(terms)) if terms else (lic, badge_slug(lic))
+        if readme.exists() and (named not in readme.read_text() or f"badge/license-{badge}-" not in readme.read_text()):
             names.append("plugin/README.md (does not name this distribution's license)")
         bad = [f"{f.relative_to(HERE.parent)} ({'; '.join(p)})" for f in doc_files() for p in [check_markers(f.read_text())] if p]
         if bad:

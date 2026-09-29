@@ -954,7 +954,11 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     assert "community supported" not in sp and "Supported by Exabeam" not in sp and "licensed under the Exabeam Enterprise Agreement" in sp
     assert "community supported" not in rd and "LICENSE-APACHE" in rd
     assert "Apache-2.0 — see `LICENSE` / `NOTICE`" not in rd, "the community License line must not ship in a distribution copy"
-    assert "blue.svg)](LICENSE-APACHE)" in rd, "the Apache badge links to the Apache text in a distribution copy"
+    assert "[![License: Exabeam Enterprise Agreement](https://img.shields.io/badge/license-Exabeam_Enterprise_Agreement-blue.svg)](LICENSE)" in rd, \
+        "a distribution that names its terms leads with them in the badge"
+    assert "badge/license-Apache" not in rd
+    assert "licensed under the Exabeam Enterprise Agreement (see `LICENSE`)." in rd and "It includes Raffkin, open-source software" in rd
+    assert "Project sponsor" not in rd, "the upstream project's sponsor section is community-only"
     assert not sp.endswith("\n\n") and not rd.endswith("\n\n")
     # every bare community marketplace name left is a source link, never a command or a key
     for f in (guide, support, readme, work / "docs" / "index.md"):
