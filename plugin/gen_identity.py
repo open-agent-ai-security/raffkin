@@ -199,12 +199,14 @@ def check_markers(text):
     return problems
 
 
-def _switch_distribution_prose(text):
-    """Drop community-only blocks, unwrap distribution-only blocks, point the license badge at the Apache
+def _switch_distribution_prose(text, vendor=""):
+    """Drop community-only blocks, unwrap distribution-only blocks, name the distributor where that prose says
+    {{vendor}} (the distribution block's `vendor`, or a generic phrase), point the license badge at the Apache
     text (LICENSE holds the distribution's terms in such a copy), and tidy the blank lines the removals
     leave. Idempotent: a second pass finds nothing."""
     text = _COMMUNITY_BLOCK.sub("", text)
     text = _DISTRIBUTION_WRAP.sub("", text)
+    text = text.replace(_VENDOR_TOKEN, vendor or _VENDOR_FALLBACK)
     text = _BADGE_LINK.sub(r"\1LICENSE-APACHE)", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.rstrip("\n") + "\n" if text.strip() else text
@@ -219,8 +221,8 @@ _PROSE_BEFORE = r"[A-Za-z0-9_./@\-]"
 _PROSE_AFTER = r"(?:[A-Za-z0-9_/]|-(?=[A-Za-z0-9]))"
 _MESSAGE_AFTER = re.compile(r" (?:gate:|gate could|bridge refused|bridge:)")
 # The attribution form names the included open-source project itself and keeps it, the way a product says it
-# "includes Linux": "The software in this copy is Raffkin, open source under the Apache License 2.0".
-_ATTRIBUTION_AFTER = re.compile(r", open source\b")
+# "includes Linux": "It includes Raffkin, open-source software licensed under the Apache License 2.0".
+_ATTRIBUTION_AFTER = re.compile(r",\s+open[- ]source\b")
 _ENDS_SENTENCE = (".", "!", "?", "|", "—", "=", "{", "[")
 
 
@@ -300,6 +302,7 @@ def rewrite_docs(prev, identity):
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
     switch = bool(identity.get("distribution"))
     prose = (prev.get("product", ""), product_name(identity))
+    prefix = (f"mcp__plugin_{prev['name']}_", f"mcp__plugin_{identity['name']}_") if prev.get("name") and prev["name"] != identity["name"] else None
     changed, kept = [], []
     for f in doc_files():
         text = f.read_text()
@@ -307,8 +310,10 @@ def rewrite_docs(prev, identity):
         kept += [f"{f.relative_to(HERE.parent)}:{n}" for n in lines]
         if bare:
             new = re.sub(rf"(?<!{_BARE_BEFORE}){re.escape(bare[0])}(?!{_BARE_AFTER})", bare[1], new)
+        if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
+            new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new)
+            new = _switch_distribution_prose(new, (identity.get("distribution") or {}).get("vendor", ""))
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -371,6 +376,8 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
+DISTRIBUTION_PROSE_KEYS = ("vendor",)      # prose only: the distributor's name, filled into the distribution-only text
+_VENDOR_TOKEN, _VENDOR_FALLBACK = "{{vendor}}", "the organization that distributes it"
 
 
 def manifest_fields(identity):
@@ -380,9 +387,9 @@ def manifest_fields(identity):
     software's license: it drives the SPDX headers, the README badge and identity.sh, and is untouched by
     the block, so the source stays under its own license while the package states the distribution's."""
     dist = identity.get("distribution") or {}
-    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS))
+    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS) - set(DISTRIBUTION_PROSE_KEYS))
     if unknown:
-        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS}, got {unknown}")
+        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS}, got {unknown}")
     return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
 
 
