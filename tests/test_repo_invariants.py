@@ -942,7 +942,8 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
                              "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
     ident["productName"] = "the Exabeam Agentic SOC plugin"
-    ident["distribution"]["vendor"] = "Exabeam"
+    ident["distribution"].update(vendor="Exabeam", terms="the Exabeam Enterprise Agreement",
+                                 support="https://www.exabeam.com/support-and-services/")
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     subprocess.run(gen, check=True, capture_output=True, text=True)
     for f in (guide, support, readme):
@@ -950,7 +951,7 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
         assert "community-only" not in t and "distribution-only" not in t, f"{f.name}: markers must be consumed"
     g, sp, rd = guide.read_text(), support.read_text(), readme.read_text()
     assert "community release" not in g and "This copy is a distribution" in g
-    assert "community supported" not in sp and "Supported by Exabeam" not in sp and "licensed under the terms in its `LICENSE`" in sp
+    assert "community supported" not in sp and "Supported by Exabeam" not in sp and "licensed under the Exabeam Enterprise Agreement" in sp
     assert "community supported" not in rd and "LICENSE-APACHE" in rd
     assert "Apache-2.0 — see `LICENSE` / `NOTICE`" not in rd, "the community License line must not ship in a distribution copy"
     assert "blue.svg)](LICENSE-APACHE)" in rd, "the Apache badge links to the Apache text in a distribution copy"
@@ -970,8 +971,10 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
             assert not re.search(r"\b(?:[Aa]n?|[Tt]he|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny) the Exabeam", line), f"{f.name}:{n}: stacked article"
     assert "The Exabeam Agentic SOC plugin" in rd and "~/.raffkin/" in (work / "docs" / "logging.md").read_text()
     # the distributor is named in its own copy, and security reports go to it, not to the upstream project
-    assert "by Exabeam, which also provides" in sp and "support path of Exabeam." in sp and "{{vendor}}" not in sp
-    assert "SECURITY.md" not in sp, "a distribution copy routes security reports to its distributor"
+    assert "licensed under the Exabeam Enterprise Agreement (see `LICENSE`) by Exabeam, which also provides" in sp
+    assert sp.count("[Exabeam support](https://www.exabeam.com/support-and-services/)") == 2 and "{{" not in sp
+    assert "SECURITY.md" not in sp and "raffkin/issues" not in sp, "a distribution copy routes reports to its distributor"
+    assert "licensed under the Exabeam Enterprise Agreement" in (work / "docs" / "index.md").read_text()
     # the tool names the host really shows follow the plugin key
     lg = (work / "docs" / "logging.md").read_text()
     assert "mcp__plugin_raffkin_" not in lg and "mcp__plugin_soc_exabeam__" in lg
