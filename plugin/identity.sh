@@ -8,3 +8,4 @@ RAFFKIN_ID_LICENSE=Apache-2.0
 RAFFKIN_ID_MCP_SERVER=exabeam
 RAFFKIN_ID_MARKETPLACE_REPO=open-agent-ai-security/plugins
 RAFFKIN_ID_MARKETPLACE_NAME=open-agent-ai-security
+RAFFKIN_ID_PRODUCT_NAME=Raffkin
