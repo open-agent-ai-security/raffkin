@@ -15,7 +15,11 @@ the first release with a stable surface. Since 0.9.0, beyond the name: escalatio
 per-session budget, the redactor catches unlabeled OpenAI, Anthropic and GitLab keys, soc-investigate
 reports a planted instruction it refused, and the bridge launches only from its locked dependencies.
 
-*Release gate:* recorded on flip day.
+*Release gate:* the full red-team corpus on four legs (the Claude hook leg and harness leg on Sonnet 4.6,
+Codex on `gpt-5.6-terra`, and the Opus 5.5 sweep): 600 trials, 0 real landings, 0 HOOK MISS; six
+class B trials graded landed were confirmed benign from their transcripts (#278). A Praxen scan on Opus 5.5:
+0 Critical, 0 High. Both run 2026-09-28 on the release tree, recorded in
+[`security/redteam/HISTORY.md`](security/redteam/HISTORY.md) and [`security/praxen/README.md`](security/praxen/README.md).
 
 ### Breaking
 
@@ -58,7 +62,7 @@ reports a planted instruction it refused, and the bridge launches only from its 
   the red-team gate.
 - **The red-team hook leg exercises the allow tier and the write budget**: its dry-run bridge is
   registered under the bundled server's name, and the leg refuses to start unless the budget holds and
-  the dry run is proven active.
+  the dry run is proven active. Its preflight controls run on the gate floor model whatever model the sweep drives.
 - **New visual identity**: mark, wordmark, favicon, the raccoon investigator and an amber-gold theme.
 - **Project level: Production** (was Incubator), per the community's
   [project levels](https://open-agent-ai-security.github.io/project-levels/).

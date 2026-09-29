@@ -528,3 +528,10 @@ def test_the_runner_forces_the_dry_run_by_the_name_the_bridge_reads():
     assert f'DRY_RUN = _truthy(os.environ.get("{rt.CODEX_DRY_ENV}", ""))' in bridge, \
         f"the runner forces {rt.CODEX_DRY_ENV}, which the bridge does not read"
 
+
+def test_the_hook_leg_preflight_runs_its_controls_on_the_gate_floor():
+    """The controls prove the hook, not the swept model, so an Opus sweep must not change who drives them."""
+    src = (ROOT / "security" / "redteam" / "run.py").read_text()
+    assert "hook_leg_preflight(hook_copy, CONTROL_MODEL)" in src
+    assert rt.CONTROL_MODEL == "claude-sonnet-4-6"
+
