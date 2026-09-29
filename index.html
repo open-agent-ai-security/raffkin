@@ -15,7 +15,7 @@
   <meta name="description" content="Raffkin is an open-source agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex, built end to end for the fact that SIEM data is untrusted input: guardrails and write gates in the code, behavior scan, red team and AI-BOM in the process.">
   <meta name="keywords" content="agentic SOC, SOC analyst agent, Exabeam New-Scale, MCP, Claude Code plugin, OpenAI Codex plugin, alert triage, AI SOC, prompt injection guardrails, red team, human in the loop">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/">
+  <link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/">
   <link rel="icon" type="image/png" sizes="32x32" href="graphics/web/favicon-32.png">
   <link rel="icon" type="image/png" sizes="256x256" href="graphics/web/favicon-256.png">
   <link rel="apple-touch-icon" sizes="180x180" href="graphics/web/favicon-180.png">
@@ -23,21 +23,21 @@
   <meta property="og:site_name" content="Raffkin">
   <meta property="og:title" content="Raffkin — Hunt the real threats. Leave the noise.">
   <meta property="og:description" content="Open-source agentic SOC skills for Exabeam New-Scale, on Claude Code and Codex — built with security, not bolted on: guardrails, write gates, red team, behavior scan, AI-BOM.">
-  <meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/">
-  <meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+  <meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/">
+  <meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
   <meta property="og:image:width" content="1280"><meta property="og:image:height" content="640">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Raffkin — Agentic SOC Skill Suite">
   <meta name="twitter:description" content="Hunt the real threats. Leave the noise.">
-  <meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
+  <meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
     "name": "Raffkin",
     "description": "Open-source agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex. Investigates alerts and cases to a written verdict, triages the open queue, finds noisy detection rules. Engineered for untrusted SIEM data: deterministic guardrails on read and write, a human gate on dismiss/close, containment recommended never executed, and a release process of behavior verification, red team, and an AI bill of materials.",
-    "url": "https://open-agent-ai-security.github.io/socxen/",
-    "codeRepository": "https://github.com/open-agent-ai-security/socxen",
+    "url": "https://open-agent-ai-security.github.io/raffkin/",
+    "codeRepository": "https://github.com/open-agent-ai-security/raffkin",
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
     "applicationCategory": "SecurityApplication",
     "author": { "@id": "https://open-agent-ai-security.github.io/#org", "@type": "Organization", "name": "Open Agent and AI Security Community", "url": "https://open-agent-ai-security.github.io/" },
@@ -178,8 +178,6 @@
     .sponsor-band .lbl { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-2); font-weight: 600; }
     .exa-logo { height: 32px; width: auto; display: block; opacity: 0.96; }
     .sponsor-note { max-width: 540px; margin: 2px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
-    .prerelease { text-align: center; font-size: 13.5px; color: var(--muted-2); padding: 12px 0 0; }
-    .prerelease b { color: var(--gold-2); }
 
     @media (max-width: 920px) {
       .hero-grid { grid-template-columns: 1fr; } .mascot-stage { order: -1; margin-bottom: 8px; } .mascot-stage img { max-width: 450px; }
@@ -201,7 +199,7 @@
         <a href="guide/index.html">Docs</a>
       </nav>
       <div class="nav-cta">
-        <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
+        <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
         <a class="btn btn-primary" href="#install">Install</a>
       </div>
     </div>
@@ -328,21 +326,21 @@
           <p>Raffkin is security-tested before every release, scanned to confirm that it behaves as intended, and shipped with a transparent ingredients list. Detailed results are published for anyone who wants the fine print.</p>
         </div>
         <div class="explore">
-          <a class="xcard" href="https://github.com/open-agent-ai-security/socxen/blob/main/security/redteam/HISTORY.md" target="_blank" rel="noopener">
+          <a class="xcard" href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/redteam/HISTORY.md" target="_blank" rel="noopener">
             <span class="xtag">Security testing</span>
             <h3>Attacked before release</h3>
             <p>Raffkin is repeatedly tested against prompt injection, verdict manipulation, unsafe actions, and data exposure. A release is blocked until discovered problems are fixed and tested again.</p>
             <div class="stat"><b>29</b><span>attack scenarios, each repeated five times before release</span></div>
             <span class="go">See the test history <span class="arw">→</span></span>
           </a>
-          <a class="xcard" href="https://github.com/open-agent-ai-security/socxen/blob/main/security/aibom.cdx.json" target="_blank" rel="noopener">
+          <a class="xcard" href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/aibom.cdx.json" target="_blank" rel="noopener">
             <span class="xtag">Ingredients list</span>
             <h3>Know what is inside</h3>
             <p>Every release includes a machine-readable list of the models, tools, software dependencies, and governance controls Raffkin uses.</p>
             <div class="stat"><b>Every</b><span>release includes a current, machine-readable inventory</span></div>
             <span class="go">Read the ingredients list <span class="arw">→</span></span>
           </a>
-          <a class="xcard" href="https://github.com/open-agent-ai-security/socxen/blob/main/security/praxen/README.md" target="_blank" rel="noopener">
+          <a class="xcard" href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/praxen/README.md" target="_blank" rel="noopener">
             <span class="xtag">Behavior scan</span>
             <h3>Checked against its job description</h3>
             <p>Praxen compares what Raffkin is supposed to do with its code and release evidence, then reports where its behavior or controls do not match.</p>
@@ -395,7 +393,6 @@
 <span class="pmt">&gt;</span> investigate alert 8f67ee43-bfa0-4f84-a5d0-42f97d893aed</pre>
           </div>
         </div>
-        <p class="prerelease"><b>Pre-release software, for evaluation.</b> Expect breaking changes between versions; keep a human reviewing every action. <a href="https://open-agent-ai-security.github.io/project-levels/">Incubator</a> project level.</p>
       </div>
     </section>
 
@@ -405,7 +402,7 @@
         <p>Open source, Apache-2.0, built in the open with the Open Agent and AI Security Community.</p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="guide/installation.html">Read the setup guide →</a>
-          <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener">Star on GitHub</a>
+          <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener">Star on GitHub</a>
         </div>
       </div>
     </section>
@@ -420,8 +417,8 @@
         </div>
         <div class="foot-cols">
           <div class="foot-col"><h4>Docs</h4><a href="guide/installation.html">Installation &amp; setup</a><a href="guide/index.html">User guide</a><a href="guide/usage.html">Using the skills</a><a href="guide/example.html">Example investigation</a><a href="guide/security-guardrails.html">Security guardrails</a><a href="guide/logging.html">Audit logging</a></div>
-          <div class="foot-col"><h4>Assurance (in the repo)</h4><a href="https://github.com/open-agent-ai-security/socxen/blob/main/security/redteam/METHODOLOGY.md" target="_blank" rel="noopener">Red-team methodology</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/security/redteam/HISTORY.md" target="_blank" rel="noopener">Red-team history</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/security/praxen/README.md" target="_blank" rel="noopener">Behavior verification</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/security/aibom.cdx.json" target="_blank" rel="noopener">AI-BOM</a></div>
-          <div class="foot-col"><h4>Project</h4><a href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener">GitHub</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a><a href="https://github.com/open-agent-ai-security/socxen/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a><a href="https://www.linkedin.com/company/open-agent-and-ai-security-community/" target="_blank" rel="noopener">Join on LinkedIn</a></div>
+          <div class="foot-col"><h4>Assurance (in the repo)</h4><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/redteam/METHODOLOGY.md" target="_blank" rel="noopener">Red-team methodology</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/redteam/HISTORY.md" target="_blank" rel="noopener">Red-team history</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/praxen/README.md" target="_blank" rel="noopener">Behavior verification</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/security/aibom.cdx.json" target="_blank" rel="noopener">AI-BOM</a></div>
+          <div class="foot-col"><h4>Project</h4><a href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener">GitHub</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a><a href="https://www.linkedin.com/company/open-agent-and-ai-security-community/" target="_blank" rel="noopener">Join on LinkedIn</a></div>
         </div>
       </div>
       <div class="sponsor-band">
@@ -430,7 +427,7 @@
         <p class="sponsor-note">Exabeam contributed the initial code and continues to provide ongoing support and contributions to Raffkin — part of its commitment to security in an increasingly agentic world.</p>
       </div>
       <div class="foot-bottom">
-        <span class="legal">All use and distribution is governed by the <a href="https://github.com/open-agent-ai-security/socxen/blob/main/plugin/LICENSE" target="_blank" rel="noopener">Apache 2.0 License</a> · © 2026 Exabeam, Inc.</span>
+        <span class="legal">All use and distribution is governed by the <a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/LICENSE" target="_blank" rel="noopener">Apache 2.0 License</a> · © 2026 Exabeam, Inc.</span>
         <a class="footer-community" href="https://open-agent-ai-security.github.io/" target="_blank" rel="noopener" aria-label="Part of the Open Agent AI Security community"><span>Part of the</span><img class="logo-on-dark" src="graphics/brand/community-logo-dark-background.svg" alt="Open Agent AI Security community"><img class="logo-on-light" src="graphics/brand/community-logo-light-background.svg" alt="Open Agent AI Security community"></a>
       </div>
     </div>

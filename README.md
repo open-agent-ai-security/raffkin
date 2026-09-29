@@ -6,12 +6,12 @@
 # Raffkin
 **an agentic SOC skill suite for Exabeam New-Scale**
 
-[![Project level: Incubator](https://img.shields.io/badge/project_level-incubator-d29922)](https://open-agent-ai-security.github.io/project-levels/)
-[![CI](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml)
+[![Project level: Production](https://img.shields.io/badge/project_level-production-3fb950)](https://open-agent-ai-security.github.io/project-levels/)
+[![CI](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 
 > ## 📘 Looking to install or use Raffkin? Start at the user guide.
-> ### **[open-agent-ai-security.github.io/socxen](https://open-agent-ai-security.github.io/socxen/)**
+> ### **[open-agent-ai-security.github.io/raffkin](https://open-agent-ai-security.github.io/raffkin/)**
 >
 > How to install on Claude Code or Codex, credentials, the safety gate, your first investigation,
 > what gets logged. Everything on this page below the line is about how Raffkin is **built** —
@@ -34,9 +34,6 @@ host enforces (a bundled hook on Claude Code, tool-approval policy on Codex), an
 first. Containment is recommended for a human to perform in EDR or IAM; the plugin never executes it.
 Nothing is hosted by us: Raffkin runs on the analyst's machine, against your tenant, through your own
 model provider.
-
-> ⚠️ **Pre-release software — for evaluation only.** Expect breaking changes between versions, and do
-> not point it at alerts whose disposition matters without a human reviewing every action.
 
 **See what it produces:** a worked investigation, from alert to verdict —
 [coordinated credential access](plugin/skills/soc-investigate/reference/examples/coordinated-credential-access.md).

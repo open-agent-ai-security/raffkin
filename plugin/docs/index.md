@@ -78,4 +78,4 @@ Details, how it is tested, and what these do not cover: [Security](security-guar
 - Windows: not supported natively — use WSL (Git Bash cannot protect the credentials file)
 - Help: [Support](support.md)
 
-For version history see the [CHANGELOG](https://github.com/open-agent-ai-security/socxen/blob/main/CHANGELOG.md). Working on the code? The developer material lives in the [repository](https://github.com/open-agent-ai-security/socxen#working-on-raffkin).
+For version history see the [CHANGELOG](https://github.com/open-agent-ai-security/raffkin/blob/main/CHANGELOG.md). Working on the code? The developer material lives in the [repository](https://github.com/open-agent-ai-security/raffkin#working-on-raffkin).

@@ -29,14 +29,14 @@ a{color:#0a7d99}
 <header><div class="wrap">
   <h1><span class="sc">Raffkin</span> — AI Bill of Materials</h1>
   <p class="tag">Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent&#x27;s tool-approval rules.</p>
-  <div class="badges"><span class="badge">v0.9.0</span><span class="badge">CycloneDX 1.6</span><span class="badge">Apache-2.0</span><span class="badge">serial 39f13b5c…</span></div>
+  <div class="badges"><span class="badge">v1.0.0</span><span class="badge">CycloneDX 1.6</span><span class="badge">Apache-2.0</span><span class="badge">serial bfdd1193…</span></div>
 </div></header>
 <div class="wrap">
   <p class="lead">This is an <b>AI application / agent</b> BOM, not a model card. Raffkin runs on a
   hosted foundation model it does not ship (Claude on Claude Code, an OpenAI model on Codex), and its
   substance is a <b>prompt/methodology</b> plus a small <b>MCP connector</b> carrying the guardrails. The inventory below is generated deterministically from the repo's
   own sources by <code>security/gen_aibom.py</code>.</p>
-  <p class="meta">Supplier: Open Agent AI Security · Generated: 2026-09-28T18:09:52Z · Serial: <code>urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156</code></p>
+  <p class="meta">Supplier: Open Agent AI Security · Generated: 2026-09-28T19:37:18Z · Serial: <code>urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178</code></p>
 
   <h2>Components</h2>
   <table><tbody><tr><td class="cat" colspan="2">Foundation model</td></tr>
@@ -60,8 +60,8 @@ a{color:#0a7d99}
   <div class="prop"><b>foundationModel</b> — Claude (Anthropic) on Claude Code; OpenAI model on Codex — external hosted APIs, chosen by the host</div><div class="prop"><b>humanInTheLoop</b> — required for dismiss/close and outbound mail (update_alert/update_case/send_email) — enforced by the host: a bundled PreToolUse hook on Claude Code (holds under --dangerously-skip-permissions; a headless ask is refused); tool-approval policy on Codex (default approve, 70 tools disabled)</div><div class="prop"><b>autonomousActions</b> — read/search + create_case/case_notes (escalation) — prompt-free on both hosts</div><div class="prop"><b>containmentCapability</b> — none — recommend-only, performed by a human in EDR/IAM; every containment tool is denied by the gate</div><div class="prop"><b>guardrails</b> — permission tiers 21 allow / 3 ask / 70 deny from one tier file (permissions.json → hook, Codex policy, published permission snippet for fleet policy); input canonicalizer on every read and on the remote&#x27;s tool definitions (hashed per session); output neutralizer on every write (formulas inert, links de-fanged unless into the operator&#x27;s tenant, secrets and structured identifiers masked); updates carry state only; a create_case with a closing disposition is refused; in-prompt ask-before-close as the model-side layer</div><div class="prop"><b>auditTrail</b> — on by default, local, bounded: every call, gate decision and guardrail firing as metadata and safe identifiers, never case content (~/.raffkin/)</div><div class="prop"><b>secretsHandling</b> — Exabeam OAuth key/secret from ~/.exabeam-mcp.env; never logged; posted over https only (the bridge refuses a cleartext URL)</div>
 
   <h2>Provenance</h2>
-  <ul><li><a href="https://github.com/open-agent-ai-security/socxen">vcs</a> — https://github.com/open-agent-ai-security/socxen</li><li><a href="https://github.com/open-agent-ai-security/socxen">website</a> — https://github.com/open-agent-ai-security/socxen</li><li><a href="https://github.com/open-agent-ai-security/plugins">distribution</a> — https://github.com/open-agent-ai-security/plugins</li><li><a href="sbom.cdx.json">bom</a> — sbom.cdx.json</li></ul>
+  <ul><li><a href="https://github.com/open-agent-ai-security/raffkin">vcs</a> — https://github.com/open-agent-ai-security/raffkin</li><li><a href="https://github.com/open-agent-ai-security/raffkin">website</a> — https://github.com/open-agent-ai-security/raffkin</li><li><a href="https://github.com/open-agent-ai-security/plugins">distribution</a> — https://github.com/open-agent-ai-security/plugins</li><li><a href="sbom.cdx.json">bom</a> — sbom.cdx.json</li></ul>
 
-  <footer>CycloneDX 1.6 · urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156<br>
+  <footer>CycloneDX 1.6 · urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178<br>
   Regenerate with <code>uv run security/gen_aibom.py</code>. Raw BOM: <code>security/aibom.cdx.json</code>.</footer>
 </div></body></html>

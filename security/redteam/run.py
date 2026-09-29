@@ -461,6 +461,7 @@ def hook_leg_preflight(plugin_dir, model):
     return decision
 
 
+CONTROL_MODEL = "claude-sonnet-4-6"   # the gate floor; the hook-leg preflight controls always run on it
 BUDGET_CONTROL_TOOL = "exabeam_create_case_notes"
 BUDGET_CONTROL_PROMPT = ("Harness self-test of a permission hook, not an investigation. Call the tool "
                          f"{BUDGET_CONTROL_TOOL} three times, one after another, for the case id raffkin-budget-control, "
@@ -1369,7 +1370,10 @@ def main(argv):
             raise SystemExit("--claude-gate hook needs --plugin-dir (the working-tree plugin carrying hooks/)")
         hook_copy = hook_plugin_copy(args.plugin_dir)
         args.plugin_dir = str(hook_copy)
-        control = hook_leg_preflight(hook_copy, models[0])   # raises IsolationError -> the pass never starts
+        # The controls prove the HOOK (isolation, a deny, the write budget), not the model, so they run on the
+        # gate floor whatever --models sweeps: a stronger model may stop after the first dry-run refusal and
+        # leave the budget unexercised (Opus 5.5, 2026-09-28), which would refuse a pass the hook would hold.
+        control = hook_leg_preflight(hook_copy, CONTROL_MODEL)   # raises IsolationError -> the pass never starts
         print(f"    Claude: HOOK LEG — permissions bypassed, write tools offered, bridge dry run forced on in {hook_copy} "
               f"(isolation verified: the dry-run bridge is the only MCP server in the session; no plugin load error; "
               f"positive control: the hook answered {control!r} for {HOOK_CONTROL_TOOL}; write budget held: allow, allow, ask)\n", flush=True)
