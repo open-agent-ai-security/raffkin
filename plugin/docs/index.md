@@ -18,8 +18,8 @@ every call on an audit trail.
 [Open Agent and AI Security community](https://open-agent-ai-security.github.io/).*
 <!-- /community-only -->
 <!-- distribution-only
-*The software in this copy is Raffkin, open source under the Apache License 2.0; see [Support](support.md)
-for the terms this copy is distributed and supported under.*
+*This copy is licensed under the terms in its `LICENSE` file; see [Support](support.md).
+It includes Raffkin, open-source software licensed under the Apache License 2.0.*
 /distribution-only -->
 
 ## Where to start
