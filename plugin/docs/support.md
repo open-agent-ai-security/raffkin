@@ -13,9 +13,9 @@ Raffkin is an open-source project, published by the
 service level, no support desk and no warranty; the people who build it answer questions as they can.
 <!-- /community-only -->
 <!-- distribution-only
-This copy is distributed under the terms in its `LICENSE` file, by the organization named there, which
-also provides its support. The software it includes is Raffkin, open source under the Apache License 2.0
-(see `LICENSE-APACHE`); its source is at
+This copy is licensed under the terms in its `LICENSE` file by the organization named there, which also
+provides its support. It includes Raffkin, open-source software licensed under the Apache License 2.0
+(see `LICENSE-APACHE`), whose source is at
 [github.com/open-agent-ai-security/raffkin](https://github.com/open-agent-ai-security/raffkin).
 /distribution-only -->
 

@@ -219,8 +219,8 @@ _PROSE_BEFORE = r"[A-Za-z0-9_./@\-]"
 _PROSE_AFTER = r"(?:[A-Za-z0-9_/]|-(?=[A-Za-z0-9]))"
 _MESSAGE_AFTER = re.compile(r" (?:gate:|gate could|bridge refused|bridge:)")
 # The attribution form names the included open-source project itself and keeps it, the way a product says it
-# "includes Linux": "The software in this copy is Raffkin, open source under the Apache License 2.0".
-_ATTRIBUTION_AFTER = re.compile(r", open source\b")
+# "includes Linux": "It includes Raffkin, open-source software licensed under the Apache License 2.0".
+_ATTRIBUTION_AFTER = re.compile(r",\s+open[- ]source\b")
 _ENDS_SENTENCE = (".", "!", "?", "|", "—", "=", "{", "[")
 
 
