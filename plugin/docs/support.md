@@ -42,6 +42,6 @@ also provides its support. The software it includes is Raffkin, open source unde
 
 Exabeam offers a **supported SOC Agent pack** — the same agentic SOC skills, delivered and supported
 under Exabeam's commercial terms — through the
-[**Exabeam Plug-in Forge**](https://exabeam-labs.github.io/plugins/). If you are an Exabeam customer and
+[**Exabeam Plug-in Catalog**](https://plugins.exabeam.com/). If you are an Exabeam customer and
 want a supported build with a support path, that is where it lives.
 <!-- /community-only -->
