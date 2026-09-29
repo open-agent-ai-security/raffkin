@@ -300,6 +300,7 @@ def rewrite_docs(prev, identity):
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
     switch = bool(identity.get("distribution"))
     prose = (prev.get("product", ""), product_name(identity))
+    prefix = (f"mcp__plugin_{prev['name']}_", f"mcp__plugin_{identity['name']}_") if prev.get("name") and prev["name"] != identity["name"] else None
     changed, kept = [], []
     for f in doc_files():
         text = f.read_text()
@@ -307,6 +308,8 @@ def rewrite_docs(prev, identity):
         kept += [f"{f.relative_to(HERE.parent)}:{n}" for n in lines]
         if bare:
             new = re.sub(rf"(?<!{_BARE_BEFORE}){re.escape(bare[0])}(?!{_BARE_AFTER})", bare[1], new)
+        if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
+            new = new.replace(prefix[0], prefix[1])
         if switch:
             new = _switch_distribution_prose(new)
         new = _rename_prose(new, *prose)

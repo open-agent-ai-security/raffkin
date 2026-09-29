@@ -968,6 +968,9 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
                     f"{f.name}:{n}: prose still names Raffkin: {line.strip()[:100]}"
             assert not re.search(r"\b(?:[Aa]n?|[Tt]he|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny) the Exabeam", line), f"{f.name}:{n}: stacked article"
     assert "The Exabeam Agentic SOC plugin" in rd and "~/.raffkin/" in (work / "docs" / "logging.md").read_text()
+    # the tool names the host really shows follow the plugin key
+    lg = (work / "docs" / "logging.md").read_text()
+    assert "mcp__plugin_raffkin_" not in lg and "mcp__plugin_soc_exabeam__" in lg
     # idempotent and --check clean
     before = (g, sp, rd)
     subprocess.run(gen, check=True, capture_output=True, text=True)
