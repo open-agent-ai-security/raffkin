@@ -24,8 +24,15 @@ reports a planted instruction it refused, and the bridge launches only from its 
   - Plugin key `raffkin@open-agent-ai-security`; skills `raffkin:<skill>`; MCP tools
     `mcp__plugin_raffkin_exabeam__*`. Permission rules and telemetry consumers keyed on the old prefix
     must move.
-  - Environment variables are `RAFFKIN_*` (was `SOCXEN_*`), with no fallback to the old names.
-  - The home directory is `~/.raffkin` (telemetry, gate log, write-budget state); `~/.socxen` is not read.
+  - Environment variables are `RAFFKIN_*` (was `SOCXEN_*`), with no fallback: an old name is silently
+    ignored. Rename each one you set: `SOCXEN_OBSERVRA`, `SOCXEN_OBSERVRA_PATH`, `SOCXEN_OBSERVRA_URL`,
+    `SOCXEN_OBSERVRA_ENDPOINT`, `SOCXEN_OBSERVRA_MAX_BYTES`, `SOCXEN_OBSERVRA_BACKUPS`,
+    `SOCXEN_GATE_LOG`, `SOCXEN_GATE_LOG_MAX_BYTES`, `SOCXEN_GATE_STATE_DIR`, `SOCXEN_DRY_RUN`, and the
+    installer and preflight overrides `SOCXEN_SCOPE`, `SOCXEN_REPO`, `SOCXEN_MARKETPLACE`,
+    `SOCXEN_PLUGIN`, `SOCXEN_PLATFORM`. **If you turned audit logging off with `SOCXEN_OBSERVRA=off`, it
+    is back on until you set `RAFFKIN_OBSERVRA=off`.**
+  - The home directory is `~/.raffkin` (telemetry, gate log, write-budget state); `~/.socxen` is not read
+    and not deleted. Keep it if you want the earlier audit trail: the new trail starts fresh.
   - Telemetry `agent_name` is `raffkin`; the gate's and bridge's messages start `Raffkin gate:` and
     `Raffkin bridge refused`.
   - The repository and site move to `github.com/open-agent-ai-security/raffkin` and
