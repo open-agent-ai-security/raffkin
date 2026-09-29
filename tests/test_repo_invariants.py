@@ -942,6 +942,7 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
                              "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
     ident["productName"] = "the Exabeam Agentic SOC plugin"
+    ident["distribution"]["vendor"] = "Exabeam"
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     subprocess.run(gen, check=True, capture_output=True, text=True)
     for f in (guide, support, readme):
@@ -968,6 +969,9 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
                     f"{f.name}:{n}: prose still names Raffkin: {line.strip()[:100]}"
             assert not re.search(r"\b(?:[Aa]n?|[Tt]he|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny) the Exabeam", line), f"{f.name}:{n}: stacked article"
     assert "The Exabeam Agentic SOC plugin" in rd and "~/.raffkin/" in (work / "docs" / "logging.md").read_text()
+    # the distributor is named in its own copy, and security reports go to it, not to the upstream project
+    assert "by Exabeam, which also provides" in sp and "support path of Exabeam." in sp and "{{vendor}}" not in sp
+    assert "SECURITY.md" not in sp, "a distribution copy routes security reports to its distributor"
     # the tool names the host really shows follow the plugin key
     lg = (work / "docs" / "logging.md").read_text()
     assert "mcp__plugin_raffkin_" not in lg and "mcp__plugin_soc_exabeam__" in lg

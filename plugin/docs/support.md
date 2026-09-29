@@ -13,8 +13,8 @@ Raffkin is an open-source project, published by the
 service level, no support desk and no warranty; the people who build it answer questions as they can.
 <!-- /community-only -->
 <!-- distribution-only
-This copy is licensed under the terms in its `LICENSE` file by the organization named there, which also
-provides its support. It includes Raffkin, open-source software licensed under the Apache License 2.0
+This copy is licensed under the terms in its `LICENSE` file by {{vendor}}, which also provides its
+support. It includes Raffkin, open-source software licensed under the Apache License 2.0
 (see `LICENSE-APACHE`), whose source is at
 [github.com/open-agent-ai-security/raffkin](https://github.com/open-agent-ai-security/raffkin).
 /distribution-only -->
@@ -29,13 +29,17 @@ provides its support. It includes Raffkin, open-source software licensed under t
   Include the host (Claude Code or Codex), the plugin version, and the `preflight.sh` output.
 <!-- /community-only -->
 <!-- distribution-only
-- **Questions and bug reports:** through the support path of the organization that distributes this
-  copy. Include the host (Claude Code or Codex), the plugin version, and the `preflight.sh` output. A
-  defect in the open-source software itself may also be reported at
+- **Questions and bug reports:** through the support path of {{vendor}}. Include the host (Claude Code
+  or Codex), the plugin version, and the `preflight.sh` output. A defect in the open-source software
+  itself may also be reported at
   [github.com/open-agent-ai-security/raffkin/issues](https://github.com/open-agent-ai-security/raffkin/issues).
+- **Security vulnerabilities:** please do not open a public issue — report them privately through the
+  support path of {{vendor}}.
 /distribution-only -->
+<!-- community-only -->
 - **Security vulnerabilities:** please do not open a public issue — follow
   [SECURITY.md](https://github.com/open-agent-ai-security/raffkin/blob/main/SECURITY.md).
+<!-- /community-only -->
 
 <!-- community-only -->
 ## Supported by Exabeam
