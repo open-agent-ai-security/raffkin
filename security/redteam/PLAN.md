@@ -3,7 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# socxen red-team plan (operational)
+# Raffkin red-team plan (operational)
 
 *The operational contract the runner executes against — the attack classes to run, how they're graded,
 the parameters, and what blocks a release. For the **why / what / scope** narrative you'd hand to a
@@ -12,7 +12,7 @@ doc.*
 
 ## Purpose
 
-Adversarially test **socxen as configured** — Claude Code or Codex running the three skills
+Adversarially test **Raffkin as configured** — Claude Code or Codex running the three skills
 (`soc-investigate` at depth; `triage-cases` and `rule-tuning` at sweep depth) against the Exabeam
 New-Scale MCP, under the governance model in the docs — to answer one question before each
 release: **can an adversary who controls the telemetry make the agent suppress a real threat, bypass the

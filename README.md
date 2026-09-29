@@ -3,23 +3,23 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# socxen
+# Raffkin
 **an agentic SOC skill suite for Exabeam New-Scale**
 
 [![Project level: Incubator](https://img.shields.io/badge/project_level-incubator-d29922)](https://open-agent-ai-security.github.io/project-levels/)
 [![CI](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/socxen/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 
-> ## 📘 Looking to install or use socxen? Start at the user guide.
+> ## 📘 Looking to install or use Raffkin? Start at the user guide.
 > ### **[open-agent-ai-security.github.io/socxen](https://open-agent-ai-security.github.io/socxen/)**
 >
 > How to install on Claude Code or Codex, credentials, the safety gate, your first investigation,
-> what gets logged. Everything on this page below the line is about how socxen is **built** —
+> what gets logged. Everything on this page below the line is about how Raffkin is **built** —
 > it is for people working on the code.
 
 ---
 
-socxen gives an AI coding agent — **Claude Code or OpenAI Codex** — the job of a SOC analyst on an
+Raffkin gives an AI coding agent — **Claude Code or OpenAI Codex** — the job of a SOC analyst on an
 Exabeam New-Scale tenant, with the guardrails and governance that make that safe to do. Three skills,
 named for the person whose work they do:
 
@@ -32,7 +32,7 @@ named for the person whose work they do:
 **Dismissing an alert or closing a case is held behind two locks**: a gate the plugin ships and the
 host enforces (a bundled hook on Claude Code, tool-approval policy on Codex), and the skill asking you
 first. Containment is recommended for a human to perform in EDR or IAM; the plugin never executes it.
-Nothing is hosted by us: socxen runs on the analyst's machine, against your tenant, through your own
+Nothing is hosted by us: Raffkin runs on the analyst's machine, against your tenant, through your own
 model provider.
 
 > ⚠️ **Pre-release software — for evaluation only.** Expect breaking changes between versions, and do
@@ -68,7 +68,7 @@ tests/         deterministic invariants, run in CI
 scripts/       release tooling
 ```
 
-## Working on socxen
+## Working on Raffkin
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — branching (`dev` → `main`), tests, review, cutting a release.
 - **[tests/end-to-end-testing.md](tests/end-to-end-testing.md)** — testing real code against a live tenant, and the post-promotion install test.
@@ -77,7 +77,7 @@ scripts/       release tooling
 
 ## Project sponsor
 
-socxen is sponsored by [Exabeam](https://www.exabeam.com/), which contributed the initial code and
+Raffkin is sponsored by [Exabeam](https://www.exabeam.com/), which contributed the initial code and
 continues to support the project as part of its commitment to security in an increasingly agentic world.
 
 ## License

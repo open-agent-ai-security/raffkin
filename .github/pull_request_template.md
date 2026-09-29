@@ -4,7 +4,7 @@
 -->
 
 <!--
-  Thanks for sending a PR to socxen.
+  Thanks for sending a PR to Raffkin.
 
   Base branch: target `dev`, not `main`. `main` is the live install channel and
   only receives release PRs. If GitHub defaulted the base to `main`, switch it to

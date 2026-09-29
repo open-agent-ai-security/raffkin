@@ -5,12 +5,12 @@
 
 # Using the skills
 
-What to say, what happens, and what socxen will ask you before it acts. This assumes you have finished
+What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 [installation](installation.md) — credentials in place. The human-in-the-loop gate ships on, on both hosts.
 
 ## The three skills, and how to call them
 
-You talk to socxen in plain language inside your coding agent (Claude Code or Codex). The right skill
+You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.
 
 | You say | Skill that answers | What you get back |
@@ -66,11 +66,11 @@ A dismiss or close you approved is an ordinary Exabeam status change. If it was 
 alert or case in the New-Scale console.
 
 You will notice Codex also asks before the *escalation* writes (opening a case, writing notes), where
-Claude Code runs those silently. That is Exabeam's annotation on those tools, not a socxen setting; it is
+Claude Code runs those silently. That is Exabeam's annotation on those tools, not a Raffkin setting; it is
 noisier, not less safe.
 
 **What it will never do.** Isolate a host, disable an account, block an IP, kill a process — any
-containment. The Exabeam MCP exposes no such tools, and socxen denies them anyway as defense in depth.
+containment. The Exabeam MCP exposes no such tools, and Raffkin denies them anyway as defense in depth.
 When containment is warranted, the report *recommends* it, with the entity and the expected blast radius,
 for you to carry out in your EDR or IAM.
 
@@ -113,13 +113,13 @@ over-correction: a change that would blind you to real threats is called out, no
 
 ## Practical notes
 
-- **Large results.** Some Exabeam tools return very large payloads. socxen bounds its searches by
+- **Large results.** Some Exabeam tools return very large payloads. Raffkin bounds its searches by
   default; when a result is still too big for the model, your host may save it to a file and hand back a
   path. The skill reads only the fields it needs and will not copy the raw dump anywhere durable.
 - **What is recorded.** Every tool call, the gated decision, and each guardrail firing are written to a
   local, metadata-only audit log — never case notes, evidence, or payloads. Details in
   [audit logging](logging.md).
-- **What to do with the report.** It is the audit trail socxen produces in place of a database. Case
+- **What to do with the report.** It is the audit trail Raffkin produces in place of a database. Case
   notes written to Exabeam carry the same content, neutralized for safety.
 - **Example.** A real end-to-end run against a staging tenant, with the pivots and the reasoning:
   [worked example — coordinated credential access](../skills/soc-investigate/reference/examples/coordinated-credential-access.md).

@@ -5,13 +5,13 @@
 
 # security/praxen/ — Agent Behavior Verification
 
-**Does socxen do its job — and only its job?** This directory holds socxen's
+**Does Raffkin do its job — and only its job?** This directory holds Raffkin's
 **Worker Remit** (a plain-language policy declaring what the agent is authorized to do)
 and the [Praxen](https://github.com/open-agent-ai-security/praxen) reports that check the
 implementation against it.
 
 This is the complement to [`../redteam/`](../redteam/METHODOLOGY.md). The red team asks
-*"can an attacker who controls the telemetry make socxen misbehave?"* — an adversarial,
+*"can an attacker who controls the telemetry make Raffkin misbehave?"* — an adversarial,
 runtime question. Praxen asks *"does the shipped code actually enforce what we say our
 policy is?"* — a static, whole-system question. Neither subsumes the other: the red team
 exercises the paths it has fixtures for; Praxen audits every rule in the remit against the
@@ -19,7 +19,7 @@ code, including controls no fixture has ever probed.
 
 ## The release gate
 
-> **socxen does not ship a release with an open Praxen Critical finding.**
+> **Raffkin does not ship a release with an open Praxen Critical finding.**
 >
 > Before a release, run a Praxen scan against the release candidate. **Any finding at
 > `Critical` severity blocks the release** — it is either fixed, or explicitly waived in
@@ -473,17 +473,18 @@ and are never edited after the fact.
 
 | File | What it is |
 |---|---|
-| `WORKER_REMIT.md` | **The policy.** What socxen is authorized to do — the standard every scan judges the code against. |
+| `WORKER_REMIT.md` | **The policy.** What Raffkin is authorized to do — the standard every scan judges the code against. |
 | `SCAN_INSTRUCTIONS.md` | Scan-time scope: *what to scan* for this target. Distinct from the remit, which is *what the agent should do*. |
-| `results/<date>-socxen-<label>.html` | The rendered report — findings with `file:line` evidence, remit coverage, RAISE scorecard, OWASP mappings. Self-contained; open it in a browser. |
-| `results/<date>-socxen-<label>.json` | The same analysis, machine-readable. |
-| `results/<date>-socxen-<label>.txt` | The plain-text summary, when the scan produced one. |
-| `results/<date>-socxen-<label>-audit.md` | The high-mode audit record — a context-unaware second pass that re-reads every cited line and tries to refute each finding. |
-| `results/<date>-socxen-<label>-threatmodel.html` / `.json` | The evidence-derived threat model — nodes, edges, trust boundaries, attack paths — when the scan asked for one. |
+| `results/<date>-raffkin-<label>.html` | The rendered report — findings with `file:line` evidence, remit coverage, RAISE scorecard, OWASP mappings. Self-contained; open it in a browser. |
+| `results/<date>-raffkin-<label>.json` | The same analysis, machine-readable. |
+| `results/<date>-raffkin-<label>.txt` | The plain-text summary, when the scan produced one. |
+| `results/<date>-raffkin-<label>-audit.md` | The high-mode audit record — a context-unaware second pass that re-reads every cited line and tries to refute each finding. |
+| `results/<date>-raffkin-<label>-threatmodel.html` / `.json` | The evidence-derived threat model — nodes, edges, trust boundaries, attack paths — when the scan asked for one. |
 
 ### Which scan gated which release
 
-Artifacts are named `<scan date>-socxen-<label>`, where the label names the tree scanned (`dev-rc`,
+Artifacts are named `<scan date>-raffkin-<label>` (scans before the rename to Raffkin are named
+`-socxen-`), where the label names the tree scanned (`dev-rc`,
 `fix163`, `rc-remit17`, …). The status block for each scan, above, records the commit it read and, where
 it gated a release, which one; that is the gate record.
 
@@ -494,7 +495,7 @@ invented rule produces a finding that looks entirely real — correct file, corr
 violation of the rule as written. Check the rules, not only the findings.
 
 - **Write rules from documented intent, never from the implementation.** A remit written from the
-  code describes what socxen *does*, not what it *should* do, and a scan against it finds nothing.
+  code describes what Raffkin *does*, not what it *should* do, and a scan against it finds nothing.
   Author from `README.md`, `SECURITY.md` and `docs/**`.
 - **A rule the code does not satisfy is a finding, not a remit bug.** Only narrow a rule when the
   target's own documentation contradicts it.
@@ -520,15 +521,15 @@ Scan a pinned tree, not a working copy, from a directory outside any checkout so
 project context:
 
 ```bash
-git -C <socxen clone> worktree add /tmp/socxen-scan <commit>
+git -C <raffkin clone> worktree add /tmp/raffkin-scan <commit>
 mkdir -p /tmp/praxen-run && cd /tmp/praxen-run
 ```
 
 Then, in a fresh session (`--model claude-opus-5-5`):
 
 > *"Use the praxen-beta:behavior-verifier skill in high thinking mode, and produce a threat model as well.
-> Worker Remit: `/tmp/socxen-scan/security/praxen/WORKER_REMIT.md`. Scan instructions:
-> `/tmp/socxen-scan/security/praxen/SCAN_INSTRUCTIONS.md`. Workspace to scan: `/tmp/socxen-scan`. Write
+> Worker Remit: `/tmp/raffkin-scan/security/praxen/WORKER_REMIT.md`. Scan instructions:
+> `/tmp/raffkin-scan/security/praxen/SCAN_INSTRUCTIONS.md`. Workspace to scan: `/tmp/raffkin-scan`. Write
 > the reports to `./reports/`."*
 
 - **High thinking mode** adds the context-unaware audit pass over the findings and checks the remit's own

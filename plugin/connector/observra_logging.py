@@ -16,7 +16,7 @@ write). That turns the log into a machine-parseable audit trail — the thing a 
 reconstruct a session or drive anomaly detection, in place of the free-form markdown report alone.
 
 DEFAULT ON. A good agent keeps an audit trail. Logging runs unless you explicitly turn it off
-(`SOCXEN_OBSERVRA=off`). The default backend is a local, rotating JSON-lines file — no network egress.
+(`RAFFKIN_OBSERVRA=off`). The default backend is a local, rotating JSON-lines file — no network egress.
 
 Not an exact framework fit, by design: observra's `create_plugin()` hooks a supported *framework* (ADK,
 Claude SDK, LangChain, ...). Our "agent" is Claude Code driving a skill over an MCP bridge — there is no
@@ -39,10 +39,10 @@ DESIGN RULES:
     without limit.
 
 Configuration (all optional):
-    SOCXEN_OBSERVRA=jsonl              # default; also: off | exabeam | otel | otel_log | webhook
-    SOCXEN_OBSERVRA_PATH=~/.socxen/telemetry.jsonl     # jsonl backend location (default)
-    SOCXEN_OBSERVRA_MAX_BYTES=10485760                 # rotate at this size (default 10 MB)
-    SOCXEN_OBSERVRA_BACKUPS=5                          # keep this many rotated files (default 5)
+    RAFFKIN_OBSERVRA=jsonl              # default; also: off | exabeam | otel | otel_log | webhook
+    RAFFKIN_OBSERVRA_PATH=~/.raffkin/telemetry.jsonl     # jsonl backend location (default)
+    RAFFKIN_OBSERVRA_MAX_BYTES=10485760                 # rotate at this size (default 10 MB)
+    RAFFKIN_OBSERVRA_BACKUPS=5                          # keep this many rotated files (default 5)
 
 The `exabeam` backend routes telemetry back into Exabeam using the bridge's own creds — on-brand, but it
 makes network calls, so it is never the default; `jsonl` (local, offline, rotating) is.
@@ -59,7 +59,7 @@ SKILL = "soc-investigate"
 def _agent_name(root=None):
     """The plugin's own name, from identity.json beside the connector (#210): a re-keyed copy of this
     plugin (a vendor catalog shipping it as `soc`) then logs under its own name with no overlay change.
-    `socxen` only when the file is missing or unreadable — never an exception."""
+    `raffkin` only when the file is missing or unreadable — never an exception."""
     try:
         import json as _json
         here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,16 +69,16 @@ def _agent_name(root=None):
             if base and os.path.isfile(path):
                 with open(path, encoding="utf-8") as fh:
                     name = _json.load(fh).get("name")
-                return str(name).strip() if isinstance(name, str) and name.strip() else "socxen"
-        return "socxen"
+                return str(name).strip() if isinstance(name, str) and name.strip() else "raffkin"
+        return "raffkin"
     except Exception:  # noqa: BLE001 -- the audit trail must never depend on this file
-        return "socxen"
+        return "raffkin"
 
 
 AGENT = _agent_name()
 FRAMEWORK = "mcp"
 _DEFAULT_BACKEND = "jsonl"                              # ON by default — assurance is the default posture
-_DEFAULT_PATH = "~/.socxen/telemetry.jsonl"
+_DEFAULT_PATH = "~/.raffkin/telemetry.jsonl"
 _OFF_VALUES = {"off", "0", "false", "no", "none", "disabled"}
 
 # Lazily-populated runtime state. `on` is tri-state: None = not yet configured, True/False = decided.
@@ -102,11 +102,11 @@ def _int_env(name, default):
 def _configure():
     """Decide once whether telemetry is on (it is, unless explicitly off) and stand up the observra
     pipeline. Fail-open — any problem disables logging without touching the investigation."""
-    backend = os.environ.get("SOCXEN_OBSERVRA", "").strip().lower() or _DEFAULT_BACKEND
+    backend = os.environ.get("RAFFKIN_OBSERVRA", "").strip().lower() or _DEFAULT_BACKEND
     if backend in _OFF_VALUES:
         # The operator's own switch is announced, as the gate log's is: a trail that stops recording
         # without a word is how a forensic record disappears unnoticed (#215).
-        sys.stderr.write("bridge: observra logging is OFF (SOCXEN_OBSERVRA=off) — this session is not recorded\n")
+        sys.stderr.write("bridge: observra logging is OFF (RAFFKIN_OBSERVRA=off) — this session is not recorded\n")
         return _disable()
     try:
         import observra
@@ -116,27 +116,27 @@ def _configure():
         # Network backends need a destination. Resolve it HERE so it can be disclosed and recorded as the
         # actual endpoint (scheme + host), not the backend keyword — Praxen PRAX-2026-09-05-007.
         if backend == "webhook":
-            url = os.environ.get("SOCXEN_OBSERVRA_URL", "").strip()
+            url = os.environ.get("RAFFKIN_OBSERVRA_URL", "").strip()
             if url:
                 kwargs["url"] = url
         elif backend in ("otel", "otel_log"):
-            ep = os.environ.get("SOCXEN_OBSERVRA_ENDPOINT", "").strip()
+            ep = os.environ.get("RAFFKIN_OBSERVRA_ENDPOINT", "").strip()
             if ep:
                 kwargs["endpoint"] = ep
         if backend == "jsonl":
-            path = os.path.expanduser(os.environ.get("SOCXEN_OBSERVRA_PATH", _DEFAULT_PATH))
+            path = os.path.expanduser(os.environ.get("RAFFKIN_OBSERVRA_PATH", _DEFAULT_PATH))
             if path.startswith("~"):
                 # HOME/USERPROFILE unset (some daemon/container contexts) -> expanduser was a no-op. Don't
                 # create a literal "~" directory under CWD; fall back to the temp dir and say where.
                 import tempfile
-                path = os.path.join(tempfile.gettempdir(), "socxen-telemetry.jsonl")
+                path = os.path.join(tempfile.gettempdir(), "raffkin-telemetry.jsonl")
                 sys.stderr.write(f"bridge: HOME not set; audit log -> {path}\n")
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
             kwargs["path"] = path
             # initialize() forwards kwargs to the backend constructor (observra >= 1.1), so the rotation
             # bounds ride along. Clamped so a stray 0/negative can't turn rotation into per-event thrashing.
-            kwargs["max_bytes"] = max(4096, _int_env("SOCXEN_OBSERVRA_MAX_BYTES", 10_485_760))  # >=4 KB
-            kwargs["backup_count"] = max(1, _int_env("SOCXEN_OBSERVRA_BACKUPS", 5))
+            kwargs["max_bytes"] = max(4096, _int_env("RAFFKIN_OBSERVRA_MAX_BYTES", 10_485_760))  # >=4 KB
+            kwargs["backup_count"] = max(1, _int_env("RAFFKIN_OBSERVRA_BACKUPS", 5))
         observra.initialize(backend=backend, **kwargs)   # ValueError on an unknown backend -> fail-open
         observra.initialize_session()                    # a stable session/trace for this bridge process
         context.initialize_trace()
@@ -146,11 +146,11 @@ def _configure():
         # disclosures, so a dropped event is visible to the operator.
         import logging
         obs_logger = logging.getLogger("observra")
-        if not any(getattr(h, "_socxen", False) for h in obs_logger.handlers):
+        if not any(getattr(h, "_raffkin", False) for h in obs_logger.handlers):
             handler = logging.StreamHandler(sys.stderr)
             handler.setLevel(logging.WARNING)
             handler.setFormatter(logging.Formatter("bridge: observra %(levelname)s - %(message)s"))
-            handler._socxen = True
+            handler._raffkin = True
             obs_logger.addHandler(handler)
 
         _state["observra"] = observra
@@ -163,7 +163,7 @@ def _configure():
         _state["backend"] = backend
         _state["destination"] = _destination(backend, kwargs)
         sys.stderr.write(f"bridge: structured logging on -> {backend}: {_state['destination']} "
-                         f"(set SOCXEN_OBSERVRA=off to disable)\n")
+                         f"(set RAFFKIN_OBSERVRA=off to disable)\n")
         return True
     except Exception as e:  # noqa: BLE001 -- availability over telemetry, always
         return _disable(f"{type(e).__name__}: {e}")
@@ -188,7 +188,7 @@ def _destination(backend, kwargs):
     if backend == "jsonl":
         return kwargs.get("path", "")
     if backend == "webhook":
-        return host_only(kwargs["url"]) if kwargs.get("url") else "(no SOCXEN_OBSERVRA_URL set)"
+        return host_only(kwargs["url"]) if kwargs.get("url") else "(no RAFFKIN_OBSERVRA_URL set)"
     if backend in ("otel", "otel_log"):
         env = "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT" if backend == "otel_log" else "OTEL_EXPORTER_OTLP_ENDPOINT"
         return host_only(kwargs.get("endpoint") or os.environ.get(env, "") or "http://localhost:4318")

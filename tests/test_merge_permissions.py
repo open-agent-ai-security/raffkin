@@ -57,7 +57,7 @@ def write_json(path, obj):
 
 
 def backups(tmp_path):
-    return sorted(p for p in Path(tmp_path).iterdir() if ".socxen-backup-" in p.name)
+    return sorted(p for p in Path(tmp_path).iterdir() if ".raffkin-backup-" in p.name)
 
 
 def gate_on(settings_path):
@@ -262,7 +262,7 @@ def test_write_failure_restores_from_backup(tmp_path, monkeypatch):
     assert json.loads(target.read_text()) == original
     assert len(backups(tmp_path)) == 1
     # and no temp file left behind
-    assert not [p for p in tmp_path.iterdir() if p.name.startswith(".socxen-settings-")]
+    assert not [p for p in tmp_path.iterdir() if p.name.startswith(".raffkin-settings-")]
 
 
 # =====================================================================

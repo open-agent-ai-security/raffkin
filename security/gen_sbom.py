@@ -3,7 +3,7 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Generate socxen's SBOM — the *software* bill of materials — from the bridge's lockfile.
+"""Generate Raffkin's SBOM — the *software* bill of materials — from the bridge's lockfile.
 
 The AI BOM (`gen_aibom.py`) answers "what models, services and AI artifacts does this agent depend
 on". This answers the other question a supply-chain reader asks: **what code actually runs**. The
@@ -102,7 +102,7 @@ def build_sbom(timestamp):
         "type": "application",
         "name": name,
         "version": version,
-        "description": ("socxen plugin — the bundled Exabeam MCP bridge (plugin/connector/exabeam-mcp-bridge.py) "
+        "description": ("Raffkin plugin — the bundled Exabeam MCP bridge (plugin/connector/exabeam-mcp-bridge.py) "
                         "and its locked Python dependency tree. The skills themselves are prompt/markdown and "
                         "carry no runtime dependencies."),
         "licenses": [{"license": {"id": plugin["license"]}}],
@@ -126,10 +126,10 @@ def build_sbom(timestamp):
             if h.startswith("sha256:"):
                 hashes.append({"alg": "SHA-256", "content": h.split(":", 1)[1]})
         registry = (pkg.get("source") or {}).get("registry", "")
-        props = [{"name": "socxen:dependencyKind", "value": "direct" if pname in direct else "transitive"}]
+        props = [{"name": "raffkin:dependencyKind", "value": "direct" if pname in direct else "transitive"}]
         if pname in direct and direct[pname]:
-            props.append({"name": "socxen:specifier", "value": direct[pname]})
-        props.append({"name": "socxen:artifactsLocked", "value": str(len(hashes))})
+            props.append({"name": "raffkin:specifier", "value": direct[pname]})
+        props.append({"name": "raffkin:artifactsLocked", "value": str(len(hashes))})
         comp = {
             "bom-ref": ref, "type": "library", "name": pname, "version": pver, "purl": ref,
             "scope": "required", "hashes": hashes, "properties": props,
@@ -145,18 +145,18 @@ def build_sbom(timestamp):
     metadata = {
         "timestamp": timestamp,
         "tools": {"components": [{"type": "application", "name": "gen_sbom.py",
-                                  "description": "socxen's SBOM generator — reads the uv lockfile, writes CycloneDX",
+                                  "description": "Raffkin's SBOM generator — reads the uv lockfile, writes CycloneDX",
                                   "supplier": SUPPLIER}]},
         "component": root,
         "supplier": SUPPLIER,
         "properties": [
-            {"name": "socxen:lockfile", "value": str(LOCK.relative_to(ROOT))},
-            {"name": "socxen:lockfileSha256", "value": lock_sha},
-            {"name": "socxen:lockRevision", "value": str(lock.get("revision", ""))},
-            {"name": "socxen:requiresPython", "value": lock.get("requires-python", "")},
-            {"name": "socxen:resolutionMarkers", "value": "; ".join(lock.get("resolution-markers", []))},
-            {"name": "socxen:directDependencies", "value": str(len(direct))},
-            {"name": "socxen:lockedPackages", "value": str(len(components))},
+            {"name": "raffkin:lockfile", "value": str(LOCK.relative_to(ROOT))},
+            {"name": "raffkin:lockfileSha256", "value": lock_sha},
+            {"name": "raffkin:lockRevision", "value": str(lock.get("revision", ""))},
+            {"name": "raffkin:requiresPython", "value": lock.get("requires-python", "")},
+            {"name": "raffkin:resolutionMarkers", "value": "; ".join(lock.get("resolution-markers", []))},
+            {"name": "raffkin:directDependencies", "value": str(len(direct))},
+            {"name": "raffkin:lockedPackages", "value": str(len(components))},
         ],
     }
     return {
@@ -172,7 +172,7 @@ def render_html(bom):
     props = {p["name"]: p["value"] for p in m.get("properties", [])}
     esc = lambda s: escape(str(s))  # noqa: E731
     badges = "".join(f'<span class="badge">{esc(t)}</span>' for t in (
-        f'v{root["version"]}', f'CycloneDX {bom["specVersion"]}', f'{props.get("socxen:lockedPackages", "?")} packages',
+        f'v{root["version"]}', f'CycloneDX {bom["specVersion"]}', f'{props.get("raffkin:lockedPackages", "?")} packages',
         f'serial {bom["serialNumber"].split(":")[-1][:8]}…'))
     dep_of = {d["ref"]: d["dependsOn"] for d in bom["dependencies"]}
     rows = []
@@ -180,12 +180,12 @@ def render_html(bom):
         first = True
         for c in bom["components"]:
             cp = {p["name"]: p["value"] for p in c.get("properties", [])}
-            if cp.get("socxen:dependencyKind") != kind:
+            if cp.get("raffkin:dependencyKind") != kind:
                 continue
             if first:
                 label = "Direct dependencies (declared in the bridge's PEP 723 header)" if kind == "direct" else "Transitive dependencies (resolved by the lockfile)"
                 rows.append(f'<tr><td class="cat" colspan="2">{esc(label)}</td></tr>'); first = False
-            spec = f' <span class="meta">{esc(cp["socxen:specifier"])}</span>' if cp.get("socxen:specifier") else ""
+            spec = f' <span class="meta">{esc(cp["raffkin:specifier"])}</span>' if cp.get("raffkin:specifier") else ""
             deps = ", ".join(esc(d.split("/", 1)[1]) for d in dep_of.get(c["bom-ref"], [])) or "—"
             hashes = "".join(f'<div class="meta"><code>sha256:{esc(h["content"])}</code></div>' for h in c.get("hashes", [])[:1])
             more = f'<div class="meta">+ {len(c["hashes"]) - 1} more locked artifact hash(es)</div>' if len(c.get("hashes", [])) > 1 else ""
@@ -200,16 +200,16 @@ def render_html(bom):
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Copyright 2026 Exabeam, Inc. SPDX-License-Identifier: Apache-2.0 -->
-<title>socxen — Software Bill of Materials</title><style>{_CSS}</style></head>
+<title>Raffkin — Software Bill of Materials</title><style>{_CSS}</style></head>
 <body>
 <header><div class="wrap">
-  <h1><span class="sc">socxen</span> — Software Bill of Materials</h1>
+  <h1><span class="sc">Raffkin</span> — Software Bill of Materials</h1>
   <p class="tag">{esc(root["description"])}</p>
   <div class="badges">{badges}</div>
 </div></header>
 <div class="wrap">
   <p class="lead">This is the <b>software</b> BOM: every Python package the bundled Exabeam MCP bridge runs,
-  at the exact version and artifact hashes pinned in <code>{esc(props.get("socxen:lockfile", ""))}</code>.
+  at the exact version and artifact hashes pinned in <code>{esc(props.get("raffkin:lockfile", ""))}</code>.
   It is generated from that lockfile by <code>security/gen_sbom.py</code> and checked for drift in CI, so it
   cannot describe a tree the lock does not. The companion <a href="aibom.html">AI Bill of Materials</a>
   covers the model, the services and the AI artifacts.</p>
@@ -262,7 +262,7 @@ def main(argv):
     HTML_OUT.write_text(render_html(bom))
     props = {p["name"]: p["value"] for p in bom["metadata"]["properties"]}
     print(f"wrote {JSON_OUT.relative_to(ROOT)} and {HTML_OUT.relative_to(ROOT)} "
-          f"({len(bom['components'])} locked packages, {props['socxen:directDependencies']} direct)")
+          f"({len(bom['components'])} locked packages, {props['raffkin:directDependencies']} direct)")
     return 0
 
 

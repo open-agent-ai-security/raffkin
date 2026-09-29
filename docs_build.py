@@ -9,7 +9,7 @@
 
 BUILD-ONLY: not part of the shipped plugin. Mirrors praxen/docs_build.py so the sister sites read as one
 family (same left-nav shell, same theme inlined per page, same SEO/GEO head), with one difference:
-socxen's docs live in several places — the docs front page is plugin/docs/index.md (the operator
+Raffkin's docs live in several places — the docs front page is plugin/docs/index.md (the operator
 README stays on GitHub), the guides are plugin/docs/*.md, the methodology is each skill's SKILL.md, and the assurance record is security/ —
 so PAGES lists (source path, output name, nav label) and links are rewritten per source directory.
 The guide is USER documentation only: install, use, what happens to your data, the audit trail, and a
@@ -29,12 +29,12 @@ import markdown
 
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "guide"
-THEME_CSS = ROOT / "assets" / "socxen-theme.css"
+THEME_CSS = ROOT / "assets" / "raffkin-theme.css"
 REPO = "https://github.com/open-agent-ai-security/socxen"
 RAW = "https://raw.githubusercontent.com/open-agent-ai-security/socxen/main"
 SITE_URL = "https://open-agent-ai-security.github.io/socxen/"
-SOCIAL_IMAGE = "graphics/socxen-social.png"
-SITE_NAME = "socxen"
+SOCIAL_IMAGE = "graphics/raffkin-social.png"
+SITE_NAME = "Raffkin"
 
 # (source path from repo root, output name in guide/, nav label)
 PAGES = [
@@ -153,13 +153,13 @@ def _jsonld_str(v): return json.dumps(v).replace("</", "<\\/")
 
 def page_html(theme_css, title, nav, body, src, out_name, description, body_end=""):
     edit_url = f"{REPO}/blob/main/{src}"
-    full_title = f"{html.escape(title)} · socxen Docs"
+    full_title = f"{html.escape(title)} · Raffkin Docs"
     canonical = f"{SITE_URL}guide/{out_name}.html"
     desc_attr = html.escape(description, quote=True)
     image_url = f"{SITE_URL}{SOCIAL_IMAGE}"
     json_ld = f"""<script type="application/ld+json">
 {{ "@context": "https://schema.org", "@type": "TechArticle", "headline": {_jsonld_str(title)}, "description": {_jsonld_str(description)},
-  "url": {_jsonld_str(canonical)}, "isPartOf": {{ "@type": "WebSite", "name": "socxen", "url": {_jsonld_str(SITE_URL)} }},
+  "url": {_jsonld_str(canonical)}, "isPartOf": {{ "@type": "WebSite", "name": "Raffkin", "url": {_jsonld_str(SITE_URL)} }},
   "publisher": {{ "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" }} }}
 </script>"""
     return f"""<!DOCTYPE html>
@@ -173,7 +173,7 @@ def page_html(theme_css, title, nav, body, src, out_name, description, body_end=
 <link rel="canonical" href="{canonical}">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="socxen">
+<meta property="og:site_name" content="Raffkin">
 <meta property="og:title" content="{full_title}">
 <meta property="og:description" content="{desc_attr}">
 <meta property="og:url" content="{canonical}">
@@ -189,7 +189,7 @@ def page_html(theme_css, title, nav, body, src, out_name, description, body_end=
 <body class="docs-page">
 <header class="docs-top">
   <div class="docs-top-inner">
-    <a class="docs-brand" href="../"><img src="../graphics/brand/socxen-wordmark-dark-background.svg" alt="socxen" width="117" height="30"></a>
+    <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
       <a class="btn btn-ghost" href="{REPO}" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>

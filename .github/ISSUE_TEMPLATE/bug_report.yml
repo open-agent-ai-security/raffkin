@@ -1,16 +1,16 @@
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
 name: Bug report
-description: Something in socxen didn't work — install, investigation, guardrails, or docs.
+description: Something in Raffkin didn't work — install, investigation, guardrails, or docs.
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: >-
-        Thanks for testing socxen. Two things before you file: **security problems**
+        Thanks for testing Raffkin. Two things before you file: **security problems**
         (gate bypass, token leakage, governance drift) go through a
         [private security advisory](https://github.com/open-agent-ai-security/socxen/security/advisories/new),
-        not a public issue — see SECURITY.md. And since socxen works on SIEM data:
+        not a public issue — see SECURITY.md. And since Raffkin works on SIEM data:
         **never paste real alert contents, usernames, hostnames, IPs, tokens, or credentials** —
         redact or substitute before posting.
   - type: textarea
@@ -19,7 +19,7 @@ body:
       label: What happened?
       description: What did you do, what did you expect, and what happened instead?
       placeholder: |
-        1. Asked socxen to "investigate alert <id>"
+        1. Asked Raffkin to "investigate alert <id>"
         2. Expected it to pull the threat timeline
         3. Instead it ...
     validations:
@@ -29,9 +29,9 @@ body:
     attributes:
       label: Versions
       description: >-
-        Paste the socxen line from `claude plugin list`, plus `claude --version` and your OS.
+        Paste the Raffkin line from `claude plugin list`, plus `claude --version` and your OS.
       placeholder: |
-        socxen@open-agent-ai-security Version: 0.6.5 Scope: user
+        raffkin@open-agent-ai-security Version: 0.6.5 Scope: user
         claude 2.1.220
         macOS 15.5
     validations:

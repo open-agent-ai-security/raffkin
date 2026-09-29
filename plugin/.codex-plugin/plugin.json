@@ -1,7 +1,7 @@
 {
-  "name": "socxen",
+  "name": "raffkin",
   "version": "0.9.0",
-  "description": "socxen — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
+  "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
   "author": {
     "name": "Exabeam",
     "url": "https://www.exabeam.com/"
@@ -21,7 +21,7 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.codex.json",
   "interface": {
-    "displayName": "socxen — Agentic SOC Analyst",
+    "displayName": "Raffkin — Agentic SOC Analyst",
     "shortDescription": "Triage Exabeam New-Scale alerts and cases end to end — evidence, verdict, and a guarded write path.",
     "category": "Security"
   }

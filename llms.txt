@@ -1,4 +1,4 @@
-# socxen
+# Raffkin
 
 > An open-source agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex. Three skills (soc-investigate, triage-cases, rule-tuning) over one guarded Exabeam MCP bridge. Engineered for the fact that SIEM data is untrusted input: deterministic guardrails on read and write, a human gate on dismiss/close, containment recommended but never executed, and a release process of behavior verification, red team, and an AI bill of materials. Apache-2.0, sponsored by Exabeam, part of the Open Agent and AI Security Community.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""socxen's human-in-the-loop gate for Claude Code, shipped INSIDE the plugin as a PreToolUse hook.
+"""Raffkin's human-in-the-loop gate for Claude Code, shipped INSIDE the plugin as a PreToolUse hook.
 
 Why this exists. Claude Code lets a plugin ship code that takes part in permission decisions, but not
 permission rules: rules are the operator's to set. A PreToolUse hook is active the moment the plugin is enabled, its
@@ -10,11 +10,11 @@ mode and is refused when no human is present — the same posture the Codex pack
 `default_tools_approval_mode`. Verified live on 2026-09-04 (issue #9's two open questions).
 
 What it decides, keyed on the BARE tool name (the last `__` segment). `deny` and `ask` apply equally to
-every Exabeam-named server -- the bundled server under any plugin key (`mcp__plugin_socxen_exabeam__…`,
+every Exabeam-named server -- the bundled server under any plugin key (`mcp__plugin_raffkin_exabeam__…`,
 `mcp__plugin_soc_exabeam__…`), the manually wired `mcp__exabeam__…`, a third party's -- because tightening
 is always safe; `allow` applies to the bundled bridge only (below):
 
-    deny tier  → deny   containment: socxen never executes it, it recommends it
+    deny tier  → deny   containment: Raffkin never executes it, it recommends it
     ask tier   → ask    dismiss / close (and send_email): an explicit human yes, every time
     allow tier → allow  reads and the two escalation writes (create case, write notes): safe operations
                         run without a prompt, so an install needs NOTHING merged — the same tools Codex
@@ -41,10 +41,10 @@ The tiers come from the file that ships beside this hook — `skills/soc-investi
 snippet and the Codex map cannot disagree. If the tiers cannot be read at all, every tool asks: the human
 decides interactively, and headless the call is refused. The gate never fails open.
 
-Each decision is appended, best-effort, to `~/.socxen/gate.jsonl` with the call's SAFE target fields —
+Each decision is appended, best-effort, to `~/.raffkin/gate.jsonl` with the call's SAFE target fields —
 identifiers and dispositions only (alertId, caseId, alertStatus, stage, …), never free text — so a
 refused attempt reads as "tried to dismiss alert X as false positive", not just "tried update_alert".
-The near-miss is the record that matters in a SOC (`SOCXEN_GATE_LOG=off` disables;
+The near-miss is the record that matters in a SOC (`RAFFKIN_GATE_LOG=off` disables;
 another path overrides) — a first-party record of what was attempted and what the gate said, including
 attempts that never reached the bridge (#87).
 
@@ -60,7 +60,7 @@ The two escalation writes are allowed on a budget (#247): per host session, the 
 writes run without a prompt and a third asks, and a second `create_case` asks whatever the count. One
 investigation opens at most one case and writes its note; a sweep that starts acting on its queue meets a
 prompt on its third write. The count is the hook's own (keyed on the host's session id, kept in a small
-state file under ~/.socxen/gate-sessions/, never in the decision log, which can be switched off), so there
+state file under ~/.raffkin/gate-sessions/, never in the decision log, which can be switched off), so there
 is nothing for an injected instruction to talk it out of. No session id, or a state file that cannot be
 read or written, means ask: the budget never fails open.
 
@@ -118,7 +118,7 @@ def plugin_name(plugin_root: Path):
             pass
     manifest, ident = names.get(".claude-plugin/plugin.json"), names.get("identity.json")
     if manifest and ident and manifest != ident:
-        sys.stderr.write(f"socxen gate: identity.json names this plugin {ident!r} but the manifest Claude Code reads "
+        sys.stderr.write(f"Raffkin gate: identity.json names this plugin {ident!r} but the manifest Claude Code reads "
                          f"names it {manifest!r} — using the manifest; regenerate with gen_identity.py\n")
     return manifest or ident
 
@@ -144,14 +144,14 @@ def decide(tool_name: str, tiers, *, bundled: bool) -> tuple[str, str]:
     bridge alone -- elsewhere an allow-tier tool gets NO decision and the operator's rules apply."""
     name = bare(tool_name)
     if name in tiers["deny"]:
-        return "deny", f"socxen gate: {name} is a containment action. socxen recommends containment for a human to perform and never executes it."
+        return "deny", f"Raffkin gate: {name} is a containment action. Raffkin recommends containment for a human to perform and never executes it."
     if name in tiers["ask"]:
-        return "ask", f"socxen gate: {name} dismisses or closes. It needs the analyst's explicit yes — ask, and wait."
+        return "ask", f"Raffkin gate: {name} dismisses or closes. It needs the analyst's explicit yes — ask, and wait."
     if name in tiers["allow"]:
         if bundled:
-            return "allow", f"socxen gate: {name} is a read or an escalation write."
-        return NO_DECISION, f"socxen gate: {name} is a read or an escalation write, but this is not the bundled bridge — no decision; the operator's own permission rules apply."
-    return "ask", f"socxen gate: {name} is not classified in this release's permission tiers, so it asks rather than inheriting the session default."
+            return "allow", f"Raffkin gate: {name} is a read or an escalation write."
+        return NO_DECISION, f"Raffkin gate: {name} is a read or an escalation write, but this is not the bundled bridge — no decision; the operator's own permission rules apply."
+    return "ask", f"Raffkin gate: {name} is not classified in this release's permission tiers, so it asks rather than inheriting the session default."
 
 
 # The SAFE fields of a call worth recording beside the decision — the same allowlist the bridge's audit
@@ -198,19 +198,19 @@ def _rotate(path: Path) -> None:
 
 
 def log_decision(record: dict) -> None:
-    target = os.environ.get("SOCXEN_GATE_LOG", "").strip()
+    target = os.environ.get("RAFFKIN_GATE_LOG", "").strip()
     if target.lower() == "off":
         # The off switch discloses itself, as the telemetry shim's does — a silent switch is how a
         # forensic record disappears without anyone noticing.
-        print("socxen gate: decision log is OFF (SOCXEN_GATE_LOG=off) — this decision is not recorded", file=sys.stderr)
+        print("Raffkin gate: decision log is OFF (RAFFKIN_GATE_LOG=off) — this decision is not recorded", file=sys.stderr)
         return
     try:
         # Inside the guard: expanduser() on "~nosuchuser" and Path.home() with no HOME / unknown uid both
         # raise, and a crash here would turn "logging failed" into "every call blocked" via `|| exit 2`.
-        path = Path(target).expanduser() if target else Path.home() / ".socxen" / "gate.jsonl"
+        path = Path(target).expanduser() if target else Path.home() / ".raffkin" / "gate.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            limit = int(os.environ.get("SOCXEN_GATE_LOG_MAX_BYTES", LOG_MAX_BYTES))
+            limit = int(os.environ.get("RAFFKIN_GATE_LOG_MAX_BYTES", LOG_MAX_BYTES))
         except ValueError:
             limit = LOG_MAX_BYTES
         if path.exists() and path.stat().st_size >= limit:
@@ -230,8 +230,8 @@ _SESSION_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 
 
 def _state_dir() -> Path:
-    target = os.environ.get("SOCXEN_GATE_STATE_DIR", "").strip()
-    return Path(target).expanduser() if target else Path.home() / ".socxen" / "gate-sessions"
+    target = os.environ.get("RAFFKIN_GATE_STATE_DIR", "").strip()
+    return Path(target).expanduser() if target else Path.home() / ".raffkin" / "gate-sessions"
 
 
 def spend_write_budget(event, name: str) -> tuple[bool, str]:
@@ -240,7 +240,7 @@ def spend_write_budget(event, name: str) -> tuple[bool, str]:
     identify the session or to read and write its count returns (False, reason): ask, never allow."""
     sid = str(event.get("session_id") or "").strip()
     if not _SESSION_ID.match(sid):
-        return False, f"socxen gate: {name} is an escalation write, and without a session id the hook cannot count them; asking rather than allowing."
+        return False, f"Raffkin gate: {name} is an escalation write, and without a session id the hook cannot count them; asking rather than allowing."
     try:
         d = _state_dir()
         d.mkdir(parents=True, exist_ok=True)
@@ -253,17 +253,17 @@ def spend_write_budget(event, name: str) -> tuple[bool, str]:
             state = json.loads(raw) if raw.strip() else {}
             writes, cases = int(state.get("writes", 0)), int(state.get("cases", 0))
             if writes >= WRITE_BUDGET:
-                return False, (f"socxen gate: {name} would be escalation write {writes + 1} in this session; the first "
+                return False, (f"Raffkin gate: {name} would be escalation write {writes + 1} in this session; the first "
                                f"{WRITE_BUDGET} run without a prompt, and past that the analyst decides. Ask, and wait.")
             if name == "exabeam_create_case" and cases >= CASE_BUDGET:
-                return False, (f"socxen gate: {name} would open case {cases + 1} in this session; one investigation "
+                return False, (f"Raffkin gate: {name} would open case {cases + 1} in this session; one investigation "
                                "opens one case, so another needs the analyst's yes. Ask, and wait.")
             state = {"writes": writes + 1, "cases": cases + (name == "exabeam_create_case"), "updated": int(time.time())}
             fh.seek(0); fh.truncate(); fh.write(json.dumps(state)); fh.flush()
         _prune(d)
         return True, ""
     except Exception as e:  # noqa: BLE001 — cannot count → the human decides
-        return False, f"socxen gate: {name} is an escalation write and the session count could not be read ({type(e).__name__}); asking rather than allowing."
+        return False, f"Raffkin gate: {name} is an escalation write and the session count could not be read ({type(e).__name__}); asking rather than allowing."
 
 
 def _prune(d: Path) -> None:
@@ -345,7 +345,7 @@ def main(argv=None) -> int:
     except Exception as e:  # noqa: BLE001 — cannot classify → the human decides; headless → refused
         if post:
             return 0                       # a record we cannot write is not a decision to make
-        decision, reason = "ask", f"socxen gate could not evaluate this call ({type(e).__name__}); asking rather than allowing."
+        decision, reason = "ask", f"Raffkin gate could not evaluate this call ({type(e).__name__}); asking rather than allowing."
     record = {"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
               "tool": tool, "decision": decision, "reason": reason, **ctx}
     if target:

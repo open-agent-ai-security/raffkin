@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Derive plugin/.mcp.codex.json from the Claude Code permissions snippet.
 
-socxen's human-in-the-loop gate is expressed twice, because the two host agents
+Raffkin's human-in-the-loop gate is expressed twice, because the two host agents
 enforce it in different places:
 
   Claude Code  settings.snippet.json -> generated from permissions.json, the tier file the bundled

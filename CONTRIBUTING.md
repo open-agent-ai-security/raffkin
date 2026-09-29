@@ -3,17 +3,17 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Contributing to socxen
+# Contributing to Raffkin
 
-Thanks for helping improve socxen. Contributions are welcome via pull request.
-socxen is a small, safety-sensitive project — an agentic SOC skill suite whose
+Thanks for helping improve Raffkin. Contributions are welcome via pull request.
+Raffkin is a small, safety-sensitive project — an agentic SOC skill suite whose
 whole value is a disciplined investigation and a **human-gated** dismiss/close.
 So the bar for changes that touch the governance surface is high, and a couple of
 conventions below exist specifically to keep that gate real.
 
 ## License
 
-socxen is licensed under the [Apache License, Version 2.0](plugin/LICENSE). By
+Raffkin is licensed under the [Apache License, Version 2.0](plugin/LICENSE). By
 contributing, you agree that your contributions are licensed under the same terms.
 
 ## Developer Certificate of Origin (DCO)
@@ -84,7 +84,7 @@ By making a contribution to this project, I certify that:
 Branch from and target **`dev`**, not `main`.
 
 `main` is the **live install channel**: a fresh
-`claude plugin marketplace add open-agent-ai-security/plugins && claude plugin install socxen@open-agent-ai-security`
+`claude plugin marketplace add open-agent-ai-security/plugins && claude plugin install raffkin@open-agent-ai-security`
 pulls `main` at HEAD (the community marketplace pins this repo's `main` branch), so
 anything merged to `main` reaches installers immediately.
 `main` therefore receives only deliberate, re-verified releases — everyday work
@@ -104,7 +104,7 @@ looks like "nothing to do" but actually means **nothing has run yet**, including
 DCO sign-off check. It is not a failure and it is not something you can fix from your
 side; a maintainer will approve the run. Don't read an empty check list as a pass.
 
-No write access? **Fork** socxen, branch from `dev` in your fork, and open the PR
+No write access? **Fork** Raffkin, branch from `dev` in your fork, and open the PR
 against `dev` here — fork PRs run the same CI and DCO checks.
 
 The invariant we hold: **`main` is always an ancestor of `dev`** — `dev` is `main`
@@ -159,12 +159,12 @@ We deliberately keep the rest of the release machinery light for now: **no
 tag-driven release automation**. Dependabot opens weekly pin bumps for the GitHub
 Actions workflows against `dev` (label `dependencies`); the connector's Python
 dependencies are locked by `uv` and audited in CI, not bumped by bot. Tagged
-releases arrive when socxen has a real release cadence; until then the rules above
+releases arrive when Raffkin has a real release cadence; until then the rules above
 are the whole model.
 
 ## Releasing and rolling back
 
-*(Maintainers.)* socxen cuts releases as `dev → main` merge commits — no tags, no
+*(Maintainers.)* Raffkin cuts releases as `dev → main` merge commits — no tags, no
 release artifacts. Because fresh installs pull `main@HEAD`, **`main` is the live
 release channel**: whatever lands there reaches new installers immediately.
 

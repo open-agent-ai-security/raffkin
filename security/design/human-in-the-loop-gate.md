@@ -18,7 +18,7 @@ Three tiers, one source, enforced by the **host agent** rather than by the model
 
 | Tier | Tools | Decision | Why |
 |---|---|---|---|
-| **deny** (70) | every containment, detection-rule-write and context-table-write verb the Exabeam MCP exposes or may expose — 35 verbs, each listed in both its `exabeam_`-prefixed and bare spelling | refused outright | socxen recommends containment for a human to perform in EDR/IAM and never executes it; detection engineering applies rule and context-table changes |
+| **deny** (70) | every containment, detection-rule-write and context-table-write verb the Exabeam MCP exposes or may expose — 35 verbs, each listed in both its `exabeam_`-prefixed and bare spelling | refused outright | Raffkin recommends containment for a human to perform in EDR/IAM and never executes it; detection engineering applies rule and context-table changes |
 | **ask** (3) | `exabeam_update_alert`, `exabeam_update_case`, `exabeam_send_email` | an explicit human yes, every time; refused when no human is present | dismiss and close are the irreversible outcomes of an investigation, and mail leaves the platform |
 | **allow** (21) | the reads, plus the two escalation writes `create_case` and `create_case_notes` | prompt-free; the escalation writes on a per-session budget (two, then ask; a second case asks) | a fresh install must be useful immediately without weakening anything; a single investigation's escalation never prompts (a prompt on escalation teaches the model to avoid it), and a run of them does (#247) |
 | *unclassified* | any tool the remote MCP grows that this release has not tiered | asks | inherits the safe default, not the session default |
@@ -26,7 +26,7 @@ Three tiers, one source, enforced by the **host agent** rather than by the model
 The counts are the shipped tier file's; the invariant tests pin that every live tool is in exactly one
 tier and that the generated artifacts agree with it. One host-side difference: Codex prompts on
 `create_case` and `create_case_notes` regardless, because Exabeam's own annotation of those two tools
-marks them destructive — that is the platform's annotation, not socxen's tier, and the guides say so.
+marks them destructive — that is the platform's annotation, not Raffkin's tier, and the guides say so.
 
 ## 2. Why a hook, and why it ships on
 
@@ -56,7 +56,7 @@ The hook matches on the bare tool name (the last `__` segment), so a renamed ser
 between tiers. Its tiers cover two different sets of servers:
 
 - **`deny` and `ask` apply to every Exabeam-named server** — the bundled bridge under any plugin key
-  (`mcp__plugin_socxen_exabeam__…`, `mcp__plugin_soc_exabeam__…` after a vendor re-key), a manual
+  (`mcp__plugin_raffkin_exabeam__…`, `mcp__plugin_soc_exabeam__…` after a vendor re-key), a manual
   `claude mcp add exabeam …` registration, a third party's server — because tightening is always safe.
   The matcher in `hooks.json` and the hook's own `is_ours` test are both case-insensitive on the word
   `exabeam` (Praxen finding 2026-09-07-004).
@@ -104,14 +104,14 @@ plugin) moves the allow's prefix with it.
 ## 6. What the gate records
 
 Each decision — including refusals and the near-miss that never reached the bridge — is appended
-best-effort to `~/.socxen/gate.jsonl` with the call's **safe target fields** only: identifiers and
+best-effort to `~/.raffkin/gate.jsonl` with the call's **safe target fields** only: identifiers and
 dispositions (`alertId`, `caseId`, `alertStatus`, `stage`, …), never free text, values capped. So a
 refused attempt reads as "tried to dismiss alert X as false positive", which is the record that matters
 in a SOC (#87). The same hook runs again after the call (`PostToolUse`, invoked with `--post`) and
 appends `approved` for an ask-tier call that completed — inferred from completion, an ask completes only
 on a yes — or `ran_unasked` when the session's permission mode meant nobody could answer, and
 `ran_despite_deny` for a deny-tier tool that ran; never a decision, never stdout (#5).
-`SOCXEN_GATE_LOG=off` disables it; the bridge's audit trail records the calls that do
+`RAFFKIN_GATE_LOG=off` disables it; the bridge's audit trail records the calls that do
 reach it ([logging guide](../../plugin/docs/logging.md)).
 
 ## 7. The model-side layer beneath

@@ -29,7 +29,7 @@ too consequential to leave to a prompt alone.
 ## Preflight — is the Exabeam MCP connected?
 
 Everything here runs through the **Exabeam New-Scale MCP** (the `exabeam_*` tools, e.g.
-`exabeam_search_alerts`, `exabeam_get_alert_details`). socxen **bundles** this connection — it
+`exabeam_search_alerts`, `exabeam_get_alert_details`). Raffkin **bundles** this connection — it
 auto-registers when the plugin is installed — so it's usually already there. Confirm you can see
 `exabeam_*` tools; if unsure, ask the analyst to run `claude mcp list` (Codex: `codex mcp get exabeam`) in a terminal and look for
 `exabeam`.
@@ -37,7 +37,7 @@ auto-registers when the plugin is installed — so it's usually already there. C
 If it's **not** connected, do not improvise, guess, or invent alert data. It's almost always one of two
 setup gaps. Stop and give the user this — calmly; it's setup, not an error:
 
-> **Exabeam not connected.** socxen ships the connection, but it needs two things on your machine:
+> **Exabeam not connected.** Raffkin ships the connection, but it needs two things on your machine:
 > 1. **`uv`** installed (it runs the bundled bridge) — https://docs.astral.sh/uv/
 > 2. **Your credentials** in `~/.exabeam-mcp.env`:
 >    ```

@@ -6,7 +6,7 @@
 # Support
 
 <!-- community-only -->
-socxen is an open-source project, published by the
+Raffkin is an open-source project, published by the
 [Open Agent and AI Security community](https://open-agent-ai-security.github.io/) and sponsored by
 [Exabeam](https://www.exabeam.com/). It is **community supported, as is**, under the
 [Apache-2.0 license](https://github.com/open-agent-ai-security/socxen/blob/main/LICENSE). There is no
@@ -14,7 +14,7 @@ service level, no support desk and no warranty; the people who build it answer q
 <!-- /community-only -->
 <!-- distribution-only
 This copy is distributed under the terms in its `LICENSE` file, by the organization named there, which
-also provides its support. The software it includes is socxen, open source under the Apache License 2.0
+also provides its support. The software it includes is Raffkin, open source under the Apache License 2.0
 (see `LICENSE-APACHE`); its source is at
 [github.com/open-agent-ai-security/socxen](https://github.com/open-agent-ai-security/socxen).
 /distribution-only -->

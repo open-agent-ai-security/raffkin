@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Security · socxen Docs</title>
-<meta name="description" content="Everything socxen does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
+<title>Security · Raffkin Docs</title>
+<meta name="description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="socxen">
-<meta property="og:title" content="Security · socxen Docs">
-<meta property="og:description" content="Everything socxen does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
+<meta property="og:site_name" content="Raffkin">
+<meta property="og:title" content="Security · Raffkin Docs">
+<meta property="og:description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
 <meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html">
-<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Security · socxen Docs">
-<meta name="twitter:description" content="Everything socxen does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
-<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta name="twitter:title" content="Security · Raffkin Docs">
+<meta name="twitter:description" content="Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and…">
+<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
 <script type="application/ld+json">
-{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Security", "description": "Everything socxen does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and\u2026",
-  "url": "https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html", "isPartOf": { "@type": "WebSite", "name": "socxen", "url": "https://open-agent-ai-security.github.io/socxen/" },
+{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Security", "description": "Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on consequential actions, the guardrails on what it reads and\u2026",
+  "url": "https://open-agent-ai-security.github.io/socxen/guide/security-guardrails.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/socxen/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
 <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -28,10 +28,10 @@
   Copyright 2026 Exabeam, Inc.
   SPDX-License-Identifier: Apache-2.0
 
-  socxen shared design system — single source of truth for the visual theme.
+  Raffkin shared design system — single source of truth for the visual theme.
   Derived from the Praxen design system (open-agent-ai-security/praxen,
   assets/praxen-theme.css) so the three project sites read as one family;
-  only the accent hue differs: Praxen orange → socxen lion gold.
+  only the accent hue differs: Praxen orange → Raffkin amber-gold.
 
   Consumed by two surfaces:
     - index.html / news.html (the marketing pages) LINK this file.
@@ -52,18 +52,18 @@
 
 /* ---------- 2 · Design tokens ---------- */
 :root {
-  --bg:          #0b0f1a;   /* a hair warmer than Praxen's navy — savanna night */
-  --bg-2:        #0e1320;
+  --bg:          #080a0d;   /* graphite-black, warmed locally by the amber brand glow */
+  --bg-2:        #101217;
   --panel:       rgba(255, 255, 255, 0.035);
   --panel-2:     rgba(255, 255, 255, 0.05);
   --border:      rgba(255, 255, 255, 0.09);
-  --border-hi:   rgba(242,189,92, 0.45);
-  --text:        #e9eff8;
-  --muted:       #9aabc0;
-  --muted-2:     #6f819a;
-  --gold:      #e6a23c;
-  --gold-2:    #f2bd5c;
-  --gold-deep: #c4841c;
+  --border-hi:   rgba(255,216,74, 0.45);
+  --text:        #f5f7fa;
+  --muted:       #a6b0bf;
+  --muted-2:     #707b8c;
+  --gold:        #f2b705;
+  --gold-2:      #ffd84a;
+  --gold-deep:   #b87400;
   --accent-2:    #2fbf9f;   /* signal teal — second hue (clean/resisted, terminal green) */
   --green:       #67d98b;
   --maxw:        1140px;
@@ -254,7 +254,7 @@ img { max-width: 100%; display: block; }
 <body class="docs-page">
 <header class="docs-top">
   <div class="docs-top-inner">
-    <a class="docs-brand" href="../"><img src="../graphics/brand/socxen-wordmark-dark-background.svg" alt="socxen" width="117" height="30"></a>
+    <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
       <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
@@ -265,31 +265,31 @@ img { max-width: 100%; display: block; }
   <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html" class="active">Security</a><ul class="docs-subnav"><li><a href="#a-human-before-anything-is-dismissed-or-closed">A human before anything is dismissed or closed</a></li><li><a href="#what-it-reads-is-screened">What it reads is screened</a></li><li><a href="#what-it-writes-is-neutralized">What it writes is neutralized</a></li><li><a href="#what-it-did-is-on-the-record">What it did is on the record</a></li><li><a href="#where-your-data-goes">Where your data goes</a></li><li><a href="#how-it-is-tested">How it is tested</a></li><li><a href="#what-these-controls-do-not-cover">What these controls do not cover</a></li><li><a href="#advanced-mirroring-the-tiers-in-host-policy">Advanced: mirroring the tiers in host policy</a></li></ul></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="security">Security</h1>
-<p>Everything socxen does to be safe to point at a live tenant, on one page: the human gate on
+<p>Everything Raffkin does to be safe to point at a live tenant, on one page: the human gate on
 consequential actions, the guardrails on what it reads and writes, the audit trail, how it is tested,
 and what it deliberately does not cover.</p>
 <p>The starting point is that <strong>your log data is untrusted input</strong>. Anyone who can get an event into your
 telemetry — a phishing sender, a malware sample, a probing attacker — can plant something in it on
 purpose, knowing an analyst or an AI agent will read it later: an instruction hidden in invisible
-characters, a link that should never be clicked, a formula that runs when a report is exported. socxen
+characters, a link that should never be clicked, a formula that runs when a report is exported. Raffkin
 assumes that content is there, and every control below exists so that it cannot do harm through
-socxen.</p>
+Raffkin.</p>
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/open-agent-ai-security/socxen/main/plugin/docs/diagram/guardrails-dark.png">
-    <img alt="socxen guardrail bridge: your agent (Claude Code or Codex) talks to a local bridge MCP that proxies to the remote Exabeam MCP. On writes, neutralize_output defangs formulas and links and redacts secrets/structured identifiers in free-text fields (fail-closed); on reads, canonicalize strips invisible smuggling before the agent reasons (fail-closed: a block it cannot process is withheld); observra records a metadata-only audit trail (never note text, evidence or payloads)." src="https://raw.githubusercontent.com/open-agent-ai-security/socxen/main/plugin/docs/diagram/guardrails-light.png" width="100%">
+    <img alt="Raffkin guardrail bridge: your agent (Claude Code or Codex) talks to a local bridge MCP that proxies to the remote Exabeam MCP. On writes, neutralize_output defangs formulas and links and redacts secrets/structured identifiers in free-text fields (fail-closed); on reads, canonicalize strips invisible smuggling before the agent reasons (fail-closed: a block it cannot process is withheld); observra records a metadata-only audit trail (never note text, evidence or payloads)." src="https://raw.githubusercontent.com/open-agent-ai-security/socxen/main/plugin/docs/diagram/guardrails-light.png" width="100%">
   </picture>
 </p>
 
 <h2 id="a-human-before-anything-is-dismissed-or-closed">A human before anything is dismissed or closed</h2>
 <p>Dismissing an alert or closing a case is the one action where an AI mistake does real harm — a genuine
-threat suppressed. socxen holds it behind <strong>two locks</strong>, both on from the moment you install:</p>
+threat suppressed. Raffkin holds it behind <strong>two locks</strong>, both on from the moment you install:</p>
 <ul>
 <li><strong>The host's gate.</strong> On Claude Code, a hook that ships inside the plugin stops the dismiss or close
   call and asks you; it holds even when Claude Code is run with permissions skipped, and when no human is
   present the call is refused. On Codex, the plugin ships the same rule as tool-approval policy, and Codex
   asks before every write and cancels it when nobody is there to answer.</li>
-<li><strong>The skill asking you.</strong> Before it dismisses or closes, socxen asks in plain words — <em>"Dismiss alert
+<li><strong>The skill asking you.</strong> Before it dismisses or closes, Raffkin asks in plain words — <em>"Dismiss alert
   X as a false positive? (yes / no)"</em> — and waits. Say no, or nothing, and nothing happens.</li>
 </ul>
 <p>Both must open. Outbound mail (<code>exabeam_send_email</code>) is behind the same gate, and the Exabeam service
@@ -299,12 +299,12 @@ Claude Code the gate allows <strong>two</strong> of them per session; a third, o
 session, asks you. A single investigation opens at most one case and documents it, so the prompt only
 appears when something is acting at scale, such as a queue sweep talked into opening a case for every
 item.</p>
-<p><strong>What socxen never does:</strong> isolate a host, disable an account, block an address, kill a process — any
+<p><strong>What Raffkin never does:</strong> isolate a host, disable an account, block an address, kill a process — any
 containment. The Exabeam MCP exposes no such tools, and the gate refuses them outright as a second
 safeguard. When containment is warranted, the report <em>recommends</em> it for you to carry out in your EDR
 or IAM. Rule changes are the same: the tuning skill proposes, and the rule-write tools are refused.</p>
 <h2 id="what-it-reads-is-screened">What it reads is screened</h2>
-<p>Before socxen reasons over any alert, case or event, the text is screened for <strong>hidden-character
+<p>Before Raffkin reasons over any alert, case or event, the text is screened for <strong>hidden-character
 smuggling</strong> — zero-width characters, direction-reversing marks and other invisible codes that let a line
 read one way to a human and another way to software. The obvious smuggling is stripped; legitimate text
 in any language is left alone. The tool descriptions the Exabeam MCP provides are screened the same way,
@@ -312,43 +312,43 @@ and a tool whose definition cannot be screened is withheld for the session rathe
 <p>If the screen cannot process a piece of a result, that piece is withheld and the report names the gap;
 unscreened platform text never reaches the model.</p>
 <h2 id="what-it-writes-is-neutralized">What it writes is neutralized</h2>
-<p>When socxen writes back to Exabeam — a case note, an alert update, an email — it makes sure it never
+<p>When Raffkin writes back to Exabeam — a case note, an alert update, an email — it makes sure it never
 re-arms a payload that was sitting in the original data:</p>
 <ul>
 <li><strong>Links are defanged.</strong> A link in a note or email is written as <code>hxxps://example[.]com</code> so it cannot be
   clicked or auto-opened. The one exception is a link into <strong>your own tenant</strong>, which stays live. If a
-  link in a socxen note looks "broken," that is the safety measure working: the address is still fully
+  link in a Raffkin note looks "broken," that is the safety measure working: the address is still fully
   readable for a sandbox or a threat-intel lookup, it just cannot hurt anyone with a stray click.</li>
 <li><strong>Spreadsheet formulas are disarmed.</strong> A value like <code>=HYPERLINK(...)</code> would run when an exported
-  report is opened in a spreadsheet; socxen writes it as plain text.</li>
+  report is opened in a spreadsheet; Raffkin writes it as plain text.</li>
 <li><strong>Secrets and structured identifiers are masked.</strong> An API key, token, private key or labeled password,
   a Social Security number or a payment-card number found in the alert data is written as
   <code>[REDACTED:…]</code>. The finding is recorded; the value is not copied into a note or export where a wider
   audience could read it. This is deterministic code, not the model remembering to redact.</li>
 <li><strong>Updates change state only.</strong> An alert or case update can set a status, a stage, a priority, a
-  closing reason or an assignee — never rewrite the description, name or tags an analyst wrote. socxen's
+  closing reason or an assignee — never rewrite the description, name or tags an analyst wrote. Raffkin's
   reasoning goes into a case note, which appends.</li>
 </ul>
 <h2 id="what-it-did-is-on-the-record">What it did is on the record</h2>
 <p>Every tool call, every gated decision (which alert or case, to what disposition) and every guardrail
-firing is written to a local, structured audit log, on by default: <code>~/.socxen/telemetry.jsonl</code>. It
+firing is written to a local, structured audit log, on by default: <code>~/.raffkin/telemetry.jsonl</code>. It
 records metadata only — never case notes, evidence or payloads — and can be routed to Exabeam, an
 OpenTelemetry collector or a webhook. See <a href="logging.html">Audit logging</a>.</p>
 <h2 id="where-your-data-goes">Where your data goes</h2>
 <p>Three facts, and they are good ones:</p>
 <ul>
-<li><strong>socxen stores nothing.</strong> No server, no database, no queue, no hosted service. The audit log is a local
+<li><strong>Raffkin stores nothing.</strong> No server, no database, no queue, no hosted service. The audit log is a local
   file holding metadata only. Exabeam holds what it already held, plus the case notes and the case and alert
 updates you approve.</li>
-<li><strong>What socxen retrieves does enter the model's context</strong> — event lines, alert and case content, identity
+<li><strong>What Raffkin retrieves does enter the model's context</strong> — event lines, alert and case content, identity
   and host context, threat timelines, rule logic — and therefore reaches whichever model provider your
   host agent is configured with. That is how the analysis happens.</li>
-<li><strong>socxen does not supply, choose or configure that provider.</strong> You bring your own Claude Code or Codex,
+<li><strong>Raffkin does not supply, choose or configure that provider.</strong> You bring your own Claude Code or Codex,
   your own authentication, your own agreement. Residency, retention and processing terms are whatever
-  your agreement with your provider says; socxen is not a party to it and cannot change it.</li>
+  your agreement with your provider says; Raffkin is not a party to it and cannot change it.</li>
 </ul>
 <p>Compared with a hosted SOC agent, where the vendor runs the analysis and holds a copy of your telemetry
-under its own posture, there is no middle here: socxen runs on the analyst's machine, against your
+under its own posture, there is no middle here: Raffkin runs on the analyst's machine, against your
 tenant, through your provider, on your terms.</p>
 <h2 id="how-it-is-tested">How it is tested</h2>
 <p>Claims about agent safety are worth what the testing behind them is worth, so the testing is public
@@ -359,7 +359,7 @@ and every release is gated on it:</p>
   attack <em>landed</em> — a wrong verdict, an obeyed instruction, a leaked secret — not on whether the model
   sounded cautious. A landing in the blocking classes stops a release until it is fixed, or waived in
   writing with the reason recorded.</li>
-<li><strong>Behavior verification.</strong> Each release candidate is scanned against socxen's declared policy by an
+<li><strong>Behavior verification.</strong> Each release candidate is scanned against Raffkin's declared policy by an
   independent verifier, with an audit pass over the findings and a threat model. No release ships with
   an open Critical finding; every other finding is triaged into an issue, and the decision to ship with
   it is written down beside the scan.</li>
@@ -370,7 +370,7 @@ and every release is gated on it:</p>
 <a href="https://github.com/open-agent-ai-security/socxen/tree/main/security"><code>security/</code></a> directory.</p>
 <h2 id="what-these-controls-do-not-cover">What these controls do not cover</h2>
 <ul>
-<li><strong>Your own screen.</strong> Redaction protects what socxen <em>persists</em>. A secret shown to you during an
+<li><strong>Your own screen.</strong> Redaction protects what Raffkin <em>persists</em>. A secret shown to you during an
   investigation is not masked, because you are already authorized to read that log.</li>
 <li><strong>Very large results.</strong> When a result is too big for the model, your host may save it to a local
   file, unredacted, and it persists after the session. Delete those files when the case data is
@@ -379,7 +379,7 @@ and every release is gated on it:</p>
   names, addresses or dates of birth in prose; handle those with the care you would give any case.</li>
 <li><strong>A credential with nothing to grip</strong> — no label, no quotes, no recognizable format — is caught on a
   best-effort basis. Treat a known-exposed password as compromised regardless of what the note shows.</li>
-<li><strong>Links you read directly.</strong> The defanging applies to what socxen writes. A link typed as prose in an
+<li><strong>Links you read directly.</strong> The defanging applies to what Raffkin writes. A link typed as prose in an
   alert may be left as written; verify any URL out of band before you trust it.</li>
 <li><strong>A server you wire by hand.</strong> The screening, the neutralizer and the audit trail live in the bundled
   connector; registering the remote Exabeam MCP directly bypasses all three, leaving only the

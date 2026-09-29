@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Output-side active-content neutralizer -- the a10 (export / formula injection) fix.
 
-Applied to content socxen WRITES back through the bridge (case notes, alert/case updates) so a payload
+Applied to content Raffkin WRITES back through the bridge (case notes, alert/case updates) so a payload
 planted in telemetry cannot fire when that persisted artifact is later exported. Scope is deliberately
 narrow -- "do no harm; stop the obvious; document the exotic" -- to two ACTIVE-content forms:
 
@@ -16,7 +16,7 @@ narrow -- "do no harm; stop the obvious; document the exotic" -- to two ACTIVE-c
      attributes, srcset, CSS url() in style attributes and <style> blocks): the target is defanged
      (host -> [.], scheme -> hxxp, javascript: -> [:]) UNLESS it points into the operator's own tenant.
      "Clickable is decided by destination, not authorship" (#147): the model writes the text, so
-     "socxen wrote this link" carries no trust; a URL to the operator's own console is verifiable
+     "Raffkin wrote this link" carries no trust; a URL to the operator's own console is verifiable
      against config, anything else is not. The allowlist is derived from EXABEAM_MCP_URL by the bridge
      (tenant_hosts_from_url) -- never curated, never model-influenced -- and defaults to EMPTY, so with
      no config every link is defanged (the safe default the red-team harness grades under).

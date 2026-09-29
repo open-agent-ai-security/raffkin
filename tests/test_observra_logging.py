@@ -7,7 +7,7 @@
 """Deterministic tests for the structured agent-telemetry shim (plugin/connector/observra_logging.py).
 
 Four things matter and all are tested without a network:
-  * DEFAULT ON — logging runs unless explicitly SOCXEN_OBSERVRA=off. A production agent keeps an audit trail.
+  * DEFAULT ON — logging runs unless explicitly RAFFKIN_OBSERVRA=off. A production agent keeps an audit trail.
   * FAIL-OPEN — a missing/misconfigured backend disables logging silently; no recording call ever raises.
     Telemetry must never break an investigation.
   * PRIVACY BY CONSTRUCTION — events carry the gated action's IDs/enums + guardrail COUNTS/CLASSES, never
@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / "plugin" / "connector"))
 def _fresh(monkeypatch, env):
     """Import a pristine copy of the shim under a controlled environment (its on/off decision is cached
     per-module, so each scenario needs its own module instance)."""
-    for key in ("SOCXEN_OBSERVRA", "SOCXEN_OBSERVRA_PATH", "SOCXEN_OBSERVRA_MAX_BYTES", "SOCXEN_OBSERVRA_BACKUPS"):
+    for key in ("RAFFKIN_OBSERVRA", "RAFFKIN_OBSERVRA_PATH", "RAFFKIN_OBSERVRA_MAX_BYTES", "RAFFKIN_OBSERVRA_BACKUPS"):
         monkeypatch.delenv(key, raising=False)
     for key, val in env.items():
         monkeypatch.setenv(key, val)
@@ -46,21 +46,21 @@ def _fresh(monkeypatch, env):
 # ---- default-on / off-switch / fail-open ------------------------------------------------------------
 
 def test_enabled_by_default(monkeypatch, tmp_path):
-    # No SOCXEN_OBSERVRA set at all -> logging is ON (jsonl). Assurance is the default posture.
+    # No RAFFKIN_OBSERVRA set at all -> logging is ON (jsonl). Assurance is the default posture.
     pytest.importorskip("observra")
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA_PATH": str(tmp_path / "t.jsonl")})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA_PATH": str(tmp_path / "t.jsonl")})
     assert t.enabled() is True
 
 
 @pytest.mark.parametrize("val", ["off", "0", "false", "none", "disabled"])
 def test_explicit_off_disables(monkeypatch, val):
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": val})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": val})
     assert t.enabled() is False
 
 
 def test_unknown_backend_fails_open(monkeypatch):
     # A bad backend name must disable telemetry, not crash the bridge.
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "definitely-not-a-backend"})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "definitely-not-a-backend"})
     assert t.enabled() is False
 
 
@@ -73,7 +73,7 @@ def test_missing_observra_fails_open_even_on_default(monkeypatch):
 
 
 def test_recording_calls_never_raise_when_disabled(monkeypatch):
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "off"})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "off"})
     t.session_start()
     t.tool_start("exabeam_search_alerts")
     t.tool_end("exabeam_update_alert", 12.3, defang_notes=[{"type": "formula"}],
@@ -87,7 +87,7 @@ def test_recording_calls_never_raise_when_disabled(monkeypatch):
 def _read_events(monkeypatch, tmp_path):
     pytest.importorskip("observra")
     out = tmp_path / "telemetry.jsonl"
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(out)})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out)})
     assert t.enabled() is True
 
     t.session_start()
@@ -155,8 +155,8 @@ def test_jsonl_rotation_is_bounded(monkeypatch, tmp_path):
     # A tiny max_bytes forces rotation; a backup file must appear, proving the log is bounded.
     pytest.importorskip("observra")
     out = tmp_path / "telemetry.jsonl"
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(out),
-                             "SOCXEN_OBSERVRA_MAX_BYTES": "2048", "SOCXEN_OBSERVRA_BACKUPS": "3"})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out),
+                             "RAFFKIN_OBSERVRA_MAX_BYTES": "2048", "RAFFKIN_OBSERVRA_BACKUPS": "3"})
     assert t.enabled() is True
     for i in range(200):
         t.tool_end("exabeam_search_events", float(i))
@@ -171,7 +171,7 @@ def test_single_emit_failure_does_not_disable_the_whole_trail(monkeypatch, tmp_p
     switch off the mandatory audit log for the rest of the session (code-review PR #39, round 2, #1)."""
     pytest.importorskip("observra")
     out = tmp_path / "telemetry.jsonl"
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(out)})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out)})
     assert t.enabled() is True
 
     real_emit = t._state["emit"]
@@ -199,9 +199,9 @@ def test_session_start_attests_backend_and_destination_and_tool_end_carries_kept
     fail-open — instead of stderr lines the analyst never sees."""
     pytest.importorskip("observra")
     out = tmp_path / "telemetry.jsonl"
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(out)})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out)})
     assert t.enabled() is True
-    t.session_start(dry_run=True, plugin_version="0.8.5", gate_log="~/.socxen/gate.jsonl")
+    t.session_start(dry_run=True, plugin_version="0.8.5", gate_log="~/.raffkin/gate.jsonl")
     t.tool_end("exabeam_search_events", 3.0, hygiene_kept=[{"cp": "U+200D", "name": "ZERO WIDTH JOINER"},
                                                            {"cp": "U+200F", "name": "RIGHT-TO-LEFT MARK"},
                                                            {"cp": "U+200D", "name": "ZERO WIDTH JOINER"}],
@@ -233,7 +233,7 @@ def test_session_start_attests_even_when_it_is_the_first_telemetry_call(monkeypa
     Review 2026-09-05: evaluating _state before enabled() recorded an empty backend/destination."""
     pytest.importorskip("observra")
     out = tmp_path / "t.jsonl"
-    t = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(out)})
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out)})
     t.session_start(dry_run=False)                      # no enabled() call first, deliberately
     t.session_start(telemetry_backend="caller-wins", event_type="y")    # colliding keys must not raise
     t._shutdown()
@@ -247,7 +247,7 @@ def test_destination_never_leaks_userinfo_or_a_raw_endpoint(monkeypatch):
     assert t._destination("webhook", {"url": "https://user:s3cr3t@hooks.example.com/x?token=1"}) == "https://hooks.example.com"
     assert "api-key" not in t._destination("otel", {"endpoint": "collector:4318/v1/traces?api-key=abc"})
     assert "secret" not in t._destination("webhook", {"url": "hooks.example.com/services/T0/B0/secret?token=abc"})
-    assert t._destination("webhook", {}) == "(no SOCXEN_OBSERVRA_URL set)"
+    assert t._destination("webhook", {}) == "(no RAFFKIN_OBSERVRA_URL set)"
     monkeypatch.setenv("EXABEAM_ENDPOINT", "https://api:tok@x.exabeam.cloud/ingest?k=1")
     assert t._destination("exabeam", {}) == "https://x.exabeam.cloud"
     assert t._destination("jsonl", {"path": "/tmp/t.jsonl"}) == "/tmp/t.jsonl"
@@ -255,21 +255,21 @@ def test_destination_never_leaks_userinfo_or_a_raw_endpoint(monkeypatch):
 
 # ---- #210 / #173: the stream contract ---------------------------------------------------------------
 
-def test_agent_name_comes_from_identity_json_with_socxen_as_the_fallback(monkeypatch, tmp_path):
+def test_agent_name_comes_from_identity_json_with_raffkin_as_the_fallback(monkeypatch, tmp_path):
     """#210: a re-keyed copy (a vendor catalog shipping this plugin as `soc`) must log under its own name,
-    read from identity.json beside the connector; no file, or a broken one, means `socxen`, never an error."""
+    read from identity.json beside the connector; no file, or a broken one, means `raffkin`, never an error."""
     monkeypatch.delenv("CLAUDE_PLUGIN_ROOT", raising=False)
     mod = _fresh(monkeypatch, {})
-    assert mod.AGENT == "socxen", "this tree's identity.json names the plugin socxen"
+    assert mod.AGENT == "raffkin", "this tree's identity.json names the plugin raffkin"
     rekeyed = tmp_path / "rekeyed"; rekeyed.mkdir()
     (rekeyed / "identity.json").write_text(json.dumps({"name": "soc", "version": "0.8.7"}))
     assert mod._agent_name(str(rekeyed)) == "soc"
     (rekeyed / "identity.json").write_text("{not json")
-    assert mod._agent_name(str(rekeyed)) == "socxen"
-    assert mod._agent_name(str(tmp_path / "nowhere")) == "socxen"
+    assert mod._agent_name(str(rekeyed)) == "raffkin"
+    assert mod._agent_name(str(tmp_path / "nowhere")) == "raffkin"
     (rekeyed / "identity.json").write_text(json.dumps({"name": "soc"}))
     # the file beside the running code wins over CLAUDE_PLUGIN_ROOT (an inherited env var can name another plugin)
-    assert _fresh(monkeypatch, {"CLAUDE_PLUGIN_ROOT": str(rekeyed)}).AGENT == "socxen"
+    assert _fresh(monkeypatch, {"CLAUDE_PLUGIN_ROOT": str(rekeyed)}).AGENT == "raffkin"
     # with no sibling identity.json, the env var is the fallback: a copy of the shim under a bare tree
     import importlib.util, shutil
     bare = tmp_path / "bare" / "connector"; bare.mkdir(parents=True)
@@ -284,7 +284,7 @@ def test_tool_error_records_structure_never_the_upstream_message(monkeypatch, tm
     """#173: the audit record of a failed call carries the error code, HTTP status, class and retryability
     — and no message text, which quotes the request (a model-written filter is tenant content)."""
     path = tmp_path / "t.jsonl"
-    mod = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(path)})
+    mod = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(path)})
     if not mod.enabled():
         pytest.skip("observra not installed")
     mod.tool_error("exabeam_search_alerts", 12.5, RuntimeError("Invalid filter value alert_name:\"finance user p.mensah\""),
@@ -300,14 +300,14 @@ def test_tool_error_records_structure_never_the_upstream_message(monkeypatch, tm
 
 
 def test_the_explicit_off_switch_is_announced_on_stderr(monkeypatch, capsys, tmp_path):
-    """#215: SOCXEN_OBSERVRA=off turns the audit trail off and says so, as the gate log's switch does."""
+    """#215: RAFFKIN_OBSERVRA=off turns the audit trail off and says so, as the gate log's switch does."""
     probe = _fresh(monkeypatch, {})
     for val in sorted(probe._OFF_VALUES):
-        mod = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": val})
+        mod = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": val})
         assert mod.enabled() is False
         err = capsys.readouterr().err
-        assert "observra logging is OFF (SOCXEN_OBSERVRA=off)" in err and "not recorded" in err, (val, err)
-    mod = _fresh(monkeypatch, {"SOCXEN_OBSERVRA": "jsonl", "SOCXEN_OBSERVRA_PATH": str(tmp_path / "t.jsonl")})
+        assert "observra logging is OFF (RAFFKIN_OBSERVRA=off)" in err and "not recorded" in err, (val, err)
+    mod = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(tmp_path / "t.jsonl")})
     if not mod.enabled():
         pytest.skip("observra not installed")
-    assert "logging is OFF (SOCXEN_OBSERVRA=off)" not in capsys.readouterr().err
+    assert "logging is OFF (RAFFKIN_OBSERVRA=off)" not in capsys.readouterr().err

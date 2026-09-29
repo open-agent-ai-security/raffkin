@@ -4,7 +4,7 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Bump socxen's version everywhere it lives, in one shot.
+"""Bump Raffkin's version everywhere it lives, in one shot.
 
 Version is set in two places and generated into the rest; the invariant tests + CI fail if they drift, so
 bumping by hand is error-prone. This edits both and regenerates everything downstream:

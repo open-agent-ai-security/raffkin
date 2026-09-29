@@ -7,7 +7,7 @@
 # Exercises both real Claude Code journeys in throwaway scratch config dirs,
 # never touching your live install:
 #   Leg 1 (clean):   add the COMMUNITY marketplace (open-agent-ai-security/plugins,
-#                    whose socxen entry pins this repo's main) + plugin install.
+#                    whose Raffkin entry pins this repo's main) + plugin install.
 #                    This is the documented install path, end to end over the network.
 #   Leg 2 (upgrade): install the PRIOR release, then marketplace update +
 #                    plugin update to the current one — the re-run path (#43). Since the
@@ -16,7 +16,7 @@
 #                    inside a throwaway worktree to make the version rewind
 #                    locally controllable.
 #
-# socxen has no tags, so "releases" are resolved from git history:
+# Raffkin has no tags, so "releases" are resolved from git history:
 #   current = origin/main@HEAD
 #   prior   = the commit just before the last change to plugin.json on main
 #             (i.e. the previous version), overridable as $1.
@@ -29,10 +29,10 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 # Identity from the generated include (see plugin/gen_identity.py) — a re-keyed payload smokes under its own key.
 . "${REPO_ROOT}/plugin/identity.sh"
-PLUGIN="${SOCXEN_ID_NAME}"
-MARKETPLACE="${SOCXEN_ID_MARKETPLACE_NAME}"
-MARKETPLACE_REPO="${SOCXEN_ID_MARKETPLACE_REPO}"
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/socxen-smoke.XXXXXX")"
+PLUGIN="${RAFFKIN_ID_NAME}"
+MARKETPLACE="${RAFFKIN_ID_MARKETPLACE_NAME}"
+MARKETPLACE_REPO="${RAFFKIN_ID_MARKETPLACE_REPO}"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/raffkin-smoke.XXXXXX")"
 WT_CURRENT="${SCRATCH}/wt-current"
 WT_UPGRADE="${SCRATCH}/wt-upgrade"
 

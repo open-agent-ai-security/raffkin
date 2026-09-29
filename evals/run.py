@@ -4,7 +4,7 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""socxen eval harness — grade soc-investigate runs against fixtures.
+"""Raffkin eval harness — grade soc-investigate runs against fixtures.
 
 Two layers:
   • Default (CI-safe, no creds): grade a *recorded* run (evals/runs/<id>.json) against
@@ -231,7 +231,7 @@ def grade_judge(fx, run, model):
 def run_live(fx, model, max_turns):
     """Drive the real skill headlessly in DRY-RUN and return a run transcript.
 
-    Requires the socxen plugin installed and the exabeam MCP connected. Fail-closed:
+    Requires the Raffkin plugin installed and the exabeam MCP connected. Fail-closed:
     only READ_TOOLS are allowlisted (so a future mutating tool can't slip through), and
     the write/close tools are additionally denied — a live eval can never mutate anything.
     """
@@ -246,7 +246,7 @@ def run_live(fx, model, max_turns):
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
     except FileNotFoundError:
-        raise SystemExit("--live needs the `claude` CLI on PATH (and the socxen plugin installed).")
+        raise SystemExit("--live needs the `claude` CLI on PATH (and the Raffkin plugin installed).")
     tool_calls, texts = [], []
     for line in proc.stdout.splitlines():
         line = line.strip()

@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-os.environ["SOCXEN_OBSERVRA"] = "off"          # never let a test write to the operator's real audit log
+os.environ["RAFFKIN_OBSERVRA"] = "off"          # never let a test write to the operator's real audit log
 
 mcp_client = pytest.importorskip("mcp.client.streamable_http")
 if not hasattr(mcp_client, "streamablehttp_client"):

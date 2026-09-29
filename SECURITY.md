@@ -5,13 +5,13 @@
 
 # Security Policy
 
-socxen is a security tool that investigates real alerts and can take gated actions
-against a SOC platform. We take vulnerabilities in socxen itself seriously. This
+Raffkin is a security tool that investigates real alerts and can take gated actions
+against a SOC platform. We take vulnerabilities in Raffkin itself seriously. This
 document describes how to report one privately, what is in scope, and what to expect.
 
 ## Scope
 
-**In scope** — vulnerabilities in socxen itself:
+**In scope** — vulnerabilities in Raffkin itself:
 
 - The three skills — the methodology, governance rules, and reference material in
   `plugin/skills/soc-investigate/`, `triage-cases/` and `rule-tuning/` (`SKILL.md`, `reference/`).
@@ -55,15 +55,15 @@ Examples of in-scope issues:
 
 **Out of scope:**
 
-- **Findings socxen produces about *your* alerts.** If socxen investigates an alert
+- **Findings Raffkin produces about *your* alerts.** If Raffkin investigates an alert
   and reaches a verdict you disagree with, that's tool output (or a tuning issue),
-  not a vulnerability. It is also expected that socxen surfaces suspicious activity —
+  not a vulnerability. It is also expected that Raffkin surfaces suspicious activity —
   that's its job.
-- **The Exabeam New-Scale platform or its MCP server.** socxen is a client of the
+- **The Exabeam New-Scale platform or its MCP server.** Raffkin is a client of the
   Exabeam MCP; issues in the platform, its API, or the MCP server belong with
   Exabeam support/security, not here.
-- **General LLM behavior** (hallucination, refusals) not tied to a socxen-specific
-  defect. socxen's own mitigations — evidence-grounding, the gate, the two bridge filters,
+- **General LLM behavior** (hallucination, refusals) not tied to a Raffkin-specific
+  defect. Raffkin's own mitigations — evidence-grounding, the gate, the two bridge filters,
   untrusted-input handling — *are* in scope; a way to defeat them is a vulnerability.
 - **The residuals each control declares** — listed on the
   [guardrails page](plugin/docs/security-guardrails.md#what-these-guardrails-do-not-do) and in
@@ -83,7 +83,7 @@ Use GitHub's private security advisory:
 
 GitHub creates a private advisory thread between you and the maintainers; we respond
 there. If private advisories are unavailable to you, email **developer@exabeam.com**
-with the subject **`socxen security report`** and the same level of detail.
+with the subject **`Raffkin security report`** and the same level of detail.
 
 Please **do not** include live credentials, real customer data, or unredacted PII in
 a report — a synthetic repro against a test tenant is preferred.
@@ -99,6 +99,6 @@ a report — a synthetic repro against a test tenant is preferred.
 
 ## Supported versions
 
-socxen is pre-`1.0`; security fixes ship in the **latest** release. Upgrade to the
-newest version (`claude plugin update socxen@open-agent-ai-security`) before reporting. There is no
+Raffkin is pre-`1.0`; security fixes ship in the **latest** release. Upgrade to the
+newest version (`claude plugin update raffkin@open-agent-ai-security`) before reporting. There is no
 back-port or LTS branch while pre-`1.0`.

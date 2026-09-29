@@ -3,13 +3,13 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Generate socxen's AI Bill of Materials (CycloneDX 1.6) from the repo's own sources.
+"""Generate Raffkin's AI Bill of Materials (CycloneDX 1.6) from the repo's own sources.
 
-socxen is an AI *agent/application*, not a model: a plugin of three skills (prompt + methodology) plus a
+Raffkin is an AI *agent/application*, not a model: a plugin of three skills (prompt + methodology) plus a
 small MCP connector, running on a hosted foundation model the host agent picks (Claude on Claude Code, an
 OpenAI model on Codex) and calling the Exabeam New-Scale
 MCP. Model-card AI-BOM tools (which ingest a Hugging Face model id) can't describe that, so we assemble
-a CycloneDX AI-BOM directly from what socxen actually ships:
+a CycloneDX AI-BOM directly from what Raffkin actually ships:
 
   - the root component (this plugin) from plugin/.claude-plugin/plugin.json,
   - the foundation models (Claude; OpenAI on Codex) as external machine-learning-model components,
@@ -70,7 +70,7 @@ def _split_dep(spec):
 # SPDX ids for the connector's PyPI deps, verified against PyPI/upstream 2026-07-30.
 # A dep added to the bridge without an entry here ships with no license claim rather
 # than a guessed one.
-# socxen is published via the community marketplace (open-agent-ai-security/plugins);
+# Raffkin is published via the community marketplace (open-agent-ai-security/plugins);
 # the supplier is pinned here since the in-repo marketplace.json (the previous
 # source of owner metadata) was retired in the #58 hard cutover.
 SUPPLIER = {"name": "Open Agent AI Security",
@@ -149,8 +149,8 @@ def build_bom(timestamp):
             "type": "machine-learning-model",
             "name": "Claude (Anthropic)",
             "description": ("Foundation model the skill runs on. Hosted API — weights are not distributed "
-                            "with socxen. The specific member (e.g. Opus / Sonnet) is selected at runtime "
-                            "by Claude Code, not pinned by socxen."),
+                            "with Raffkin. The specific member (e.g. Opus / Sonnet) is selected at runtime "
+                            "by Claude Code, not pinned by Raffkin."),
             "supplier": {"name": "Anthropic", "url": ["https://www.anthropic.com"]},
             "externalReferences": [{"type": "website", "url": "https://www.anthropic.com/claude"}],
             "properties": [
@@ -164,8 +164,8 @@ def build_bom(timestamp):
             "type": "machine-learning-model",
             "name": "OpenAI model (via Codex)",
             "description": ("Foundation model the skills run on when the host is OpenAI Codex. Hosted API — "
-                            "weights are not distributed with socxen. The specific model and reasoning effort "
-                            "are selected by Codex, not pinned by socxen; the red-team floor is recorded per run "
+                            "weights are not distributed with Raffkin. The specific model and reasoning effort "
+                            "are selected by Codex, not pinned by Raffkin; the red-team floor is recorded per run "
                             "in security/redteam/HISTORY.md."),
             "supplier": {"name": "OpenAI", "url": ["https://openai.com"]},
             "externalReferences": [{"type": "website", "url": "https://openai.com/codex/"}],
@@ -183,7 +183,7 @@ def build_bom(timestamp):
                             "investigation methodology, queue sweep, rule tuning; governance; output discipline) "
                             "plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, "
                             "triage taxonomy, containment list, worked examples). This prompt corpus — not a "
-                            "model — is the primary AI artifact socxen ships."),
+                            "model — is the primary AI artifact Raffkin ships."),
             "licenses": lic,
             "properties": [
                 {"name": "ai:artifactKind", "value": "system-prompt/methodology"},
@@ -267,7 +267,7 @@ def build_bom(timestamp):
                       "output neutralizer on every write (formulas inert, links de-fanged unless into the operator's tenant, "
                       "secrets and structured identifiers masked); updates carry state only; a create_case with a closing "
                       "disposition is refused; in-prompt ask-before-close as the model-side layer"},
-            {"name": "ai:auditTrail", "value": "on by default, local, bounded: every call, gate decision and guardrail firing as metadata and safe identifiers, never case content (~/.socxen/)"},
+            {"name": "ai:auditTrail", "value": "on by default, local, bounded: every call, gate decision and guardrail firing as metadata and safe identifiers, never case content (~/.raffkin/)"},
             {"name": "ai:secretsHandling", "value": "Exabeam OAuth key/secret from ~/.exabeam-mcp.env; never logged; posted over https only (the bridge refuses a cleartext URL)"},
             {"name": "aibom:generator", "value": "security/gen_aibom.py (deterministic, from repo sources)"},
         ],
@@ -381,15 +381,15 @@ def render_html(bom):
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Copyright 2026 Exabeam, Inc. SPDX-License-Identifier: Apache-2.0 -->
-<title>socxen — AI Bill of Materials</title><style>{_CSS}</style></head>
+<title>Raffkin — AI Bill of Materials</title><style>{_CSS}</style></head>
 <body>
 <header><div class="wrap">
-  <h1><span class="sc">socxen</span> — AI Bill of Materials</h1>
+  <h1><span class="sc">Raffkin</span> — AI Bill of Materials</h1>
   <p class="tag">{esc(root["description"])}</p>
   <div class="badges">{badges}</div>
 </div></header>
 <div class="wrap">
-  <p class="lead">This is an <b>AI application / agent</b> BOM, not a model card. socxen runs on a
+  <p class="lead">This is an <b>AI application / agent</b> BOM, not a model card. Raffkin runs on a
   hosted foundation model it does not ship (Claude on Claude Code, an OpenAI model on Codex), and its
   substance is a <b>prompt/methodology</b> plus a small <b>MCP connector</b> carrying the guardrails. The inventory below is generated deterministically from the repo's
   own sources by <code>security/gen_aibom.py</code>.</p>

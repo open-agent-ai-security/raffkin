@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Installation &amp; setup · socxen Docs</title>
-<meta name="description" content="socxen is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<title>Installation &amp; setup · Raffkin Docs</title>
+<meta name="description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/guide/installation.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="socxen">
-<meta property="og:title" content="Installation &amp; setup · socxen Docs">
-<meta property="og:description" content="socxen is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta property="og:site_name" content="Raffkin">
+<meta property="og:title" content="Installation &amp; setup · Raffkin Docs">
+<meta property="og:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
 <meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/guide/installation.html">
-<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Installation &amp; setup · socxen Docs">
-<meta name="twitter:description" content="socxen is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
-<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta name="twitter:title" content="Installation &amp; setup · Raffkin Docs">
+<meta name="twitter:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/raffkin-social.png">
 <script type="application/ld+json">
-{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "socxen is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool interface for AI\u2026",
-  "url": "https://open-agent-ai-security.github.io/socxen/guide/installation.html", "isPartOf": { "@type": "WebSite", "name": "socxen", "url": "https://open-agent-ai-security.github.io/socxen/" },
+{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool interface for AI\u2026",
+  "url": "https://open-agent-ai-security.github.io/socxen/guide/installation.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/socxen/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
 <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -28,10 +28,10 @@
   Copyright 2026 Exabeam, Inc.
   SPDX-License-Identifier: Apache-2.0
 
-  socxen shared design system — single source of truth for the visual theme.
+  Raffkin shared design system — single source of truth for the visual theme.
   Derived from the Praxen design system (open-agent-ai-security/praxen,
   assets/praxen-theme.css) so the three project sites read as one family;
-  only the accent hue differs: Praxen orange → socxen lion gold.
+  only the accent hue differs: Praxen orange → Raffkin amber-gold.
 
   Consumed by two surfaces:
     - index.html / news.html (the marketing pages) LINK this file.
@@ -52,18 +52,18 @@
 
 /* ---------- 2 · Design tokens ---------- */
 :root {
-  --bg:          #0b0f1a;   /* a hair warmer than Praxen's navy — savanna night */
-  --bg-2:        #0e1320;
+  --bg:          #080a0d;   /* graphite-black, warmed locally by the amber brand glow */
+  --bg-2:        #101217;
   --panel:       rgba(255, 255, 255, 0.035);
   --panel-2:     rgba(255, 255, 255, 0.05);
   --border:      rgba(255, 255, 255, 0.09);
-  --border-hi:   rgba(242,189,92, 0.45);
-  --text:        #e9eff8;
-  --muted:       #9aabc0;
-  --muted-2:     #6f819a;
-  --gold:      #e6a23c;
-  --gold-2:    #f2bd5c;
-  --gold-deep: #c4841c;
+  --border-hi:   rgba(255,216,74, 0.45);
+  --text:        #f5f7fa;
+  --muted:       #a6b0bf;
+  --muted-2:     #707b8c;
+  --gold:        #f2b705;
+  --gold-2:      #ffd84a;
+  --gold-deep:   #b87400;
   --accent-2:    #2fbf9f;   /* signal teal — second hue (clean/resisted, terminal green) */
   --green:       #67d98b;
   --maxw:        1140px;
@@ -254,7 +254,7 @@ img { max-width: 100%; display: block; }
 <body class="docs-page">
 <header class="docs-top">
   <div class="docs-top-inner">
-    <a class="docs-brand" href="../"><img src="../graphics/brand/socxen-wordmark-dark-background.svg" alt="socxen" width="117" height="30"></a>
+    <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
       <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
@@ -265,7 +265,7 @@ img { max-width: 100%; display: block; }
   <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="installation-setup">Installation &amp; setup</h1>
-<p>socxen is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
+<p>Raffkin is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
 through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the same shape on both hosts: install the plugin, add one credentials
 file, check, and run your first investigation. Five minutes.</p>
 <p>The safety gate is on from the moment the plugin is installed: dismissing an alert or closing a case
@@ -288,7 +288,7 @@ one, the call is refused.</p>
   the host runs before each Exabeam call; without <code>python3</code> every gated call is refused. macOS and most
   Linux distributions already have it (<code>python3 --version</code>). Codex does not need it.</li>
 <li><strong>An Exabeam New-Scale API key and secret</strong>, created under <strong>Settings → API Keys</strong> in your New-Scale
-  console. Keys don't carry a role — you grant them <strong>access entitlements</strong>, and socxen gets exactly what
+  console. Keys don't carry a role — you grant them <strong>access entitlements</strong>, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
   coverage and detection content (rules, parsers, context tables), and to create cases and write case
   notes; a read-only key
@@ -299,7 +299,7 @@ one, the call is refused.</p>
   (for example a demo or a dedicated tenant) have no region in the URL; ask your Exabeam administrator
   which region hosts them. The <strong>Region Deployed</strong> field under <em>Service Health and Consumption → License
   View</em> is <strong>not</strong> reliable for this — it may show a country rather than the hosting region.</li>
-<li><strong>Windows:</strong> socxen is not supported natively on Windows; use <strong>WSL</strong>. The diagnostics and the safety
+<li><strong>Windows:</strong> Raffkin is not supported natively on Windows; use <strong>WSL</strong>. The diagnostics and the safety
   gate are shell scripts and Python, and the credentials file below is protected by Unix file
   permissions, which Git Bash on NTFS does not enforce — so Git Bash can run the scripts but leaves your
   key and secret unprotected. There is no PowerShell path.</li>
@@ -316,14 +316,14 @@ one, the call is refused.</p>
   organization that distributes it, which also provides its support; see [Support](support.md).
 /distribution-only -->
 <ul>
-<li><strong>Your own subscription.</strong> socxen runs inside your Claude Code or Codex plan. An investigation is a long
+<li><strong>Your own subscription.</strong> Raffkin runs inside your Claude Code or Codex plan. An investigation is a long
   agent session and is billed by your provider like any other.</li>
 </ul>
 <h2 id="quick-start-claude-code">Quick start — Claude Code</h2>
 <p><strong>1. Install the plugin.</strong></p>
 <pre><code class="language-bash">claude plugin marketplace add open-agent-ai-security/plugins
-claude plugin install socxen@open-agent-ai-security
-claude plugin list      # expect a block for socxen@open-agent-ai-security ending in: Status: ✔ enabled
+claude plugin install raffkin@open-agent-ai-security
+claude plugin list      # expect a block for raffkin@open-agent-ai-security ending in: Status: ✔ enabled
 </code></pre>
 <p>If the block shows an error line under it, the plugin installed but did not load — see
 <a href="#troubleshooting">Troubleshooting</a>.</p>
@@ -340,7 +340,7 @@ chmod 600 ~/.exabeam-mcp.env
 <p><strong>3. Check the setup.</strong> The plugin ships a read-only diagnostic that tells you what, if anything, is
 missing. It lives in the installed plugin. Run it with the exact version step 1 showed (not a wildcard:
 the cache keeps earlier versions, and a wildcard would run the oldest one):</p>
-<pre><code class="language-bash">bash ~/.claude/plugins/cache/open-agent-ai-security/socxen/&lt;version&gt;/preflight.sh
+<pre><code class="language-bash">bash ~/.claude/plugins/cache/open-agent-ai-security/raffkin/&lt;version&gt;/preflight.sh
 </code></pre>
 <p>Expect <code>✓</code> on every line, including <strong><code>Exabeam MCP reachable</code></strong> and <strong><code>Human-in-the-loop gate ON</code></strong>. A
 <code>!</code> or <code>✗</code> line names what to fix; a <code>↷</code> line was skipped because an earlier line failed, so fix that one
@@ -349,8 +349,8 @@ first. If you see <code>No credentials yet</code>, go back to step 2.</p>
 <blockquote>
 <p>investigate alert <code>&lt;alert id&gt;</code></p>
 </blockquote>
-<p>You can find an alert ID in the New-Scale console under <strong>Threat Center → Alerts</strong>; or ask socxen
-<em>"triage the queue"</em> first and pick one from the list it returns. socxen loads the <code>soc-investigate</code>
+<p>You can find an alert ID in the New-Scale console under <strong>Threat Center → Alerts</strong>; or ask Raffkin
+<em>"triage the queue"</em> first and pick one from the list it returns. Raffkin loads the <code>soc-investigate</code>
 skill, queries Exabeam for the evidence (you will see the tool calls go by), and ends with a written
 report: the timeline, the evidence with its source, a MITRE mapping, a verdict, and a last line of
 <code>Taxonomy outcome: raised</code>, <code>auto_closed</code> or <code>fp_closed</code>. If it concludes the alert is a false
@@ -360,8 +360,8 @@ dismissed or closed until you say yes.</p>
 <h2 id="quick-start-codex">Quick start — Codex</h2>
 <p><strong>1. Install the plugin.</strong></p>
 <pre><code class="language-bash">codex plugin marketplace add open-agent-ai-security/plugins
-codex plugin add socxen@open-agent-ai-security
-codex plugin list      # expect: socxen@open-agent-ai-security  installed, enabled  &lt;version&gt;
+codex plugin add raffkin@open-agent-ai-security
+codex plugin list      # expect: raffkin@open-agent-ai-security  installed, enabled  &lt;version&gt;
 </code></pre>
 <p><strong>2. Add your credentials</strong> — the same file as for Claude Code, above (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
 <code>chmod 600</code>). Then start a new Codex session.</p>
@@ -377,18 +377,18 @@ first. If you see <code>No credentials yet</code>, go back to step 2.</p>
 <p>investigate alert <code>&lt;alert id&gt;</code></p>
 </blockquote>
 <p>Same report, same last line, same question before any dismissal. One difference on Codex: it also asks
-you before socxen <em>opens</em> a case or writes a note, because Exabeam marks those tools as writes and Codex
-asks before every write. Noisier, not less safe. And if you script socxen with <code>codex exec</code>, where
+you before Raffkin <em>opens</em> a case or writes a note, because Exabeam marks those tools as writes and Codex
+asks before every write. Noisier, not less safe. And if you script Raffkin with <code>codex exec</code>, where
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.</p>
 <h2 id="updating">Updating</h2>
 <pre><code class="language-bash"># Claude Code
 claude plugin marketplace update open-agent-ai-security
-claude plugin update socxen@open-agent-ai-security
+claude plugin update raffkin@open-agent-ai-security
 
 # Codex
 codex plugin marketplace upgrade open-agent-ai-security
-codex plugin add socxen@open-agent-ai-security
+codex plugin add raffkin@open-agent-ai-security
 </code></pre>
 <p>Both commands matter on Claude Code: the first refreshes the catalog, the second installs from it.
 Restart or <code>/reload-plugins</code> to apply. Auto-update on Claude Code is per marketplace and off by default
@@ -416,23 +416,21 @@ to your tenant, and the safety gate, and names the failing step.</p>
   lacks may come back empty rather than failing. See <a href="#key-entitlements">Key entitlements</a>.</li>
 <li><strong>The skill says the Exabeam MCP is not connected.</strong> The credentials file is missing or was added
   after the host started; add it and restart the host.</li>
-<li><strong><code>claude plugin list</code> shows an error beside socxen.</strong> The plugin installed but did not load; run
-  <code>claude plugin update socxen@open-agent-ai-security</code> to get the current release, then restart.</li>
-<li><strong>Two copies of socxen.</strong> If you installed an early build from the retired <code>socxen@socxen</code>
-  marketplace, remove it first: <code>claude plugin marketplace remove socxen</code>, then install as in step 1.</li>
+<li><strong><code>claude plugin list</code> shows an error beside Raffkin.</strong> The plugin installed but did not load; run
+  <code>claude plugin update raffkin@open-agent-ai-security</code> to get the current release, then restart.</li>
 <li><strong>On Codex, no <code>exabeam</code> server appears.</strong> Codex drops a bundled server silently if any part of its
-  configuration is invalid; run <code>codex plugin add socxen@open-agent-ai-security</code> again and re-check.</li>
+  configuration is invalid; run <code>codex plugin add raffkin@open-agent-ai-security</code> again and re-check.</li>
 </ul>
 <h2 id="advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</h2>
 <p>You can register the remote Exabeam MCP in your host directly (<code>claude mcp add … exabeam …</code>) with a
 bearer token you mint yourself. Two things to know: the token expires in about four hours, and, more
-importantly, socxen's guardrails — the screening of what it reads, the neutralizing and masking of what
+importantly, Raffkin's guardrails — the screening of what it reads, the neutralizing and masking of what
 it writes, and the audit trail — live in the bundled connector, so
 none of them run when Claude Code talks to the remote MCP directly. Only the dismiss/close gate
 survives, and only if the server is named <code>exabeam</code>. Use this for a connectivity check, not for investigations you rely on.</p>
 <h2 id="key-entitlements">Key entitlements</h2>
 <p>Whoever grants the key's access entitlements can check against this list rather than guessing. These are
-the Exabeam MCP tools socxen calls, shown without their <code>exabeam_</code> prefix. Every containment or
+the Exabeam MCP tools Raffkin calls, shown without their <code>exabeam_</code> prefix. Every containment or
 rule-writing tool is refused before it reaches your tenant, and any tool not on this list asks you first.</p>
 <table>
 <thead>
@@ -462,11 +460,11 @@ rule-writing tool is refused before it reaches your tenant, and any tool not on 
 </table>
 <h2 id="uninstalling">Uninstalling</h2>
 <pre><code class="language-bash"># Claude Code
-claude plugin uninstall socxen@open-agent-ai-security
+claude plugin uninstall raffkin@open-agent-ai-security
 claude plugin marketplace remove open-agent-ai-security   # optional; also removes other plugins from this catalog
 
 # Codex
-codex plugin remove socxen@open-agent-ai-security
+codex plugin remove raffkin@open-agent-ai-security
 codex plugin marketplace remove open-agent-ai-security   # optional; same caveat
 </code></pre>
 <p>Removing the plugin removes the gate it shipped. Neither command touches <code>~/.exabeam-mcp.env</code>; delete

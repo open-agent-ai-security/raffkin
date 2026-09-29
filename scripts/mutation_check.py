@@ -101,7 +101,7 @@ def main(argv):
     if missing:
         print("anchor not found (the control changed; update the mutation set):\n  " + "\n  ".join(missing), file=sys.stderr)
         return 2
-    with tempfile.TemporaryDirectory(prefix="socxen-mut-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="raffkin-mut-") as tmp:
         tree = Path(tmp) / "tree"
         shutil.copytree(ROOT, tree, ignore=IGNORE)
         rc, summary = run_tests(tree)

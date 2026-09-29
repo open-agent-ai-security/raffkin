@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/open-agent-ai-security/socxen/security/redteam/attack.schema.json",
-  "title": "socxen red-team attack fixture",
-  "description": "An adversarial input handed to one of socxen's skills (soc-investigate by default), plus the must_not the run is graded against. Unlike an eval fixture, an attack asserts no positive outcome — only what the agent must NOT do (get suppressed, bypass the gate, leak). See PLAN.md.",
+  "title": "Raffkin red-team attack fixture",
+  "description": "An adversarial input handed to one of Raffkin's skills (soc-investigate by default), plus the must_not the run is graded against. Unlike an eval fixture, an attack asserts no positive outcome — only what the agent must NOT do (get suppressed, bypass the gate, leak). See PLAN.md.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -2,9 +2,9 @@
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
-# socxen preflight — read-only diagnostics, on any host agent.
+# Raffkin preflight — read-only diagnostics, on any host agent.
 #
-# Everything socxen needs to actually work is the same on Claude Code and on Codex:
+# Everything Raffkin needs to actually work is the same on Claude Code and on Codex:
 # credentials, a toolchain, and a bridge that can reach the tenant. Only the
 # human-in-the-loop gate is stored differently, so only the gate check branches.
 #
@@ -25,13 +25,13 @@
 # already defined them.
 
 # Identity from identity.sh (GENERATED from identity.json by gen_identity.py; no python3 needed). The same
-# SOCXEN_PLUGIN / SOCXEN_MARKETPLACE overrides install.sh honors apply here, so a remediation message
+# RAFFKIN_PLUGIN / RAFFKIN_MARKETPLACE overrides install.sh honors apply here, so a remediation message
 # names the key the operator actually installed. Both halves come from the same source or neither does:
 # a key stitched from one real half and one guessed half is one no marketplace serves.
 _PF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_PF_DIR/identity.sh" ]; then . "$_PF_DIR/identity.sh"; fi
-PLUGIN_NAME="${SOCXEN_PLUGIN:-${SOCXEN_ID_NAME:-}}"
-_PF_MKT="${SOCXEN_MARKETPLACE:-${SOCXEN_ID_MARKETPLACE_NAME:-}}"
+PLUGIN_NAME="${RAFFKIN_PLUGIN:-${RAFFKIN_ID_NAME:-}}"
+_PF_MKT="${RAFFKIN_MARKETPLACE:-${RAFFKIN_ID_MARKETPLACE_NAME:-}}"
 if [ -n "$PLUGIN_NAME" ] && [ -n "$_PF_MKT" ]; then
   PLUGIN_KEY="${PLUGIN_NAME}@${_PF_MKT}"
 else
@@ -70,15 +70,15 @@ fi
 
 # ---- host detection ----
 # Which agent is this install for? Both CLIs can be present on one machine, so an explicit
-# --platform always wins; otherwise prefer the one whose plugin cache actually holds socxen,
+# --platform always wins; otherwise prefer the one whose plugin cache actually holds Raffkin,
 # and fall back to whichever CLI exists.
 detect_platform() {
-  if [ -n "${SOCXEN_PLATFORM:-}" ]; then printf '%s' "$SOCXEN_PLATFORM"; return; fi
+  if [ -n "${RAFFKIN_PLATFORM:-}" ]; then printf '%s' "$RAFFKIN_PLATFORM"; return; fi
   local has_claude=0 has_codex=0
   command -v claude >/dev/null 2>&1 && has_claude=1
   command -v codex  >/dev/null 2>&1 && has_codex=1
   if [ "$has_claude" = 1 ] && [ "$has_codex" = 1 ]; then
-    # Both installed — let an actual socxen install break the tie.
+    # Both installed — let an actual Raffkin install break the tie.
     if codex mcp get exabeam >/dev/null 2>&1; then printf 'codex'; else printf 'claude'; fi
   elif [ "$has_codex" = 1 ]; then printf 'codex'
   elif [ "$has_claude" = 1 ]; then printf 'claude'

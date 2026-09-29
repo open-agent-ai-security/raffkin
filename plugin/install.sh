@@ -2,7 +2,7 @@
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
-# socxen installer — adds the marketplace, installs the plugin (three skills) into
+# Raffkin installer — adds the marketplace, installs the plugin (three skills) into
 # Claude Code, and runs a connectivity preflight. Idempotent; safe to re-run.
 #
 # Claude Code only, deliberately. Most of this script is `claude plugin` CLI handling, and
@@ -24,7 +24,7 @@
 #   install.sh -h | --help
 #
 # Env (all overridable):
-#   SOCXEN_SCOPE=user|project   SOCXEN_REPO   SOCXEN_MARKETPLACE   SOCXEN_PLUGIN
+#   RAFFKIN_SCOPE=user|project   RAFFKIN_REPO   RAFFKIN_MARKETPLACE   RAFFKIN_PLUGIN
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,15 +32,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # read it); env still overrides. There is deliberately NO literal fallback: the install target is not a
 # cosmetic value, and a guessed name would install the upstream plugin after a re-key.
 if [ -f "$SCRIPT_DIR/identity.sh" ]; then . "$SCRIPT_DIR/identity.sh"; fi
-MARKETPLACE_REPO="${SOCXEN_REPO:-${SOCXEN_ID_MARKETPLACE_REPO:-}}"
-MARKETPLACE_NAME="${SOCXEN_MARKETPLACE:-${SOCXEN_ID_MARKETPLACE_NAME:-}}"
-PLUGIN="${SOCXEN_PLUGIN:-${SOCXEN_ID_NAME:-}}"
+MARKETPLACE_REPO="${RAFFKIN_REPO:-${RAFFKIN_ID_MARKETPLACE_REPO:-}}"
+MARKETPLACE_NAME="${RAFFKIN_MARKETPLACE:-${RAFFKIN_ID_MARKETPLACE_NAME:-}}"
+PLUGIN="${RAFFKIN_PLUGIN:-${RAFFKIN_ID_NAME:-}}"
 if [ -z "$PLUGIN" ] || [ -z "$MARKETPLACE_NAME" ] || [ -z "$MARKETPLACE_REPO" ]; then
   printf 'install.sh: cannot determine the plugin identity — %s/identity.sh is missing or incomplete.\n' "$SCRIPT_DIR" >&2
-  printf '  Regenerate it with: python3 %s/gen_identity.py   (or set SOCXEN_PLUGIN, SOCXEN_MARKETPLACE and SOCXEN_REPO)\n' "$SCRIPT_DIR" >&2
+  printf '  Regenerate it with: python3 %s/gen_identity.py   (or set RAFFKIN_PLUGIN, RAFFKIN_MARKETPLACE and RAFFKIN_REPO)\n' "$SCRIPT_DIR" >&2
   exit 1
 fi
-SCOPE="${SOCXEN_SCOPE:-user}"
+SCOPE="${RAFFKIN_SCOPE:-user}"
 ENV_FILE="${EXABEAM_ENV_FILE:-$HOME/.exabeam-mcp.env}"
 BRIDGE="$SCRIPT_DIR/connector/exabeam-mcp-bridge.py"
 
@@ -95,7 +95,7 @@ banner
 # Sourced, not exec'd: preflight.sh defines its checks and runs nothing when sourced, and its UI
 # helpers defer to the ones defined above so counters and summary stay shared.
 # A missing file here would abort bash under `set -e` with a bare "No such file or directory"
-# and no socxen framing, before any UI has been printed. It ships beside us and is git-tracked,
+# and no Raffkin framing, before any UI has been printed. It ships beside us and is git-tracked,
 # so this only fires on a partial checkout or a packaging filter — but make it legible when it does.
 if [ ! -f "$SCRIPT_DIR/preflight.sh" ]; then
   printf '%s✗%s preflight.sh not found beside install.sh (%s)\n' "$RED" "$RST" "$SCRIPT_DIR" >&2
@@ -157,13 +157,13 @@ print(next(((p.get("version") or "unknown") for p in plugins
 plugin_install_cmd() { claude plugin install "${PLUGIN}@${MARKETPLACE_NAME}" --scope "${SCOPE}"; }
 plugin_update_cmd()  { claude plugin update  "${PLUGIN}@${MARKETPLACE_NAME}" --scope "${SCOPE}"; }
 
-# Escape a user-overridable name (SOCXEN_REPO etc.) for interpolation into an ERE, so the
+# Escape a user-overridable name (RAFFKIN_REPO etc.) for interpolation into an ERE, so the
 # patterns below can stay boundary-anchored (a bare -F substring match would let
-# 'acme/socxensuite' pass for 'socxen') without regex metacharacters breaking grep.
+# 'acme/raffkinsuite' pass for 'raffkin') without regex metacharacters breaking grep.
 esc_ere() { printf '%s' "$1" | sed 's/[][\.|$(){}?+*^]/\\&/g'; }
 
 # Does this 'claude plugin list' (plain) output contain ${PLUGIN}@${MARKETPLACE_NAME} as a
-# standalone id? Boundary excludes [alnum]_- continuation so 'socxen@open-agent-ai-security-dev' never matches.
+# standalone id? Boundary excludes [alnum]_- continuation so 'raffkin@open-agent-ai-security-dev' never matches.
 plugin_listed() {
   grep -Eqi "(^|[^[:alnum:]_-])$(esc_ere "${PLUGIN}@${MARKETPLACE_NAME}")([^[:alnum:]_-]|$)" <<<"$1"
 }

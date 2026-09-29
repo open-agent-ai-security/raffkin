@@ -9,12 +9,12 @@
 > them bumps the version). The authoritative statement of behavior is
 > the code — `plugin/connector/neutralize_output.py` (the module docstring lists every rule and every
 > residual) and the write path in `plugin/connector/exabeam-mcp-bridge.py`. The user-facing description
-> is [the guardrails page](../../plugin/docs/security-guardrails.md#2-filtering-what-socxen-writes-de-activating-dangerous-content).
+> is [the guardrails page](../../plugin/docs/security-guardrails.md#2-filtering-what-raffkin-writes-de-activating-dangerous-content).
 > This record says *why* the control is shaped this way, what was rejected, and what it declines to do.
 
 ## 1. The problem
 
-socxen writes what it read. A case note, an alert update, a case update, an outbound mail — each one
+Raffkin writes what it read. A case note, an alert update, a case update, an outbound mail — each one
 carries text that started life in telemetry an attacker could write. Three things in that text are
 *active*: they do damage not when the model reads them but when a person later opens, clicks or exports
 the persisted record.
@@ -85,7 +85,7 @@ sees the query value, because defang rewrites scheme and host, never the query s
 
 ## 4. Clickable is decided by destination, not authorship (#147)
 
-The model writes the text, so "socxen wrote this link" carries no trust. The only link that stays
+The model writes the text, so "Raffkin wrote this link" carries no trust. The only link that stays
 clickable is one whose host **is exactly the API host in `EXABEAM_MCP_URL`** — derived by the bridge
 (`tenant_hosts_from_url`), never curated, never model-influenced. No wildcard: an earlier cut allowed
 every host under the region domain, and a region is shared by every tenant in it, so one tenant's content
@@ -104,13 +104,13 @@ the console they already sign in to; the shipped rule keeps that one link and no
   `closedReason` must be one of the six values the API documents; anything else refuses the close rather
   than dropping it, because a close that lands without its disposition is a worse record than a refused
   close the analyst can re-issue. (This refusal is an ordinary tool error; only the `create_case` refusal
-  below carries the grader's mark.) socxen's reasoning goes into a case note, which appends.
+  below carries the grader's mark.) Raffkin's reasoning goes into a case note, which appends.
 - **A case is opened by `create_case`** (#164, Praxen finding 2026-09-07-001 — findings are in
   [praxen/results/](../praxen/results/); #163). The tool sits in the
   prompt-free allow tier on both hosts, yet its schema accepts `stage` and `closedReason`: a case created
   already closed or false-positive is a close by another route around the ask-tier gate. The bridge
   refuses any create carrying a closing disposition or a `closedReason` at all, before the dry run, with
-  a refusal the red-team grader recognises (`socxen bridge refused`). Fixture c04 covers it.
+  a refusal the red-team grader recognises (`Raffkin bridge refused`). Fixture c04 covers it.
 - **Writes are the default, reads the exception** (Praxen finding 2026-09-07-005). A tool this release did not
   classify as a read is neutralized, audited and refused in a dry run until someone classifies it. An
   unreadable tier file means *no* reads, so the failure direction is "a read is treated as a write",

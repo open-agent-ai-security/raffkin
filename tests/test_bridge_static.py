@@ -127,7 +127,7 @@ def test_check_without_creds_exits_clean():
 # CLOSED under `claude -p`; Codex cancels its destructive-annotated write tools under `codex exec`,
 # because approval can't be granted. (An earlier build on this branch read Codex's approve mode as
 # failing OPEN headlessly and added a connector-side confirmation for it; that did not reproduce and the
-# claim was retracted — see CHANGELOG.) SOCXEN_DRY_RUN is therefore a host-independent test switch, not a
+# claim was retracted — see CHANGELOG.) RAFFKIN_DRY_RUN is therefore a host-independent test switch, not a
 # safety fix: the bridge is the only shared layer, so it is the only place a write can be refused
 # identically on both without depending on either host's approval semantics. These pin the properties
 # that make that refusal trustworthy.
@@ -149,7 +149,7 @@ def _dry_run_guard():
 def test_dry_run_is_off_unless_the_env_says_otherwise():
     """A dry run that turns itself on would silently stop protecting a real tenant; one that turns
     itself off would silently write to it. It must come from the environment and nowhere else."""
-    assert 'DRY_RUN = _truthy(os.environ.get("SOCXEN_DRY_RUN", ""))' in SRC
+    assert 'DRY_RUN = _truthy(os.environ.get("RAFFKIN_DRY_RUN", ""))' in SRC
     assert "DRY_RUN = True" not in SRC
 
 

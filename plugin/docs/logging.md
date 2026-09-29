@@ -8,7 +8,7 @@
 **What it is:** a structured, durable, machine-parseable record of what the agent did on every
 investigation — which Exabeam tools it called, how long they took, whether they succeeded, **the gated
 action it took** (which alert/case, to what disposition), and **when the [security
-guardrails](security-guardrails.md) fired**. A good agent keeps an audit trail; socxen keeps one **by
+guardrails](security-guardrails.md) fired**. A good agent keeps an audit trail; Raffkin keeps one **by
 default**, so a production tenant can reconstruct a session or drive anomaly detection instead of relying
 on the free-form investigation report alone.
 
@@ -33,7 +33,7 @@ The bridge installs the observra library it needs (1.1 or newer); nothing for yo
 | `tool_error` | a tool call fails | `tool_name`, `duration_ms`, `error_class`, `stage` (`neutralize` = the write-side guardrail refused to forward, with `guardrail_refused: true`; `metadata_screen` = a definition the screen withheld was called by name and the bridge refused it, also with `guardrail_refused: true`; `remote` = the upstream call failed; `upstream_tool` = the tool ran on the proxy and reported an error), and for a remote failure the structured parts of what failed: `error_type_name`, `error_code` (the platform's own code, e.g. `AAA_ESA_1000_400`, when it sent one), `http_status` when there was one, `is_retryable`; `outcome_unknown: true` when a write's request had gone out before the session died (verify before re-issuing); `dropped_fields` naming, by the schema's spelling, the fields the bridge dropped from an update. Never the error message itself: it quotes the request. A failed `tools/list` at startup is recorded under `tool_name: tools/list`. |
 
 Every event also carries: `framework: "mcp"`, `agent_name` (the plugin's name from its `identity.json`
-— `socxen` here; a copy shipped under another name logs under that name), `skill_name: "soc-investigate"`,
+— `raffkin` here; a copy shipped under another name logs under that name), `skill_name: "soc-investigate"`,
 ULID `session_id` / `trace_id` / `span_id` for correlation, a `timestamp`, and host context
 (`host`, `user`, `os`, `arch`, `library_version`) for accountability.
 
@@ -67,13 +67,13 @@ bidi-shaped investigation it is the field to query.
 
 ## The gate's own record
 
-The bundled Claude Code hook keeps a second, smaller log beside the telemetry: `~/.socxen/gate.jsonl`
-(`SOCXEN_GATE_LOG=off` disables it and says so on stderr; another path overrides; rotates at ~5 MB with
+The bundled Claude Code hook keeps a second, smaller log beside the telemetry: `~/.raffkin/gate.jsonl`
+(`RAFFKIN_GATE_LOG=off` disables it and says so on stderr; another path overrides; rotates at ~5 MB with
 three backups). One line per decision:
 
 ```json
-{"ts": "2026-09-05T16:01:26+00:00", "tool": "mcp__plugin_socxen_exabeam__exabeam_update_alert",
- "decision": "ask", "reason": "socxen gate: exabeam_update_alert dismisses or closes. It needs the analyst's explicit yes — ask, and wait.",
+{"ts": "2026-09-05T16:01:26+00:00", "tool": "mcp__plugin_raffkin_exabeam__exabeam_update_alert",
+ "decision": "ask", "reason": "Raffkin gate: exabeam_update_alert dismisses or closes. It needs the analyst's explicit yes — ask, and wait.",
  "target": {"alertId": "4471", "alertStatus": "DISMISSED"}}
 ```
 
@@ -85,7 +85,7 @@ exists so that a gate that somehow did not hold is visible in the record rather 
 carry the host's `permission_mode` and `tool_use_id` when present, so a post line ties to its ask:
 
 ```json
-{"ts": "2026-09-05T16:01:41+00:00", "tool": "mcp__plugin_socxen_exabeam__exabeam_update_alert",
+{"ts": "2026-09-05T16:01:41+00:00", "tool": "mcp__plugin_raffkin_exabeam__exabeam_update_alert",
  "decision": "approved", "reason": "an ask-tier call completed after the gate asked: inferred from completion, an ask completes only on a yes",
  "permission_mode": "default", "tool_use_id": "toolu_01ABC",
  "target": {"alertId": "4471", "alertStatus": "DISMISSED"}}
@@ -127,12 +127,12 @@ Default backend is a **local, rotating JSON-lines file** — no network egress:
 
 | Setting | Env var | Default |
 |---|---|---|
-| Backend | `SOCXEN_OBSERVRA` | `jsonl` (set `off` to disable) |
-| File path | `SOCXEN_OBSERVRA_PATH` | `~/.socxen/telemetry.jsonl` |
-| Rotate at size | `SOCXEN_OBSERVRA_MAX_BYTES` | `10485760` (10 MB) |
-| Backups kept | `SOCXEN_OBSERVRA_BACKUPS` | `5` |
-| Webhook destination | `SOCXEN_OBSERVRA_URL` | — (required for `webhook`) |
-| OTLP endpoint | `SOCXEN_OBSERVRA_ENDPOINT` | — (else `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._LOGS_ENDPOINT`, else `http://localhost:4318`) |
+| Backend | `RAFFKIN_OBSERVRA` | `jsonl` (set `off` to disable) |
+| File path | `RAFFKIN_OBSERVRA_PATH` | `~/.raffkin/telemetry.jsonl` |
+| Rotate at size | `RAFFKIN_OBSERVRA_MAX_BYTES` | `10485760` (10 MB) |
+| Backups kept | `RAFFKIN_OBSERVRA_BACKUPS` | `5` |
+| Webhook destination | `RAFFKIN_OBSERVRA_URL` | — (required for `webhook`) |
+| OTLP endpoint | `RAFFKIN_OBSERVRA_ENDPOINT` | — (else `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._LOGS_ENDPOINT`, else `http://localhost:4318`) |
 
 Whatever the backend, the bridge prints the **resolved destination** on stderr at startup (a path, or the
 scheme + host of the endpoint — never a URL path or query, which can carry a token) and records the same on
@@ -143,7 +143,7 @@ printed to stderr only, because there is no longer a log to write it to.
 So the log **rotates** (`telemetry.jsonl` → `.1` → … → `.5`, oldest deleted) and is bounded to roughly
 **60 MB** by default. It never grows without limit.
 
-Other backends (opt-in via `SOCXEN_OBSERVRA=`): `exabeam` (routes telemetry back into Exabeam using the
+Other backends (opt-in via `RAFFKIN_OBSERVRA=`): `exabeam` (routes telemetry back into Exabeam using the
 bridge's own creds), `otel` / `otel_log` (OpenTelemetry), `webhook`. These make network calls, so `jsonl`
 is the default. On first enable, the bridge prints one line to stderr naming the destination and how to
 turn it off — disclosed, not silent.
@@ -155,21 +155,21 @@ turn it off — disclosed, not silent.
 
 ## Finding and reading your log
 
-By default it's at **`~/.socxen/telemetry.jsonl`** (rotated backups are `telemetry.jsonl.1` … `.5`). It's
+By default it's at **`~/.raffkin/telemetry.jsonl`** (rotated backups are `telemetry.jsonl.1` … `.5`). It's
 one JSON object per line — read it with anything that speaks JSON lines:
 
 ```bash
-tail -f ~/.socxen/telemetry.jsonl                      # watch events live
+tail -f ~/.raffkin/telemetry.jsonl                      # watch events live
 
 # the gated actions this session took (which alert, to what disposition):
 jq -c 'select(.event_type=="tool_end" and (.data|has("action.disposition")))
        | {tool: .tool_name, alert: .data."action.alertId", disp: .data."action.disposition"}' \
-   ~/.socxen/telemetry.jsonl
+   ~/.raffkin/telemetry.jsonl
 
 # every time a guardrail fired:
 jq -c 'select(.data.defang_formula or .data.defang_link or .data.hygiene_stripped)
        | {tool: .tool_name, defang_formula: .data.defang_formula, defang_link: .data.defang_link,
-          hygiene: .data.hygiene_stripped}' ~/.socxen/telemetry.jsonl
+          hygiene: .data.hygiene_stripped}' ~/.raffkin/telemetry.jsonl
 ```
 
 Events from one investigation share a `session_id`, so you can reconstruct a run by grouping on it.
@@ -193,11 +193,11 @@ announcing it. The security guardrails are independent and keep running througho
 ## Turning it off
 
 ```bash
-export SOCXEN_OBSERVRA=off
+export RAFFKIN_OBSERVRA=off
 ```
 
 Off means *off*: no file, and observra is never imported. The bridge says so on stderr when it starts —
-`bridge: observra logging is OFF (SOCXEN_OBSERVRA=off) — this session is not recorded` — so an unrecorded
+`bridge: observra logging is OFF (RAFFKIN_OBSERVRA=off) — this session is not recorded` — so an unrecorded
 session is never a silent one.
 
 ## Known limitation

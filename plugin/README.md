@@ -3,7 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# socxen
+# Raffkin
 **An agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex.**
 
 [![Project level: Incubator](https://img.shields.io/badge/project_level-incubator-d29922)](https://open-agent-ai-security.github.io/project-levels/)
@@ -16,11 +16,11 @@
 > installation, your first investigation, security, logging and support. This file is the same guide's
 > front door for readers arriving from the plugin itself.
 
-> ⚠️ **Pre-release software — for evaluation only.** socxen is under active development. Expect
+> ⚠️ **Pre-release software — for evaluation only.** Raffkin is under active development. Expect
 > breaking changes between versions, and do not rely on it for production SOC operations or point it
 > at alerts whose disposition matters without a human reviewing every action.
 
-socxen gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
+Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
 skills work the tenant through the Exabeam MCP — one case, the whole queue, or the rules behind it —
 each named for the person whose job it does. No server, no database, no approval queue: the analyst at
 the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks
@@ -55,7 +55,7 @@ Each hands off to the others: a single case to `soc-investigate`, a noise cluste
 ## Get started
 
 1. Install: `claude plugin marketplace add open-agent-ai-security/plugins` then
-   `claude plugin install socxen@open-agent-ai-security` (Codex: `codex plugin marketplace add …`,
+   `claude plugin install raffkin@open-agent-ai-security` (Codex: `codex plugin marketplace add …`,
    `codex plugin add …`).
 2. Add your Exabeam API key and secret to `~/.exabeam-mcp.env`.
 3. Run `preflight.sh` from the installed plugin to check the connection and the gate.
@@ -69,7 +69,7 @@ The full five-minute quick start, with what to expect at each step, is in
 | Page | What's in it |
 |---|---|
 | **[Installation & setup](docs/installation.md)** | quick starts for Claude Code and Codex, credentials, troubleshooting, updating (**start here**) |
-| **[Using the skills](docs/usage.md)** | what to say, what happens, what socxen asks you, how to read the report |
+| **[Using the skills](docs/usage.md)** | what to say, what happens, what Raffkin asks you, how to read the report |
 | **[Example investigation](skills/soc-investigate/reference/examples/coordinated-credential-access.md)** | a real run, from alert to verdict |
 | **[Security](docs/security-guardrails.md)** | the human gate, the guardrails, the audit trail, how it is tested, what it does not cover |
 | **[Audit logging](docs/logging.md)** | exactly what is recorded, where the log lives, how to route or disable it |
@@ -85,14 +85,14 @@ track the current release; `claude plugin list` (or `codex plugin list`) shows y
 
 ## Project sponsor
 
-socxen is sponsored by [Exabeam](https://www.exabeam.com/). Exabeam contributed the initial code and
+Raffkin is sponsored by [Exabeam](https://www.exabeam.com/). Exabeam contributed the initial code and
 continues to provide ongoing support and contributions to the project as part of its commitment to
 security in an increasingly agentic world.
 
 ## License
 
 <!-- community-only -->
-Apache-2.0 — see `LICENSE` / `NOTICE`. socxen is community supported, as is; see
+Apache-2.0 — see `LICENSE` / `NOTICE`. Raffkin is community supported, as is; see
 [Support](docs/support.md).
 <!-- /community-only -->
 <!-- distribution-only

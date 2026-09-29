@@ -5,27 +5,27 @@
 
 # security/
 
-Supply-chain and assurance artifacts for socxen. This directory is the home for the
+Supply-chain and assurance artifacts for Raffkin. This directory is the home for the
 things a security-conscious adopter asks for — the **AI BOM** and the **SBOM**, our **red-team**
 program, **agent-behavior verification** reports, and the **design records** of the controls those
 programs test. The controls themselves ship inside the plugin; this page says what they are and where
 each one lives.
 
-> **socxen is red-teamed before every release.** It's an agentic SOC analyst that reads
+> **Raffkin is red-teamed before every release.** It's an agentic SOC analyst that reads
 > attacker-influenceable telemetry and takes gated actions, so we adversarially test whether
 > an attacker who controls the data can make it suppress a real threat, bypass the human
-> gate, or leak. **→ [How we red-team socxen](redteam/METHODOLOGY.md)** ·
+> gate, or leak. **→ [How we red-team Raffkin](redteam/METHODOLOGY.md)** ·
 > [test history](redteam/HISTORY.md)
 
-> **socxen is behavior-verified against a declared policy.** We publish a **Worker Remit** —
-> what socxen is authorized to do — and check the shipped code against every rule in it with
+> **Raffkin is behavior-verified against a declared policy.** We publish a **Worker Remit** —
+> what Raffkin is authorized to do — and check the shipped code against every rule in it with
 > [Praxen](https://github.com/open-agent-ai-security/praxen). **A release does not ship with an
 > open Critical finding.** **→ [Agent Behavior Verification](praxen/README.md)** ·
 > [the remit](praxen/WORKER_REMIT.md) · [latest report](praxen/results/)
 
 ## The controls
 
-socxen's security posture is four deterministic controls in the shipped code plus the doctrine in the
+Raffkin's security posture is four deterministic controls in the shipped code plus the doctrine in the
 skills. The user-facing description — what each does and what it does not — is
 **[the guardrails page](../plugin/docs/security-guardrails.md)**; the gate's operator view is in
 **[the installation guide](../plugin/docs/installation.md#governance--the-safety-gate)**. The design
@@ -35,8 +35,8 @@ records here say *why* each control is shaped the way it is and what was rejecte
 |---|---|---|---|
 | **Human-in-the-loop gate** | Dismiss, close and outbound mail always ask a human; every containment tool is denied; an unclassified tool asks. Enforced by the host on both hosts and on by default. | `plugin/hooks/gate.py` + `hooks.json` (Claude Code); `plugin/.mcp.codex.json` (Codex); both derived from the tier file `plugin/skills/soc-investigate/permissions.json` | [design/human-in-the-loop-gate.md](design/human-in-the-loop-gate.md) |
 | **Input canonicalizer** | Strips the invisible-Unicode smuggling layer from every tool result — and from the remote's own tool definitions, which are also hashed per session — before the model reads it. Values are never rewritten; what was stripped is reported out of band. | `plugin/connector/canonicalize.py`, wired in the bridge's read path | [design/input-canonicalizer.md](design/input-canonicalizer.md) |
-| **Output neutralizer** | On every write, de-activates what socxen persists: formulas made inert, every link form defanged unless it points into the operator's own tenant, secrets and structured identifiers masked. Updates carry state only; a create that would land a case already closed is refused. | `plugin/connector/neutralize_output.py` and the write rules in `exabeam-mcp-bridge.py` | [design/output-neutralizer.md](design/output-neutralizer.md) |
-| **Audit trail** | Every call, every gate decision (including refusals) and every guardrail firing, as metadata and safe identifiers — never case content. On by default, local, bounded. | `plugin/connector/observra_logging.py`; the hook's own `~/.socxen/gate.jsonl` | [the logging guide](../plugin/docs/logging.md) |
+| **Output neutralizer** | On every write, de-activates what Raffkin persists: formulas made inert, every link form defanged unless it points into the operator's own tenant, secrets and structured identifiers masked. Updates carry state only; a create that would land a case already closed is refused. | `plugin/connector/neutralize_output.py` and the write rules in `exabeam-mcp-bridge.py` | [design/output-neutralizer.md](design/output-neutralizer.md) |
+| **Audit trail** | Every call, every gate decision (including refusals) and every guardrail firing, as metadata and safe identifiers — never case content. On by default, local, bounded. | `plugin/connector/observra_logging.py`; the hook's own `~/.raffkin/gate.jsonl` | [the logging guide](../plugin/docs/logging.md) |
 
 The deterministic tests behind each control are listed in its design record; the audit trail's are in
 `tests/test_observra_logging.py`.
@@ -68,7 +68,7 @@ its design record and on the guardrails page, not hidden.
 
 ## The AI BOM
 
-socxen is an **AI application / agent**, not a model — it runs on a hosted
+Raffkin is an **AI application / agent**, not a model — it runs on a hosted
 foundation model it does not ship (Claude on Claude Code, an OpenAI model on Codex — the host
 picks the member), and its substance is a prompt/methodology (the three skills' `SKILL.md` +
 `reference/`) plus a small MCP connector. Model-card AI-BOM tools (which ingest a Hugging
@@ -108,7 +108,7 @@ of the lock). The two BOMs reference each other (`externalReferences` of type `b
 - it is **derived** — the lockfile is the only input, so the SBOM cannot describe a tree the lock does not;
 - CI **checks for drift** on every PR (`gen_sbom.py --check`) and fails with the one-line regenerate command;
 - CI **rebuilds and publishes** it on every push (`Security lint + dependency audit` job → workflow
-  artifact `socxen-sbom-<sha>`), so the SBOM for any commit is downloadable from Actions even before
+  artifact `raffkin-sbom-<sha>`), so the SBOM for any commit is downloadable from Actions even before
   anyone commits it;
 - `scripts/bump_version.py` regenerates it on every release alongside the AI BOM;
 - the same lockfile is audited against the OSV / PyPI advisory databases in CI (`pip-audit --strict`),
