@@ -47,7 +47,7 @@ one, the call is refused.
   key and secret unprotected. There is no PowerShell path.
 <!-- community-only -->
 - **Exabeam customers:** the supported build is delivered through the
-  [Exabeam Plug-in Forge](https://exabeam-labs.github.io/plugins/), with its own install command. These
+  [Exabeam Plug-in Catalog](https://plugins.exabeam.com/), with its own install command. These
   instructions cover the community release; see [Support](support.md).
 <!-- /community-only -->
 <!-- distribution-only
