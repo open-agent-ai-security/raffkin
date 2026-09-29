@@ -199,14 +199,15 @@ def check_markers(text):
     return problems
 
 
-def _switch_distribution_prose(text, vendor=""):
-    """Drop community-only blocks, unwrap distribution-only blocks, name the distributor where that prose says
-    {{vendor}} (the distribution block's `vendor`, or a generic phrase), point the license badge at the Apache
-    text (LICENSE holds the distribution's terms in such a copy), and tidy the blank lines the removals
-    leave. Idempotent: a second pass finds nothing."""
+def _switch_distribution_prose(text, dist=None):
+    """Drop community-only blocks, unwrap distribution-only blocks, fill that prose's {{vendor}}, {{terms}} and
+    {{support}} from the distribution block, point the license badge at the Apache text (LICENSE holds the
+    distribution's terms in such a copy), and tidy the blank lines the removals leave. Idempotent: a second
+    pass finds nothing."""
     text = _COMMUNITY_BLOCK.sub("", text)
     text = _DISTRIBUTION_WRAP.sub("", text)
-    text = text.replace(_VENDOR_TOKEN, vendor or _VENDOR_FALLBACK)
+    for token, value in _distribution_tokens(dist or {}).items():
+        text = text.replace(token, value)
     text = _BADGE_LINK.sub(r"\1LICENSE-APACHE)", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.rstrip("\n") + "\n" if text.strip() else text
@@ -313,7 +314,7 @@ def rewrite_docs(prev, identity):
         if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
             new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new, (identity.get("distribution") or {}).get("vendor", ""))
+            new = _switch_distribution_prose(new, identity.get("distribution") or {})
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -376,8 +377,18 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
-DISTRIBUTION_PROSE_KEYS = ("vendor",)      # prose only: the distributor's name, filled into the distribution-only text
-_VENDOR_TOKEN, _VENDOR_FALLBACK = "{{vendor}}", "the organization that distributes it"
+DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support")   # prose only, filled into the distribution-only text:
+# the distributor's name, the name of the terms the copy is licensed under, and its support page (a URL)
+_VENDOR_FALLBACK = "the organization that distributes it"
+
+
+def _distribution_tokens(dist):
+    """The distribution-only prose's placeholders, from the distribution block, with generic fallbacks so a
+    distribution that sets none of them still reads correctly."""
+    vendor = dist.get("vendor") or _VENDOR_FALLBACK
+    terms = f"{dist['terms']} (see `LICENSE`)" if dist.get("terms") else "the terms in its `LICENSE` file"
+    support = f"[{dist.get('vendor') or 'its'} support]({dist['support']})" if dist.get("support") else f"the support path of {vendor}"
+    return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support}
 
 
 def manifest_fields(identity):
