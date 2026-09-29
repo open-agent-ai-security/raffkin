@@ -52,6 +52,11 @@ class B trials graded landed were confirmed benign from their transcripts (#278)
 - **The redactor masks unlabeled `sk-`, `sk-proj-`, `sk-ant-` and `glpat-` keys** by their shape, leaving
   hostnames and branch names alone (#268).
 - **Turning audit logging off is announced on stderr** (#215).
+- **A distribution names its own product in the docs** (#282). `identity.json` carries `productName`, and
+  when a catalog re-keys the plugin, `gen_identity.py` replaces the upstream name in the README, docs and
+  skills prose with the distribution's (for example, "the Exabeam Agentic SOC plugin"). Paths, variables,
+  URLs, code and the messages the code prints keep their names, and the attribution sentence keeps naming
+  the included open-source project. The guardrails diagram names no product.
 
 ### Changed
 

@@ -937,9 +937,11 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     assert "plugins/cache/exabeam/soc/<version>/preflight.sh" in g and "plugins/cache/open-agent-ai-security" not in g
     assert "claude plugin marketplace update exabeam" in g and 'marketplace remove exabeam' in g and '"exabeam": {' in g
     assert "<!-- community-only -->" in g and "community release" in g, "no distribution block: the community prose stays"
-    # now WITH the block: the community-only prose goes, the distribution-only prose appears
+    # now WITH the block: the community-only prose goes, the distribution-only prose appears; the distribution
+    # also names its own product in English, so the upstream project's name leaves the prose
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
                              "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
+    ident["productName"] = "the Exabeam Agentic SOC plugin"
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     subprocess.run(gen, check=True, capture_output=True, text=True)
     for f in (guide, support, readme):
@@ -957,6 +959,15 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
         for m in re.finditer(r"open-agent-ai-security", f.read_text()):
             ctx = f.read_text()[max(0, m.start() - 20):m.end() + 12]
             assert "github.com/open-agent-ai-security/" in ctx or "open-agent-ai-security.github.io" in ctx, (f.name, ctx)
+    # the product's English name: no prose "Raffkin" survives; what does survive is what the code really uses —
+    # a message it prints, quoted in a code block — and paths and variables stay lowercase identifiers
+    for f in [readme, *sorted((work / "docs").rglob("*.md")), *sorted((work / "skills").rglob("*.md"))]:
+        for n, line in enumerate(f.read_text().split("\n"), 1):
+            for m in re.finditer(r"Raffkin", line):
+                assert line[m.end():].startswith((" gate:", " gate could", " bridge refused", " bridge:", ", open source")), \
+                    f"{f.name}:{n}: prose still names Raffkin: {line.strip()[:100]}"
+            assert not re.search(r"\b(?:[Aa]n?|[Tt]he|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny) the Exabeam", line), f"{f.name}:{n}: stacked article"
+    assert "The Exabeam Agentic SOC plugin" in rd and "~/.raffkin/" in (work / "docs" / "logging.md").read_text()
     # idempotent and --check clean
     before = (g, sp, rd)
     subprocess.run(gen, check=True, capture_output=True, text=True)
@@ -1011,3 +1022,43 @@ def test_no_tracked_text_file_carries_a_nul_byte():
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
     bad = [f for f in files if f and not f.lower().endswith(binary) and (ROOT / f).is_file() and b"\x00" in (ROOT / f).read_bytes()]
     assert not bad, f"NUL bytes in tracked text files: {bad}"
+
+
+@pytest.mark.parametrize("src, want", [
+    ("# Raffkin", "# The Exabeam Agentic SOC plugin"),
+    ("what Raffkin asks you", "what the Exabeam Agentic SOC plugin asks you"),
+    ("it is not a Raffkin setting", "it is not an Exabeam Agentic SOC plugin setting"),
+    ("The Raffkin guardrail bridge", "The Exabeam Agentic SOC plugin guardrail bridge"),
+    ("importantly, Raffkin's guardrails", "importantly, the Exabeam Agentic SOC plugin's guardrails"),
+    ('<img alt="Raffkin guardrail bridge">', '<img alt="The Exabeam Agentic SOC plugin guardrail bridge">'),
+    ("| Raffkin | x |", "| The Exabeam Agentic SOC plugin | x |"),
+    ("done. Raffkin then", "done. The Exabeam Agentic SOC plugin then"),
+    ("and no Raffkin skill applies", "and no Exabeam Agentic SOC plugin skill applies"),
+    ("every Raffkin skill", "every Exabeam Agentic SOC plugin skill"),
+    ("A Raffkin note", "An Exabeam Agentic SOC plugin note"),
+    ("cannot do harm through\nRaffkin.", "cannot do harm through\nthe Exabeam Agentic SOC plugin."),
+    ("Previous paragraph.\n\nRaffkin reads it", "Previous paragraph.\n\nThe Exabeam Agentic SOC plugin reads it"),
+    ("no middle here: Raffkin does", "no middle here: the Exabeam Agentic SOC plugin does"),
+    ("e.g. Raffkin", "e.g. the Exabeam Agentic SOC plugin"),
+    ('```mermaid\nS{{"Raffkin skill"}}\n```', '```mermaid\nS{{"The Exabeam Agentic SOC plugin skill"}}\n```'),
+    ("The Raffkin gate blocks it", "The Exabeam Agentic SOC plugin gate blocks it"),
+    # the attribution form names the included open-source project, which keeps its own name
+    ("The software in this copy is Raffkin, open source under the Apache License 2.0",
+     "The software in this copy is Raffkin, open source under the Apache License 2.0"),
+    ("```\nRaffkin in a code block\n```", "```\nRaffkin in a code block\n```"),
+    ("~~~\nRaffkin in a code block\n~~~", "~~~\nRaffkin in a code block\n~~~"),
+    # identifiers and the code's own messages are left exactly as the code uses them
+    ("~/.raffkin/ and `Raffkin gate: x`", "~/.raffkin/ and `Raffkin gate: x`"),
+    ('"reason": "Raffkin gate: y"', '"reason": "Raffkin gate: y"'),
+    ("Raffkin bridge refused it", "Raffkin bridge refused it"),
+    ("https://github.com/open-agent-ai-security/raffkin", "https://github.com/open-agent-ai-security/raffkin"),
+])
+def test_a_distribution_names_its_own_product_in_the_prose(src, want):
+    """A distribution ships the payload under its own product name: the upstream project's English name is
+    replaced in prose, with articles and capitals right, and never inside an identifier or a quoted message."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("gen_identity_prose", ROOT / "plugin" / "gen_identity.py")
+    g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
+    assert g._rename_prose(src, "Raffkin", "the Exabeam Agentic SOC plugin") == want
+    assert g._rename_prose(src, "Raffkin", "Raffkin") == src, "the upstream distribution's own name is a no-op"
+
