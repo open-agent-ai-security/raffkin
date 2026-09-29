@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/gate.py\" || exit 2",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/gate.py\" || { printf '%s\n' \"Raffkin gate could not run: python3 was not found on PATH. The gate fails closed, so every Exabeam call is refused until it can run. Raffkin is not supported natively on Windows (python3 there is a Microsoft Store alias stub, not an interpreter) - use WSL. See https://github.com/open-agent-ai-security/raffkin\" >&2; exit 2; }",
             "timeout": 20
           }
         ]
