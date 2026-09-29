@@ -76,7 +76,9 @@ Trust 4 → 3, where the scanner records both scores as defensible and takes the
 functional change since 09-24 is those two fixes, that is inside the run-to-run range measured on
 2026-09-08. The Critical count, which is the gate, is 0 on both.
 
-**Disposition:** maintainer review pending.
+**Disposition (maintainer approval, Steve Wilson, 2026-09-28).** Gate passes. No finding blocks the 1.0.0
+release: the Mediums are the documented design or tracked (the remit side of `-001` in #267, `-003` is #247's
+designed threshold), and the Lows are carried or hardening.
 
 ## Previous — remit v1.8 @ `0e58da8` (2026-09-24, `dev` on the 1.0 glide path)
 
