@@ -8,7 +8,7 @@
 Notable changes to Raffkin (named socxen before 1.0). Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
 governance model (feature → `dev`, release `dev` → `main`).
 
-## [1.0.0] — lands with the repository rename
+## [1.0.0] — 2026-09-28
 
 **Raffkin 1.0: the project is renamed, and compatibility starts here.** socxen was pre-release; this is
 the first release with a stable surface. Since 0.9.0, beyond the name: escalation writes run on a
