@@ -190,13 +190,18 @@ def test_decision_log_is_best_effort(tmp_path):
 def test_hook_invocation_fails_closed_without_an_interpreter(tmp_path):
     """Praxen PRAX-2026-09-05-001: gate.py never fails open, but a hook whose command errors is
     NON-blocking on the host — so a missing python3 meant no gate. The command now exits 2 (the host's
-    blocking code) when the interpreter is missing or the script cannot run."""
+    blocking code) when the interpreter is missing or the script cannot run.
+
+    Asserted as behavior, not spelling: the command used to end in the literal `|| exit 2`, which pinned
+    the exit code to one phrasing and blocked adding a reason to the failure. What has to hold is the
+    exit code the host reads, and that the operator is told which component refused the call — the bare
+    form left them with only the interpreter's own message and no mention of Raffkin."""
     import subprocess, json as _json
     cmd = _json.loads((PLUGIN / "hooks" / "hooks.json").read_text())["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-    assert cmd.endswith("|| exit 2")
     env = {"PATH": str(tmp_path), "CLAUDE_PLUGIN_ROOT": str(PLUGIN)}     # no python3 on PATH
     proc = subprocess.run(["/bin/sh", "-c", cmd], input="{}", capture_output=True, text=True, env=env)
     assert proc.returncode == 2
+    assert "Raffkin" in proc.stderr, "a blocked call must name the component that blocked it"
 
 
 def test_gate_log_rotates_at_a_ceiling_and_the_off_switch_discloses_itself(tmp_path):
