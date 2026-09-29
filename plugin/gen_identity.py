@@ -83,8 +83,8 @@ def check_server(identity, perms):
 
 def product_name(identity):
     """The product's name as English prose uses it, mid-sentence, article included when the name needs one
-    ("Raffkin"; a distribution's "the Exabeam Agentic SOC plugin"). Defaults to the plugin name."""
-    return identity.get("productName") or identity["name"]
+    ("Raffkin"; a distribution's "the Exabeam Agentic SOC plugin"). Defaults to the upstream name."""
+    return identity.get("productName") or "Raffkin"     # the upstream project's name, never the bare plugin key
 
 
 def shell_include(identity, perms):
@@ -125,7 +125,7 @@ def previous_identity():
     return {"key": f"{vals['RAFFKIN_ID_NAME']}@{vals['RAFFKIN_ID_MARKETPLACE_NAME']}", "repo": vals["RAFFKIN_ID_MARKETPLACE_REPO"],
             "name": vals["RAFFKIN_ID_NAME"], "marketplace": vals["RAFFKIN_ID_MARKETPLACE_NAME"],
             "license": vals.get("RAFFKIN_ID_LICENSE", ""),      # absent in copies generated before the license followed
-            "product": vals.get("RAFFKIN_ID_PRODUCT_NAME", "")}  # absent in copies generated before the prose name followed
+            "product": vals.get("RAFFKIN_ID_PRODUCT_NAME") or "Raffkin"}  # copies generated before the prose name followed were Raffkin
 
 
 def install_key(identity):
@@ -217,52 +217,71 @@ def _switch_distribution_prose(text):
 # that documents them keeps them. Code is skipped too, except diagram source (mermaid), whose labels are prose.
 _PROSE_BEFORE = r"[A-Za-z0-9_./@\-]"
 _PROSE_AFTER = r"(?:[A-Za-z0-9_/]|-(?=[A-Za-z0-9]))"
-_MESSAGE_AFTER = re.compile(r" (?:gate\b|bridge\b)")
+_MESSAGE_AFTER = re.compile(r" (?:gate:|gate could|bridge refused|bridge:)")
+# The attribution form names the included open-source project itself and keeps it, the way a product says it
+# "includes Linux": "The software in this copy is Raffkin, open source under the Apache License 2.0".
+_ATTRIBUTION_AFTER = re.compile(r", open source\b")
+_ENDS_SENTENCE = (".", "!", "?", "|", "—", "=", "{", "[")
 
 
 def _rename_prose(text, old, new):
-    """Replace the product name `old` with `new` in prose only: outside inline code and non-diagram code fences,
-    not inside an identifier, a path or a URL, and not where it opens one of the code's own messages.
+    """Replace the product name `old` with `new` in prose only: outside inline code and code fences other than
+    diagram source, not inside an identifier, a path or a URL, and not where it opens one of the code's own
+    messages.
 
     `new` carries its own article when it needs one ("the Exabeam Agentic SOC plugin"). Where the prose already
-    puts an article before the name ("not a Raffkin setting"), that article is kept and fixed to agree ("an
-    Exabeam Agentic SOC plugin setting") instead of stacking two. A name that starts a sentence, heading, list
-    item, table cell or attribute value is capitalized."""
+    puts a determiner before the name ("not a Raffkin setting", "every Raffkin skill"), that word is kept, fixed
+    to agree ("an Exabeam Agentic SOC plugin setting"), and the name goes in without its own article. A name
+    that starts a sentence, heading, list item, table cell, attribute value or diagram label is capitalized; a
+    name opening a hard-wrapped continuation line is not."""
     if not old or old == new:
         return text
     bare = new[4:] if new.lower().startswith("the ") else new       # the name without its own article
-    pat = re.compile(rf"(?:(?<![A-Za-z])(?P<art>[Aa]n?|[Tt]he)\s+)?(?<!{_PROSE_BEFORE}){re.escape(old)}(?!{_PROSE_AFTER})")
+    pat = re.compile(rf"(?:(?<![A-Za-z])(?P<det>[Aa]n?|[Tt]he|THE|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny)\s+)?"
+                     rf"(?<!{_PROSE_BEFORE}){re.escape(old)}(?!{_PROSE_AFTER})")
 
-    def sub(seg, done):
+    def sub(seg, done, prev_line):
         out, last = [], 0
         for m in pat.finditer(seg):
-            if _MESSAGE_AFTER.match(seg, m.end()):
+            if _MESSAGE_AFTER.match(seg, m.end()) or _ATTRIBUTION_AFTER.match(seg, m.end()):
                 continue
-            art = m.group("art")
-            if art:
-                if art.lower() in ("a", "an"):
-                    art = ("An" if art[0].isupper() else "an") if bare[:1].lower() in "aeiou" else ("A" if art[0].isupper() else "a")
-                rep = f"{art} {bare}"
+            det = m.group("det")
+            if det:
+                if det.lower() in ("a", "an"):
+                    vowel = bare[:1].lower() in "aeiou"
+                    det = ("An" if det[0].isupper() else "an") if vowel else ("A" if det[0].isupper() else "a")
+                rep = f"{det} {bare}"
             else:
                 rep = new
-                before = re.sub(r"[\s*_\[(\"“]+$", "", done + seg[:m.start()])
-                if not re.sub(r"^[\s#>|\-*+\d.)]*", "", before) or before.endswith((".", "!", "?", ":", "|", "—", "=")):
+                before = re.sub(r"[\s*_(\"“']+$", "", done + seg[:m.start()])
+                opener = re.sub(r"^[\s#>|\-*+\d.)\[\]]*", "", before)
+                if opener:
+                    cap = before.endswith(_ENDS_SENTENCE) and not before.lower().endswith(("e.g.", "i.e.", "etc.", "vs."))
+                else:        # the name opens the line: a new sentence unless it continues a wrapped one
+                    p = prev_line.strip()
+                    cap = (not p or p.startswith(("#", "|", "-", "*", ">", "<")) or p.endswith(_ENDS_SENTENCE + (":",))
+                           or bool(re.match(r"^\s*([#>|]|[-*+]\s|\d+[.)]\s)", done + seg[:m.start()])))
+                if cap:
                     rep = rep[:1].upper() + rep[1:]
             out.append(seg[last:m.start()] + rep); last = m.end()
         return "".join(out) + seg[last:]
 
-    lines, fence = [], None
+    lines, fence, prev = [], None, ""
     for line in text.split("\n"):
         stripped = line.strip()
-        if stripped.startswith("```"):
-            fence = None if fence is not None else (stripped[3:].strip().lower() or "code")
-            lines.append(line); continue
-        if fence is not None and fence != "mermaid":
-            lines.append(line); continue
+        if stripped.startswith(("```", "~~~")):
+            mark = stripped[:3]
+            if fence is None:
+                fence = (mark, stripped[3:].strip().lower() or "code")
+            elif stripped.startswith(fence[0]) and not stripped[3:].strip():
+                fence = None
+            lines.append(line); prev = line; continue
+        if fence is not None and fence[1] != "mermaid":
+            lines.append(line); prev = line; continue
         parts, done = re.split(r"(`[^`]*`)", line), ""       # odd indexes are inline code, left alone
         for i, part in enumerate(parts):
-            done += part if i % 2 else sub(part, done)
-        lines.append(done)
+            done += part if i % 2 else sub(part, done, prev)
+        lines.append(done); prev = line
     return "\n".join(lines)
 
 

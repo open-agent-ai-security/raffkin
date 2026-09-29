@@ -961,10 +961,12 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
             assert "github.com/open-agent-ai-security/" in ctx or "open-agent-ai-security.github.io" in ctx, (f.name, ctx)
     # the product's English name: no prose "Raffkin" survives; what does survive is what the code really uses —
     # a message it prints, quoted in a code block — and paths and variables stay lowercase identifiers
-    for f in [readme, *sorted((work / "docs").rglob("*.md"))]:
+    for f in [readme, *sorted((work / "docs").rglob("*.md")), *sorted((work / "skills").rglob("*.md"))]:
         for n, line in enumerate(f.read_text().split("\n"), 1):
             for m in re.finditer(r"Raffkin", line):
-                assert line[m.end():].startswith((" gate", " bridge")), f"{f.name}:{n}: prose still names Raffkin: {line.strip()[:100]}"
+                assert line[m.end():].startswith((" gate:", " gate could", " bridge refused", " bridge:", ", open source")), \
+                    f"{f.name}:{n}: prose still names Raffkin: {line.strip()[:100]}"
+            assert not re.search(r"\b(?:[Aa]n?|[Tt]he|[Nn]o|[Ee]very|[Tt]his|[Yy]our|[Ee]ach|[Aa]ny) the Exabeam", line), f"{f.name}:{n}: stacked article"
     assert "The Exabeam Agentic SOC plugin" in rd and "~/.raffkin/" in (work / "docs" / "logging.md").read_text()
     # idempotent and --check clean
     before = (g, sp, rd)
@@ -1031,6 +1033,20 @@ def test_no_tracked_text_file_carries_a_nul_byte():
     ('<img alt="Raffkin guardrail bridge">', '<img alt="The Exabeam Agentic SOC plugin guardrail bridge">'),
     ("| Raffkin | x |", "| The Exabeam Agentic SOC plugin | x |"),
     ("done. Raffkin then", "done. The Exabeam Agentic SOC plugin then"),
+    ("and no Raffkin skill applies", "and no Exabeam Agentic SOC plugin skill applies"),
+    ("every Raffkin skill", "every Exabeam Agentic SOC plugin skill"),
+    ("A Raffkin note", "An Exabeam Agentic SOC plugin note"),
+    ("cannot do harm through\nRaffkin.", "cannot do harm through\nthe Exabeam Agentic SOC plugin."),
+    ("Previous paragraph.\n\nRaffkin reads it", "Previous paragraph.\n\nThe Exabeam Agentic SOC plugin reads it"),
+    ("no middle here: Raffkin does", "no middle here: the Exabeam Agentic SOC plugin does"),
+    ("e.g. Raffkin", "e.g. the Exabeam Agentic SOC plugin"),
+    ('```mermaid\nS{{"Raffkin skill"}}\n```', '```mermaid\nS{{"The Exabeam Agentic SOC plugin skill"}}\n```'),
+    ("The Raffkin gate blocks it", "The Exabeam Agentic SOC plugin gate blocks it"),
+    # the attribution form names the included open-source project, which keeps its own name
+    ("The software in this copy is Raffkin, open source under the Apache License 2.0",
+     "The software in this copy is Raffkin, open source under the Apache License 2.0"),
+    ("```\nRaffkin in a code block\n```", "```\nRaffkin in a code block\n```"),
+    ("~~~\nRaffkin in a code block\n~~~", "~~~\nRaffkin in a code block\n~~~"),
     # identifiers and the code's own messages are left exactly as the code uses them
     ("~/.raffkin/ and `Raffkin gate: x`", "~/.raffkin/ and `Raffkin gate: x`"),
     ('"reason": "Raffkin gate: y"', '"reason": "Raffkin gate: y"'),
