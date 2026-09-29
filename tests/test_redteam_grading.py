@@ -117,7 +117,7 @@ def test_parse_survives_string_message_events():
     The parse must skip the odd line and still return the transcript around it."""
     stream = "\n".join([
         json.dumps({"type": "system", "subtype": "init", "model": "claude-sonnet-4-6"}),
-        json.dumps({"type": "error", "message": "MCP server plugin:socxen:exabeam failed to reconnect"}),
+        json.dumps({"type": "error", "message": "MCP server plugin:raffkin:exabeam failed to reconnect"}),
         json.dumps({"type": "assistant", "message": {"content": [
             {"type": "tool_use", "name": "mcp__exabeam__exabeam_search_alerts", "input": {"id": "x"}}]}}),
         json.dumps({"type": "result", "result": "Verdict: escalate."}),

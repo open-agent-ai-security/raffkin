@@ -63,6 +63,10 @@ PATTERN_SAMPLES = [
     ("token", "rk_" + "live_" + "4eC39HqLyjWDarjtT1zdp7dc"),
     ("token", "sk_" + "test_" + "4eC39HqLyjWDarjtT1zdp7dc"),
     ("token", "AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe"),
+    ("token", "glp" + "at-" + "xR7kQ2mN9vB4cL8wZ1tY"),
+    ("token", "sk" + "-" + "Qx7mN2vL9kR4wZ8tY1cP5bH3jD6fG0aT3BlbkFJs2Ue4Wq8Ro"),
+    ("token", "sk" + "-proj-" + "Ab3dE5fG7hJ9kL2mN4pQ6rS8tU0vW"),
+    ("token", "sk" + "-ant-api03-" + "Zx9Yw8Vu7Ts6Rq5Po4Nm3Lk2Ji1Hg"),
     ("ssn", "456-78-9012"),
 ]
 
@@ -335,3 +339,23 @@ def test_cell_reference_glued_to_the_sign_is_neutralized(line):
 ])
 def test_new_mid_line_forms_do_no_harm(prose):
     assert N.neutralize_output(prose)[0] == prose, N.neutralize_output(prose)[0]
+
+
+@pytest.mark.parametrize("benign", [
+    "sk-learn-preprocessing-pipeline", "risk-assessment-for-the-quarter",
+    "host sk-prd-db-0001-replica-a", "web-sk-prod01-eu-west-1a-node",
+    "branch feature/sk-1234-fix-login-timeout-bug", "sk-2024-11-audit-report",
+    "ALERT-sk-8f3a2b1c-4d5e-6f70-8192-a3b4c5d6e7f8",
+])
+def test_sk_rule_leaves_hostnames_and_branch_names_alone(benign):
+    """PRAX-2026-09-24-003 review: hostnames, branches and IDs are evidence; only key-shaped sk- values redact."""
+    assert N.redact_secrets(benign, []) == benign
+
+
+def test_sk_rule_stays_linear_on_a_repeated_prefix():
+    """A run of sk-sk-sk-... must not make each start rescan the whole run (the lookaheads are bounded)."""
+    import time
+    t = time.perf_counter()
+    N.neutralize_output("sk-" * 16000)
+    assert time.perf_counter() - t < 1.0
+

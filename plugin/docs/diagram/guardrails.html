@@ -6,7 +6,7 @@
   embedded in ../security-guardrails.md. Edit this file, then regenerate the PNGs — see the
   README.md in this directory. Self-contained; a #light / #dark URL hash lets the renderer stamp the theme.
 -->
-<title>socxen guardrail bridge</title>
+<title>Raffkin guardrail bridge</title>
 <script>
   document.documentElement.setAttribute("data-theme", (location.hash.replace("#", "") || "light"));
 </script>
@@ -138,17 +138,17 @@
 
 <div class="wrap">
   <p class="eyebrow">connector · runtime safety</p>
-  <h1>The socxen guardrail bridge <span class="mono">exabeam-mcp-bridge.py</span></h1>
+  <h1>The Raffkin guardrail bridge <span class="mono">exabeam-mcp-bridge.py</span></h1>
   <p class="lede">
     Your log data is untrusted input — an attacker can plant a payload in an alert knowing an agent will
-    read it. So socxen never talks to Exabeam directly. Your agent talks to a <strong>local bridge MCP</strong>
+    read it. So Raffkin never talks to Exabeam directly. Your agent talks to a <strong>local bridge MCP</strong>
     that proxies every call to the real Exabeam MCP — and because it sits in the path of <em>every</em>
     call, it's the one place to <strong>hook input and output</strong> for safety.
   </p>
 
   <div class="keyrow">
     <span class="key"><span class="swatch" style="background:var(--spotlight)"></span>the agent</span>
-    <span class="key"><span class="swatch" style="background:var(--accent)"></span>socxen's own code</span>
+    <span class="key"><span class="swatch" style="background:var(--accent)"></span>Raffkin's own code</span>
     <span class="key"><span class="swatch" style="background:var(--closed)"></span>write path · fails closed</span>
     <span class="key"><span class="swatch" style="background:var(--open)"></span>read path · fails closed (withholds)</span>
     <span class="key"><span class="swatch dash"></span>Exabeam platform</span>
@@ -177,7 +177,7 @@
     <!-- bridge -->
     <div class="col bridge">
       <div class="brhead">
-        <div class="role">socxen connector · local stdio MCP</div>
+        <div class="role">Raffkin connector · local stdio MCP</div>
         <div class="nm">The guardrail bridge<span class="path">connector/exabeam-mcp-bridge.py</span></div>
         <div class="sub">Proxies every call &amp; auto-refreshes OAuth. The two deterministic guardrails live in <code style="font-family:var(--mono);font-size:11.5px">call_tool()</code>:</div>
       </div>
@@ -209,7 +209,7 @@
 
     <!-- remote -->
     <div class="col remote">
-      <div class="role">exabeam platform · not socxen code</div>
+      <div class="role">exabeam platform · not Raffkin code</div>
       <div class="nm">Exabeam New-Scale MCP<span class="path">remote · HTTP + OAuth</span></div>
       <div class="sub">The real MCP → New-Scale alerts, cases &amp; events.</div>
     </div>
@@ -229,7 +229,7 @@
         <div class="nm">observra logging <span class="path">connector/observra_logging.py</span></div>
         <div class="od">Records the tool, duration, the <b>gated decision</b> (which alert/case → what disposition), and <b>when each guardrail fired</b>. Metadata &amp; safe IDs/enums only — <b>never</b> note text, evidence, or the neutralized payload. Fail-open; local, rotating.</div>
       </div>
-      <div class="logchip"><small>default sink</small>~/.socxen/<br>telemetry.jsonl</div>
+      <div class="logchip"><small>default sink</small>~/.raffkin/<br>telemetry.jsonl</div>
     </div>
   </div>
 

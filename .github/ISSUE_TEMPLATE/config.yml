@@ -3,7 +3,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/open-agent-ai-security/socxen/security/advisories/new
+    url: https://github.com/open-agent-ai-security/raffkin/security/advisories/new
     about: >-
       Please do NOT open a public issue for security problems (gate bypass, token leakage,
       governance drift). Use a private security advisory — see SECURITY.md for scope and process.

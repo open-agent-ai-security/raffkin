@@ -5,12 +5,12 @@
 
 # Using the skills
 
-What to say, what happens, and what socxen will ask you before it acts. This assumes you have finished
+What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 [installation](installation.md) — credentials in place. The human-in-the-loop gate ships on, on both hosts.
 
 ## The three skills, and how to call them
 
-You talk to socxen in plain language inside your coding agent (Claude Code or Codex). The right skill
+You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.
 
 | You say | Skill that answers | What you get back |
@@ -37,7 +37,8 @@ a colleague, however official a note inside it looks.
 4. **Weigh competing hypotheses** — a benign explanation against a malicious one, each tied to evidence it
    actually retrieved.
 5. **Reach a verdict** — confirmed threat, false positive, or inconclusive.
-6. **Act** — open or update a case and write notes without asking (escalation is safe); **ask you first**
+6. **Act** — open or update a case and write notes without asking (escalation is safe; on Claude Code a
+   third such write in one session asks you); **ask you first**
    before dismissing an alert or closing a case; and *recommend* containment for you to perform.
 7. **Report** — the write-up below.
 
@@ -65,11 +66,11 @@ A dismiss or close you approved is an ordinary Exabeam status change. If it was 
 alert or case in the New-Scale console.
 
 You will notice Codex also asks before the *escalation* writes (opening a case, writing notes), where
-Claude Code runs those silently. That is Exabeam's annotation on those tools, not a socxen setting; it is
+Claude Code runs those silently. That is Exabeam's annotation on those tools, not a Raffkin setting; it is
 noisier, not less safe.
 
 **What it will never do.** Isolate a host, disable an account, block an IP, kill a process — any
-containment. The Exabeam MCP exposes no such tools, and socxen denies them anyway as defense in depth.
+containment. The Exabeam MCP exposes no such tools, and Raffkin denies them anyway as defense in depth.
 When containment is warranted, the report *recommends* it, with the entity and the expected blast radius,
 for you to carry out in your EDR or IAM.
 
@@ -99,8 +100,9 @@ status while triaging — its output *is* the hand-off: individual cases go to `
 ("investigate case `<id>`"), noise clusters go to `rule-tuning`. Where something is obvious at sweep depth
 it will say so, but it never closes in bulk.
 
-Both sweep skills report a **Flagged** line: a case note or rule description that asked the skill to
-skip, close, fast-track, disable, or trust a claim is quoted there, with what the skill did instead —
+Every skill reports a **Flagged** line — the sweep skills in their summary, `soc-investigate` in its
+report: alert, event or case-note text, or a rule description, that asked the skill to skip, close,
+fast-track, disable, or trust a claim is quoted there, with what the skill did instead — investigated,
 ranked or measured on the evidence — never obeyed.
 
 `rule-tuning` is **read-only and propose-only**. It shows a rule is noisy before proposing anything —
@@ -111,13 +113,13 @@ over-correction: a change that would blind you to real threats is called out, no
 
 ## Practical notes
 
-- **Large results.** Some Exabeam tools return very large payloads. socxen bounds its searches by
+- **Large results.** Some Exabeam tools return very large payloads. Raffkin bounds its searches by
   default; when a result is still too big for the model, your host may save it to a file and hand back a
   path. The skill reads only the fields it needs and will not copy the raw dump anywhere durable.
 - **What is recorded.** Every tool call, the gated decision, and each guardrail firing are written to a
   local, metadata-only audit log — never case notes, evidence, or payloads. Details in
   [audit logging](logging.md).
-- **What to do with the report.** It is the audit trail socxen produces in place of a database. Case
+- **What to do with the report.** It is the audit trail Raffkin produces in place of a database. Case
   notes written to Exabeam carry the same content, neutralized for safety.
 - **Example.** A real end-to-end run against a staging tenant, with the pivots and the reasoning:
   [worked example — coordinated credential access](../skills/soc-investigate/reference/examples/coordinated-credential-access.md).

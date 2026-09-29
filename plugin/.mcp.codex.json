@@ -4,6 +4,7 @@
     "args": [
       "run",
       "--quiet",
+      "--locked",
       "connector/exabeam-mcp-bridge.py"
     ],
     "cwd": ".",

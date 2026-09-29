@@ -4,7 +4,7 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Deterministic, no-inference invariant tests for the socxen plugin.
+"""Deterministic, no-inference invariant tests for the Raffkin plugin.
 
 The skill's safety model lives in structured, cross-referenced files — the plugin
 manifests, the permissions snippet, the containment list, and the tool-map. Almost
@@ -68,7 +68,7 @@ def test_plugin_prefix_is_derived_not_drifted():
     plugin.json's name + .mcp.json's server key. Bundling the MCP silently changed
     tool identity to mcp__plugin_<plugin>_<server>__* once; the ask/deny rules stopped
     matching and the gate went inert. This fails red if that ever recurs."""
-    plugin_name = PLUGIN["name"]                       # "socxen"
+    plugin_name = PLUGIN["name"]                       # "raffkin"
     servers = list(MCP["mcpServers"].keys())
     assert len(servers) == 1, f"expected exactly one bundled MCP server, got {servers}"
     server = servers[0]                                # "exabeam"
@@ -219,7 +219,7 @@ def test_readme_version_badge_matches_plugin():
 # --- #6: marketplace identity (the name-collision guard) ---
 
 def test_no_in_repo_marketplace():
-    """socxen is published via the community marketplace
+    """Raffkin is published via the community marketplace
     (open-agent-ai-security/plugins, marketplace name 'open-agent-ai-security');
     the repo-hosted 'socxen' marketplace was retired in a hard cutover (#58).
     Reintroducing a marketplace.json here would either resurrect the dead
@@ -227,7 +227,7 @@ def test_no_in_repo_marketplace():
     name (a duplicate name silently REPLACES another marketplace — this
     overwrote praxen once). The plugin manifest itself must stay."""
     assert not (ROOT / "plugin/.claude-plugin/marketplace.json").exists(), (
-        "unexpected plugin/.claude-plugin/marketplace.json — socxen installs via "
+        "unexpected plugin/.claude-plugin/marketplace.json — Raffkin installs via "
         "open-agent-ai-security/plugins; see plugin/docs/installation.md")
     assert PLUGIN["name"] == IDENTITY["name"]
 
@@ -374,7 +374,7 @@ def test_shipped_docs_never_link_outside_the_plugin():
 # =====================================================================
 # TIER 1 (cont.) — the Codex gate
 #
-# socxen ships the same human-in-the-loop gate to two host agents that enforce it in
+# Raffkin ships the same human-in-the-loop gate to two host agents that enforce it in
 # different places. Claude Code reads the tiers in the plugin's bundled hook; Codex reads
 # approval modes out of the plugin's own .mcp.codex.json.
 # Two hand-maintained copies of a safety control is exactly the drift this file exists
@@ -394,6 +394,18 @@ def _gen_codex_mcp():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod.build()
+
+
+def test_the_bridge_is_launched_with_the_lock_enforced_on_both_hosts():
+    """#248: the connector ships a hash-pinned script lock, and it is honored only if the launch asks for
+    it. Both hosts launch with `uv run --quiet --locked`, preflight's connectivity check runs the bridge
+    the same way, and preflight states the uv floor the flag needs (script locks: 0.5.17; the `--locked`
+    warning on scripts gone: 0.5.23)."""
+    for label, args in (("plugin/.mcp.json", MCP["mcpServers"]["exabeam"]["args"]), ("plugin/.mcp.codex.json", CODEX_SERVER["args"])):
+        assert args[:3] == ["run", "--quiet", "--locked"], f"{label} launches the bridge without --locked: {args}"
+    assert (ROOT / "plugin" / "connector" / "exabeam-mcp-bridge.py.lock").is_file(), "the script lock must ship beside the bridge"
+    assert 'uv run --quiet --locked "$bridge" --check' in PREFLIGHT_SH, "preflight's connectivity check must launch the bridge as the hosts do"
+    assert 'UV_MIN="0.5.23"' in PREFLIGHT_SH, "preflight must state the uv floor --locked needs"
 
 
 def test_codex_gate_is_derived_from_the_claude_snippet():
@@ -597,11 +609,11 @@ def test_identity_artifacts_are_generated_from_identity_json():
     # The shell include install.sh / preflight.sh source (no python3 on the host) carries the same identity.
     sh = dict(line.split("=", 1) for line in (ROOT / "plugin" / "identity.sh").read_text().splitlines()
               if line and not line.startswith("#"))
-    assert sh["SOCXEN_ID_NAME"].strip("'") == IDENTITY["name"]
-    assert sh["SOCXEN_ID_MARKETPLACE_NAME"].strip("'") == IDENTITY["marketplace"]["name"]
-    assert sh["SOCXEN_ID_MARKETPLACE_REPO"].strip("'") == IDENTITY["marketplace"]["repo"]
-    assert sh["SOCXEN_ID_MCP_SERVER"].strip("'") == IDENTITY["mcpServer"] == list(MCP["mcpServers"])[0]
-    assert "|| echo socxen" not in INSTALL_SH and "|| echo socxen" not in PREFLIGHT_SH, "no literal identity fallback"
+    assert sh["RAFFKIN_ID_NAME"].strip("'") == IDENTITY["name"]
+    assert sh["RAFFKIN_ID_MARKETPLACE_NAME"].strip("'") == IDENTITY["marketplace"]["name"]
+    assert sh["RAFFKIN_ID_MARKETPLACE_REPO"].strip("'") == IDENTITY["marketplace"]["repo"]
+    assert sh["RAFFKIN_ID_MCP_SERVER"].strip("'") == IDENTITY["mcpServer"] == list(MCP["mcpServers"])[0]
+    assert "|| echo raffkin" not in INSTALL_SH and "|| echo raffkin" not in PREFLIGHT_SH, "no literal identity fallback"
 
 
 def test_skill_states_the_taxonomy_report_contract():
@@ -714,7 +726,7 @@ if __name__ == "__main__":
 
 def test_gen_identity_rekey_leaves_longer_identifiers_alone(tmp_path):
     """#182 review note: the rewrite matches the previous key and repo at identifier boundaries only. A
-    longer identifier that merely starts with them (`socxen@open-agent-ai-security-dev`, a sibling
+    longer identifier that merely starts with them (`raffkin@open-agent-ai-security-dev`, a sibling
     catalog's `open-agent-ai-security/plugins-dev`) names something else — it survives a re-key
     byte-for-byte, and the regeneration says so."""
     import shutil, subprocess, sys, json
@@ -722,26 +734,26 @@ def test_gen_identity_rekey_leaves_longer_identifiers_alone(tmp_path):
     shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
     gen = [sys.executable, str(work / "gen_identity.py")]
     sibling = work / "docs" / "sibling.md"
-    fixture = ("Install the real thing with `claude plugin install socxen@open-agent-ai-security`.\n"
-               "Not `socxen@open-agent-ai-security-dev`, not `xsocxen@open-agent-ai-security`, and the catalog is\n"
+    fixture = ("Install the real thing with `claude plugin install raffkin@open-agent-ai-security`.\n"
+               "Not `raffkin@open-agent-ai-security-dev`, not `xraffkin@open-agent-ai-security`, and the catalog is\n"
                "open-agent-ai-security/plugins — never open-agent-ai-security/plugins-dev.\n"
-               "A shell default moves with the key: ${PLUGIN_KEY:-socxen@open-agent-ai-security}\n")
+               "A shell default moves with the key: ${PLUGIN_KEY:-raffkin@open-agent-ai-security}\n")
     sibling.write_text(fixture)
     ident = json.loads((work / "identity.json").read_text())
-    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam/plugins", "name": "exabeam"}
+    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam-Labs/plugins", "name": "exabeam"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     after = sibling.read_text()
     assert after == ("Install the real thing with `claude plugin install soc@exabeam`.\n"
-                     "Not `socxen@open-agent-ai-security-dev`, not `xsocxen@open-agent-ai-security`, and the catalog is\n"
-                     "Exabeam/plugins — never open-agent-ai-security/plugins-dev.\n"
+                     "Not `raffkin@open-agent-ai-security-dev`, not `xraffkin@open-agent-ai-security`, and the catalog is\n"
+                     "Exabeam-Labs/plugins — never open-agent-ai-security/plugins-dev.\n"
                      "A shell default moves with the key: ${PLUGIN_KEY:-soc@exabeam}\n")
-    assert "soc@exabeam-dev" not in after and "xsoc@exabeam" not in after and "Exabeam/plugins-dev" not in after
+    assert "soc@exabeam-dev" not in after and "xsoc@exabeam" not in after and "Exabeam-Labs/plugins-dev" not in after
     assert "longer identifier(s) untouched" in out and "docs/sibling.md:2" in out and "docs/sibling.md:3" in out
     # the live instance the review found: install.sh documents its own boundary handling with a -dev key
     installer = (work / "install.sh").read_text()
-    if "socxen@open-agent-ai-security-dev" in (ROOT / "plugin" / "install.sh").read_text():
-        assert "socxen@open-agent-ai-security-dev" in installer and "soc@exabeam-dev" not in installer
+    if "raffkin@open-agent-ai-security-dev" in (ROOT / "plugin" / "install.sh").read_text():
+        assert "raffkin@open-agent-ai-security-dev" in installer and "soc@exabeam-dev" not in installer
     # and the regeneration is still idempotent and clean afterwards
     again = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert "install key" not in again and sibling.read_text() == after
@@ -759,16 +771,16 @@ def test_gen_identity_check_refuses_an_install_key_literal_in_the_shell_scripts(
     gen = [sys.executable, str(work / "gen_identity.py")]
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
     pf = work / "preflight.sh"
-    pf.write_text(pf.read_text() + '\nKEY_FALLBACK="socxen@open-agent-ai-security"\n')
+    pf.write_text(pf.read_text() + '\nKEY_FALLBACK="raffkin@open-agent-ai-security"\n')
     r = subprocess.run(gen + ["--check"], capture_output=True, text=True)
     assert r.returncode == 1 and "plugin/preflight.sh" in r.stderr and "literal" in r.stderr, r.stderr
     assert "install.sh" not in r.stderr
     # and a re-key leaves the shell scripts byte-identical
     before = (work / "install.sh").read_bytes()
-    pf.write_text(pf.read_text().replace('\nKEY_FALLBACK="socxen@open-agent-ai-security"\n', ""))
+    pf.write_text(pf.read_text().replace('\nKEY_FALLBACK="raffkin@open-agent-ai-security"\n', ""))
     import json
     ident = json.loads((work / "identity.json").read_text())
-    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam/plugins", "name": "exabeam"}
+    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam-Labs/plugins", "name": "exabeam"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert (work / "install.sh").read_bytes() == before and "install.sh" not in out
@@ -777,7 +789,7 @@ def test_gen_identity_check_refuses_an_install_key_literal_in_the_shell_scripts(
 
 def test_gen_identity_rekey_relicenses_every_file_of_the_copy(tmp_path):
     """A vendor catalog that serves the payload under its own terms sets `license` in identity.json
-    (Exabeam/plugins does: LicenseRef-Exabeam-Enterprise-Agreement). Regenerating then relicenses the
+    (Exabeam-Labs/plugins does: LicenseRef-Exabeam-Enterprise-Agreement). Regenerating then relicenses the
     copy in every file that states a license — each SPDX header, the README's badge and License
     section, identity.sh, the manifests — so the copy says one thing about its terms, a license
     scanner reads the same answer its LICENSE gives, and --check holds it there. The LICENSE text
@@ -818,7 +830,7 @@ def test_gen_identity_rekey_relicenses_every_file_of_the_copy(tmp_path):
     assert f"[![License: {new}](https://img.shields.io/badge/license-LicenseRef_Exabeam_Enterprise_Agreement-blue.svg)](LICENSE)" in text
     assert f"{new} — see `LICENSE` / `NOTICE`." in text
     sh = (work / "identity.sh").read_text()
-    assert f"SOCXEN_ID_LICENSE={new}" in sh and f"# SPDX-License-Identifier: {new}" in sh
+    assert f"RAFFKIN_ID_LICENSE={new}" in sh and f"# SPDX-License-Identifier: {new}" in sh
     for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         assert json.loads((work / m).read_text())["license"] == new, m
     assert (work / "LICENSE").read_text() == (ROOT / "plugin" / "LICENSE").read_text()
@@ -829,7 +841,7 @@ def test_gen_identity_rekey_relicenses_every_file_of_the_copy(tmp_path):
 
 
 def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp_path):
-    """A catalog that distributes the payload under its own terms (Exabeam/plugins) sets `distribution`
+    """A catalog that distributes the payload under its own terms (Exabeam-Labs/plugins) sets `distribution`
     in identity.json — license, homepage, repository. The manifests describe the plugin AS DISTRIBUTED,
     so they take those values; the source stays under its own license: every SPDX header, the README
     badge and identity.sh keep the top-level `license`. Without the block the manifests carry the
@@ -842,14 +854,14 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     readme_before = (work / "README.md").read_text()
     headers_before = {p.relative_to(work): p.read_text() for p in work.rglob("*") if p.is_file() and "SPDX-License-Identifier" in p.read_text(errors="ignore")}
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
-                             "homepage": "https://github.com/Exabeam/plugins", "repository": "https://github.com/Exabeam/plugins"}
+                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 1, "the manifests are stale until regenerated"
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert "manifests carry the distribution's homepage, license, repository" in out, out
     for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         d = json.loads((work / m).read_text())
-        assert d["license"] == "LicenseRef-Exabeam-Enterprise-Agreement" and d["homepage"] == d["repository"] == "https://github.com/Exabeam/plugins", m
+        assert d["license"] == "LicenseRef-Exabeam-Enterprise-Agreement" and d["homepage"] == d["repository"] == "https://github.com/Exabeam-Labs/plugins", m
         assert d["name"] == ident["name"] and d["version"] == ident["version"]
     # the README changes only in its marked community-only / distribution-only blocks (#256): with those
     # switched on the "before" text the same way, the rest is byte-identical — badge, License line, headers
@@ -858,7 +870,7 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
     assert (work / "README.md").read_text() == mod._switch_distribution_prose(readme_before), "the README is the software's outside the marked blocks"
     assert "badge/license-Apache_2.0-" in (work / "README.md").read_text()
-    assert "SOCXEN_ID_LICENSE=Apache-2.0" in (work / "identity.sh").read_text()
+    assert "RAFFKIN_ID_LICENSE=Apache-2.0" in (work / "identity.sh").read_text()
     for rel, text in headers_before.items():
         if rel.parts[0] in (".claude-plugin", ".codex-plugin"):
             continue
@@ -918,7 +930,7 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
         assert "<!-- community-only -->" in f.read_text() and "<!-- distribution-only" in f.read_text(), f
     # re-key WITHOUT a distribution block: names move, markers and prose stay
     ident = json.loads((work / "identity.json").read_text())
-    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam/plugins", "name": "exabeam"}
+    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam-Labs/plugins", "name": "exabeam"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     subprocess.run(gen, check=True, capture_output=True, text=True)
     g = guide.read_text()
@@ -927,7 +939,7 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     assert "<!-- community-only -->" in g and "community release" in g, "no distribution block: the community prose stays"
     # now WITH the block: the community-only prose goes, the distribution-only prose appears
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
-                             "homepage": "https://github.com/Exabeam/plugins", "repository": "https://github.com/Exabeam/plugins"}
+                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     subprocess.run(gen, check=True, capture_output=True, text=True)
     for f in (guide, support, readme):
@@ -964,24 +976,24 @@ def test_gen_identity_rewrites_the_install_key_in_the_shipped_prose_on_a_rekey(t
     gen = [sys.executable, str(work / "gen_identity.py")]
     guide = work / "docs" / "installation.md"
     before = guide.read_text()
-    assert "socxen@open-agent-ai-security" in before and "open-agent-ai-security/plugins" in before
+    assert "raffkin@open-agent-ai-security" in before and "open-agent-ai-security/plugins" in before
     # upstream identity: regenerating changes nothing in the prose
     subprocess.run(gen, check=True, capture_output=True, text=True)
     assert guide.read_text() == before
     # a re-key: name + marketplace patched, then regenerate
     ident = json.loads((work / "identity.json").read_text())
-    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam/plugins", "name": "exabeam"}
+    ident["name"], ident["marketplace"] = "soc", {"repo": "Exabeam-Labs/plugins", "name": "exabeam"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     r = subprocess.run(gen + ["--check"], capture_output=True, text=True)
     assert r.returncode == 1 and "install key" in r.stderr, "before regenerating, --check names the guide as stale"
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
-    assert "socxen@open-agent-ai-security → soc@exabeam" in out
+    assert "raffkin@open-agent-ai-security → soc@exabeam" in out
     after = guide.read_text()
-    assert "soc@exabeam" in after and "Exabeam/plugins" in after
-    assert "socxen@open-agent-ai-security" not in after and "open-agent-ai-security/plugins" not in after
+    assert "soc@exabeam" in after and "Exabeam-Labs/plugins" in after
+    assert "raffkin@open-agent-ai-security" not in after and "open-agent-ai-security/plugins" not in after
     for f in ("README.md", "docs/index.md", "preflight.sh"):
-        assert "socxen@open-agent-ai-security" not in (work / f).read_text(), f
-    assert "SOCXEN_ID_NAME=soc" in (work / "identity.sh").read_text()
+        assert "raffkin@open-agent-ai-security" not in (work / f).read_text(), f
+    assert "RAFFKIN_ID_NAME=soc" in (work / "identity.sh").read_text()
     # idempotent, and --check is clean afterwards
     again = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert "install key" not in again and guide.read_text() == after
@@ -989,3 +1001,13 @@ def test_gen_identity_rewrites_the_install_key_in_the_shipped_prose_on_a_rekey(t
     # the prose was touched only where the key or repo appeared: the same lines changed, nothing else
     b, a = before.splitlines(), after.splitlines()
     assert len(b) == len(a) and all(x == y or ("open-agent-ai-security" in x) for x, y in zip(b, a))
+
+
+def test_no_tracked_text_file_carries_a_nul_byte():
+    """A NUL byte makes git and grep treat a text file as binary, so a corrupted doc drops out of every
+    diff and search silently (#274: a rename pass left placeholders in the Praxen README)."""
+    import subprocess
+    binary = (".png", ".webp", ".ico", ".jpg", ".jpeg", ".gif", ".woff", ".woff2", ".pdf")
+    files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
+    bad = [f for f in files if f and not f.lower().endswith(binary) and (ROOT / f).is_file() and b"\x00" in (ROOT / f).read_bytes()]
+    assert not bad, f"NUL bytes in tracked text files: {bad}"

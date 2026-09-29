@@ -391,7 +391,7 @@ class _Upstream:
                 leaf = _Leaf(e)
                 self._last_summary = leaf.summary(what)
                 try:
-                    e.socxen_sent = True                 # the request had been sent: a write's outcome is unknown
+                    e.raffkin_sent = True                 # the request had been sent: a write's outcome is unknown
                 except Exception:  # noqa: BLE001, S110 — an exception type without a __dict__; the flag is advisory
                     pass
                 if leaf.status == 401:
@@ -473,20 +473,20 @@ server = Server("exabeam")
 #   • INPUT canonicalization on read RESULTS — strip the invisible Unicode smuggling layer before the
 #     agent reasons over telemetry (connector/canonicalize.py).
 #   • OUTPUT neutralization on WRITE ARGUMENTS — defang active content (formulas/phishing links) in what
-#     socxen persists to Exabeam, so an export of that stored artifact can't fire (connector/
+#     Raffkin persists to Exabeam, so an export of that stored artifact can't fire (connector/
 #     neutralize_output.py — the a10 fix). Only the write tools; reads are never argument-mutated.
 # Both are FAIL-CLOSED (#172): a read block the screen cannot process is withheld and the gap named; a
 # write the neutralizer cannot process is refused.
 from canonicalize import canonicalize, is_strippable
 from neutralize_output import neutralize_output, tenant_hosts_from_url
-# On-by-default, fail-open agent audit logging (SOCXEN_OBSERVRA=off to disable). observra is a hard
+# On-by-default, fail-open agent audit logging (RAFFKIN_OBSERVRA=off to disable). observra is a hard
 # dependency BY DESIGN (see the PEP-723 header): an autonomous agent that takes gated actions must keep an
 # audit trail, so logging ships on out of the box — which requires the lib to be resolvable at launch.
 # This is a requirement, not an optional add-on. The shim itself stays fail-open at runtime, so a
 # telemetry fault never affects an investigation.
 import observra_logging as telemetry
 
-# send_email is gated (ask on both hosts), refused under SOCXEN_DRY_RUN, and audited like every write.
+# send_email is gated (ask on both hosts), refused under RAFFKIN_DRY_RUN, and audited like every write.
 # Its schema is confirmed (list_tools, 2026-09-02): arg1.{recipients, subject, body}; body is an HTML
 # fragment. `subject` and `body` are GENUINELY neutralized (#147, decided 2026-09-05): secrets masked,
 # formulas quoted, every link form de-fanged — markdown and HTML href/src/srcset/CSS url() alike —
@@ -546,7 +546,7 @@ _DISPOSITION_KEYS = frozenset({"stage", "closedreason", "casestatus", "alertstat
 _CLOSING_VALUE = re.compile(r"clos|resolv|dismiss|false.?positive", re.I)
 _DISPOSITION_SPELLING = {"stage": "stage", "closedreason": "closedReason", "casestatus": "caseStatus",
                          "alertstatus": "alertStatus", "status": "status"}          # what the refusal names: the schema's word
-BRIDGE_REFUSAL_MARK = "socxen bridge refused"      # the red-team grader's mark for this control (never in an upstream result)
+BRIDGE_REFUSAL_MARK = "Raffkin bridge refused"      # the red-team grader's mark for this control (never in an upstream result)
 
 
 def _create_case_guard(arguments):
@@ -836,12 +836,12 @@ ALLOWED_LINK_HOSTS = tenant_hosts_from_url(URL)
 # disabled tool is removed from the model's view entirely, so the attempt never happens and the attempt
 # signal can never fire.
 #
-# Opt-in and loud: off unless SOCXEN_DRY_RUN is set, and announced on stderr at startup so a dry run can
+# Opt-in and loud: off unless RAFFKIN_DRY_RUN is set, and announced on stderr at startup so a dry run can
 # never be mistaken for a live one (or the reverse).
 def _truthy(v):
     return str(v).strip().lower() in {"1", "true", "yes", "on"}
 
-DRY_RUN = _truthy(os.environ.get("SOCXEN_DRY_RUN", ""))
+DRY_RUN = _truthy(os.environ.get("RAFFKIN_DRY_RUN", ""))
 
 # Safe (non-free-text) fields of a gated write to record in the audit log: identifiers, state and
 # disposition enums. These are the deterministic decision record — WHAT the agent did, on WHICH object,
@@ -889,7 +889,7 @@ def _rewrite_block(block, kind, clean):
     return copy(update={"resource": rcopy(update={"text": clean})})
 
 
-WITHHELD_PREFIX = "[socxen bridge: this evidence block was withheld"
+WITHHELD_PREFIX = "[Raffkin bridge: this evidence block was withheld"
 WITHHELD_BLOCK = (WITHHELD_PREFIX + " — the read-side screen could not process it "
                   "({err}). Report the evidence gap in the investigation; the other blocks of this result are intact. "
                   "A retry helps only if the block's shape was transient.]")
@@ -1104,7 +1104,7 @@ async def call_tool(name, arguments):
             sys.stderr.write(f"bridge: telemetry tail error (ignored): {e!r}\n")
         sys.stderr.write(f"bridge: {name} asked for every column (fields: [\"*\"]) — answered with the column list, not sent (#160)\n")
         return [TextContent(type="text", text=(
-            f"socxen did not send this {name}: `fields: [\"*\"]` returns every column of every row and has overflowed "
+            f"Raffkin did not send this {name}: `fields: [\"*\"]` returns every column of every row and has overflowed "
             f"the context before. Re-send the same search naming the columns you need — for this tool start from: "
             f"{cols}. The MCP schema's text calling the wildcard mandatory is wrong; this answer stands in until the "
             f"MCP server is fixed."))]
@@ -1171,7 +1171,7 @@ async def call_tool(name, arguments):
     except _UpstreamToolError as e:
         # A dropped field is part of why an update may have failed upstream (an update that carried only
         # text becomes an empty patch): say so in the record and to the agent, so it does not retry blind.
-        suffix = f" (socxen dropped: {_dropped_summary(dropped)[1]})" if dropped else ""
+        suffix = f" (Raffkin dropped: {_dropped_summary(dropped)[1]})" if dropped else ""
         _stderr_error(name, str(e) + suffix)
         if log_on:
             code, status = _error_facts(str(e))
@@ -1184,7 +1184,7 @@ async def call_tool(name, arguments):
             leaf = _Leaf(e)
             # A write whose request had gone out when the session died may have committed upstream: say
             # so, or the agent re-issues it (#157). Reads are retried; a write is sent once.
-            unknown = is_write and getattr(e, "socxen_sent", False)
+            unknown = is_write and getattr(e, "raffkin_sent", False)
             suffix = " — the write was sent and its outcome is unknown: verify before re-issuing" if unknown else ""
             _stderr_error(name, leaf.message + suffix)
             if log_on:
@@ -1202,7 +1202,7 @@ async def call_tool(name, arguments):
         # What the agent reads: the state change went through; the text did not, and where it belongs.
         # Schema-known fields by their own spelling, anything else as a count -- never the model's key text.
         content = list(content) + [TextContent(type="text", text=(
-            f"socxen forwarded state fields only and dropped {_dropped_summary(dropped)[1]} from `{name}`: an "
+            f"Raffkin forwarded state fields only and dropped {_dropped_summary(dropped)[1]} from `{name}`: an "
             f"update never replaces text an analyst wrote. Put the reason in a case note (exabeam_create_case_notes)."))]
     # Telemetry tail — FULLY GUARDED. The remote call has already committed; nothing here (not even
     # _audit_fields on pathological arguments) may raise into the return path and discard a successful write.
@@ -1244,7 +1244,7 @@ async def _serve():
     # The session record is the operator's attestation of how this bridge was configured: telemetry
     # backend + resolved destination (added by the shim), dry-run state, gate-log location, plugin version.
     telemetry.session_start(dry_run=DRY_RUN, plugin_version=_plugin_version(),
-                            gate_log=os.environ.get("SOCXEN_GATE_LOG", "").strip() or "~/.socxen/gate.jsonl")
+                            gate_log=os.environ.get("RAFFKIN_GATE_LOG", "").strip() or "~/.raffkin/gate.jsonl")
     warm = asyncio.create_task(UPSTREAM.warm())     # alongside the stdio handshake, never before it
     try:
         async with stdio_server() as (read, write):
@@ -1270,7 +1270,7 @@ def main():
     # Announce loudly. A dry run mistaken for a live one wastes an exercise; a live run mistaken for a
     # dry one writes to a real tenant, so this is never silent in either direction.
     if DRY_RUN:
-        sys.stderr.write("bridge: DRY RUN is ON (SOCXEN_DRY_RUN) - every write is refused at the "
+        sys.stderr.write("bridge: DRY RUN is ON (RAFFKIN_DRY_RUN) - every write is refused at the "
                          "bridge; nothing reaches Exabeam\n")
     asyncio.run(_check() if "--check" in sys.argv else _serve())
 

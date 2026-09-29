@@ -8,7 +8,7 @@
 > **Status:** Shipped and wired; this header is current with the code as of 0.8.6. The authoritative
 > statement of behaviour is `plugin/connector/canonicalize.py` (87 lines, stdlib only) and the read path
 > in `plugin/connector/exabeam-mcp-bridge.py`. The user-facing description is
-> [the guardrails page](../../plugin/docs/security-guardrails.md#1-screening-what-socxen-reads-hidden-character-smuggling).
+> [the guardrails page](../../plugin/docs/security-guardrails.md#1-screening-what-raffkin-reads-hidden-character-smuggling).
 > **Addresses:** RFE #2 (the code-layer half). **Supersedes:** the inbound-*defang* approach in PR #31,
 > which two independent reviews blocked for mutating pivotable values ([§2](#2-why-this-is-not-the-pr-31-approach)).
 > **Companion:** the write side is the [output neutralizer](output-neutralizer.md).
@@ -167,13 +167,13 @@ The reviewers' pivot break came from *mutating visible values*. This design does
 **Decision (resolves OQ-1, previously blocking):** the canonicalizer emits its findings as **structured, namespaced hygiene metadata carried out-of-band — never as prose mixed into the sanitized telemetry text.** Appending commentary into the tool-result text would (a) let trusted canonicalizer output be read as *evidence*, (b) create a **new injection surface** (the annotation is derived from attacker-controlled input), and (c) get re-analyzed by the fixpoint pass. So:
 
 - The **tool-result text** is the sanitized value only (stripped + NFC) — nothing else.
-- A separate **hygiene record** travels alongside it: either a dedicated content block prefixed with a reserved sentinel that the canonicalizer **skips on any re-pass** and the skill renders as *metadata, not evidence*, or the MCP result's `_meta` / structured channel if the SDK surfaces it (implementation choice — see OQ-6). Namespaced `socxen.hygiene`.
+- A separate **hygiene record** travels alongside it: either a dedicated content block prefixed with a reserved sentinel that the canonicalizer **skips on any re-pass** and the skill renders as *metadata, not evidence*, or the MCP result's `_meta` / structured channel if the SDK surfaces it (implementation choice — see OQ-6). Namespaced `raffkin.hygiene`.
 
 **Record shape** (per content block):
 
 ```json
 {
-  "schema": "socxen.hygiene/v1",
+  "schema": "raffkin.hygiene/v1",
   "removed": [{"cp": "U+200B", "name": "ZERO WIDTH SPACE", "offset": 12, "byteOffset": 12, "class": "strip", "reason": "zero-width"}],
   "flagged": [{"token": "аpple.com", "offset": 40, "class": "mixed-script", "severity": "high", "reason": "Latin+Cyrillic confusable"}],
   "counts": {"stripped": 3, "flagged": 1},

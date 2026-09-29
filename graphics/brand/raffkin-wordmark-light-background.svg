@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 278 64" width="278" height="64" role="img" aria-label="Raffkin — agentic SOC skill suite">
+  <!-- Placeholder concept artwork. Exabeam Creative will replace this with outlined production masters. -->
+  <defs>
+    <linearGradient id="gold" x1="8" y1="8" x2="55" y2="55" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd84a"/><stop offset="1" stop-color="#f2b705"/>
+    </linearGradient>
+  </defs>
+  <g aria-hidden="true">
+    <path d="M32 1.5c1.6 6.9 5 10.3 11.9 11.9C37 15 33.6 18.4 32 25.3 30.4 18.4 27 15 20.1 13.4 27 11.8 30.4 8.4 32 1.5Z" fill="url(#gold)"/>
+    <path d="M5 27 9.5 10.5 22 21 16 30Zm54 0-4.5-16.5L42 21l6 9Z" fill="url(#gold)"/>
+    <path fill="#101217" fill-rule="evenodd" d="M3 31 15 20l14 4 3 7 3-7 14-4 12 11-6 16-17 4-6 10-6-10-17-4L3 31Zm9 2 7-5 7 2-3 9-8 1-3-7Zm40 0-7-5-7 2 3 9 8 1 3-7Z"/>
+    <path d="m27 46 5 5 5-5-2.2-3h-5.6L27 46Z" fill="url(#gold)"/>
+  </g>
+  <text x="75" y="45" font-family="Space Grotesk, Inter, system-ui, sans-serif" font-size="39" font-weight="700" letter-spacing="-1" fill="#101217">Raffkin</text>
+</svg>

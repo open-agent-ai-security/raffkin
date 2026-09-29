@@ -29,7 +29,7 @@ The distinction that defines this skill:
 > volume alone. Tuning a loud-but-precise rule is a *miss you caused.*
 
 This skill is **read-only and propose-only.** The MCP does expose rule writes
-(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`); socxen denies them on both hosts, and
+(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`); Raffkin denies them on both hosts, and
 that is correct: you diagnose and recommend; detection engineering applies. Never call them, and never
 claim you changed a rule.
 

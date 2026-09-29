@@ -3,17 +3,17 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Contributing to socxen
+# Contributing to Raffkin
 
-Thanks for helping improve socxen. Contributions are welcome via pull request.
-socxen is a small, safety-sensitive project — an agentic SOC skill suite whose
+Thanks for helping improve Raffkin. Contributions are welcome via pull request.
+Raffkin is a small, safety-sensitive project — an agentic SOC skill suite whose
 whole value is a disciplined investigation and a **human-gated** dismiss/close.
 So the bar for changes that touch the governance surface is high, and a couple of
 conventions below exist specifically to keep that gate real.
 
 ## License
 
-socxen is licensed under the [Apache License, Version 2.0](plugin/LICENSE). By
+Raffkin is licensed under the [Apache License, Version 2.0](plugin/LICENSE). By
 contributing, you agree that your contributions are licensed under the same terms.
 
 ## Developer Certificate of Origin (DCO)
@@ -39,8 +39,8 @@ identity you're known by in the community (a long-standing handle counts),
 reachable at the address you sign with. Anonymous or throwaway identities aren't
 accepted. Sign-off is **required**, and CI
 enforces it: the `DCO` workflow checks every commit in your PR and tells you
-exactly which commits to amend if one is missing. (Exabeam-internal commits are
-exempt from the CI gate but follow the same convention.)
+exactly which commits to amend if one is missing. The rule is the same for
+maintainers and Exabeam employees; only bot commits are exempt.
 
 <details><summary>Full DCO text</summary>
 
@@ -84,7 +84,7 @@ By making a contribution to this project, I certify that:
 Branch from and target **`dev`**, not `main`.
 
 `main` is the **live install channel**: a fresh
-`claude plugin marketplace add open-agent-ai-security/plugins && claude plugin install socxen@open-agent-ai-security`
+`claude plugin marketplace add open-agent-ai-security/plugins && claude plugin install raffkin@open-agent-ai-security`
 pulls `main` at HEAD (the community marketplace pins this repo's `main` branch), so
 anything merged to `main` reaches installers immediately.
 `main` therefore receives only deliberate, re-verified releases — everyday work
@@ -104,7 +104,7 @@ looks like "nothing to do" but actually means **nothing has run yet**, including
 DCO sign-off check. It is not a failure and it is not something you can fix from your
 side; a maintainer will approve the run. Don't read an empty check list as a pass.
 
-No write access? **Fork** socxen, branch from `dev` in your fork, and open the PR
+No write access? **Fork** Raffkin, branch from `dev` in your fork, and open the PR
 against `dev` here — fork PRs run the same CI and DCO checks.
 
 The invariant we hold: **`main` is always an ancestor of `dev`** — `dev` is `main`
@@ -159,20 +159,21 @@ We deliberately keep the rest of the release machinery light for now: **no
 tag-driven release automation**. Dependabot opens weekly pin bumps for the GitHub
 Actions workflows against `dev` (label `dependencies`); the connector's Python
 dependencies are locked by `uv` and audited in CI, not bumped by bot. Tagged
-releases arrive when socxen has a real release cadence; until then the rules above
+releases arrive when Raffkin has a real release cadence; until then the rules above
 are the whole model.
 
 ## Releasing and rolling back
 
-*(Maintainers.)* socxen cuts releases as `dev → main` merge commits — no tags, no
+*(Maintainers.)* Raffkin cuts releases as `dev → main` merge commits — no tags, no
 release artifacts. Because fresh installs pull `main@HEAD`, **`main` is the live
 release channel**: whatever lands there reaches new installers immediately.
 
 **Cutting a release**
 
-1. Land all changes on `dev`. Run `uv run scripts/bump_version.py X.Y.Z` (bumps
-   `plugin.json`, the README pill, and regenerates the AI BOM), date the
-   `CHANGELOG.md` entry by hand, commit to `dev`.
+1. Land all changes on `dev`. Run `uv run scripts/bump_version.py X.Y.Z`: it edits
+   `plugin/identity.json`, regenerates both host manifests and `identity.sh` from it, rewrites
+   the README pill, and regenerates the AI BOM and the SBOM. Date the `CHANGELOG.md` entry by
+   hand, commit to `dev`.
 2. Open the release PR `dev → main`; promote with a **merge commit** (never
    squash), then fast-forward `dev` back up (see Branching above). `main` is
    branch-protected: the merge needs the `Repo invariants (no inference)` and
@@ -228,12 +229,13 @@ release channel**: whatever lands there reaches new installers immediately.
   rule can catch — see `tests/test_neutralize_coverage.py` for the pattern), then add a mutation to
   `scripts/mutation_check.py` that deletes or loosens the rule, and run it: the suite must fail with
   the rule gone. CI runs the gate on every PR (#120).
-- **Version bumps:** run **`uv run scripts/bump_version.py X.Y.Z`** — it updates
-  `plugin/.claude-plugin/plugin.json` and the `version-vX.Y.Z` pill in `plugin/README.md`, then
-  regenerates the AI BOM, and verifies they all agree. (If you edit by hand
-  instead, all three must match or CI fails — an invariant test guards the
-  pill↔plugin link, and `gen_aibom.py --check` guards the BOM against any
-  version / connector-dep / MCP / governance drift.)
+- **Version bumps:** run **`uv run scripts/bump_version.py X.Y.Z`** — it edits
+  `plugin/identity.json`, regenerates both host manifests (`.claude-plugin/plugin.json`,
+  `.codex-plugin/plugin.json`) and `identity.sh` from it, rewrites the `version-vX.Y.Z` pill in
+  `plugin/README.md`, regenerates the AI BOM and the SBOM, and verifies the manifests and the pill agree. If you edit
+  by hand instead, `identity.json` and the pill are the only files to edit; regenerate the rest.
+  CI fails on drift: `gen_identity.py --check`, `gen_aibom.py --check` and `gen_sbom.py --check`
+  guard the generated files, and an invariant test guards the pill↔plugin link.
 - **Connector dependencies:** the bridge's PEP 723 header is bounded and **locked**. If you add or
   change a dependency, re-lock in the same PR — `uv lock --script plugin/connector/exabeam-mcp-bridge.py`
   — and commit the updated `.lock` beside the script. `uv run` uses it automatically, so a stale lock

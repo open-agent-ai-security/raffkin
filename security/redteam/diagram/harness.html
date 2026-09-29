@@ -6,7 +6,7 @@
   Edit this file, then regenerate the PNGs — see diagram/README.md. Self-contained (no external
   assets); a #light / #dark URL hash lets the renderer stamp the theme deterministically.
 -->
-<title>socxen red-team harness</title>
+<title>Raffkin red-team harness</title>
 <script>
   // Renderer stamps the theme via location hash (#light / #dark); defaults to light for the doc figure.
   document.documentElement.setAttribute("data-theme", (location.hash.replace("#", "") || "light"));
@@ -186,7 +186,7 @@
 
 <div class="wrap">
   <p class="eyebrow">security / redteam · pre-release gate</p>
-  <h1>The socxen red-team harness <span class="mono">run.py</span></h1>
+  <h1>The Raffkin red-team harness <span class="mono">run.py</span></h1>
   <p class="lede">
     An adversary controls the telemetry a SOC analyst reads. This rig drives the <strong>real
     soc-investigate skill</strong> against poisoned alerts, in a read-only dry-run, and grades whether
@@ -195,7 +195,7 @@
   </p>
 
   <div class="keyrow">
-    <span class="key"><span class="swatch" style="background:var(--accent)"></span>socxen's own code</span>
+    <span class="key"><span class="swatch" style="background:var(--accent)"></span>Raffkin's own code</span>
     <span class="key"><span class="swatch" style="background:var(--spotlight)"></span>agent under test</span>
     <span class="key"><span class="swatch" style="background:var(--caution)"></span>policy boundary</span>
     <span class="key"><span class="swatch" style="background:var(--pass)"></span>grader / verdict</span>
@@ -240,7 +240,7 @@
           <span class="chip allow">reads: live, allow-listed</span>
           <span class="chip deny">standard leg: writes removed from the tool list</span>
           <span class="chip deny">hook leg: writes offered · hook decides · dry run backstop</span>
-          <span class="chip deny">codex: writes refused at the bridge (SOCXEN_DRY_RUN)</span>
+          <span class="chip deny">codex: writes refused at the bridge (RAFFKIN_DRY_RUN)</span>
           <span class="chip deny">all legs: containment + Bash/Read/Write/Web denied</span>
         </div>
       </div>
@@ -256,9 +256,9 @@
       <div class="edge"><span class="lbl">MCP tool calls — reads live · an attempted write is refused before the tenant</span><span class="arrow" style="color:var(--spotlight)">▼</span></div>
 
       <div class="node ours">
-        <div class="role">socxen connector · bundled MCP</div>
+        <div class="role">Raffkin connector · bundled MCP</div>
         <div class="name">MCP bridge <span class="path">connector/exabeam-mcp-bridge.py</span></div>
-        <div class="desc">The shipped Exabeam New-Scale bridge — the layer that carries socxen's own deterministic guardrails and audit trail. This is code under test too, not neutral plumbing.</div>
+        <div class="desc">The shipped Exabeam New-Scale bridge — the layer that carries Raffkin's own deterministic guardrails and audit trail. This is code under test too, not neutral plumbing.</div>
         <div class="chips">
           <span class="chip neu">canonicalize.py — strip hidden-char smuggling (in)</span>
           <span class="chip neu">neutralize_output.py — defang on write (out)</span>

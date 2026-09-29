@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Merge socxen's governance permissions snippet into a Claude Code settings.json.
+"""Merge Raffkin's governance permissions snippet into a Claude Code settings.json.
 
 For organizations that push the plugin's tiers as host policy (#226): the gate itself is
 the bundled hook, active on install, and nothing in the install path runs this. It is a
@@ -121,10 +121,10 @@ def plan_merge(snippet_perms, current_perms):
     conflicts: [(rule, snippet_tier, operator_tier)]
 
     Conflict detection is exact-string, which is enough because the snippet already
-    carries both the bundled (`mcp__plugin_socxen_exabeam__…`) and manual
+    carries both the bundled (`mcp__plugin_raffkin_exabeam__…`) and manual
     (`mcp__exabeam__…`) spellings of the gated tools. We deliberately do not try to
     reason about wildcard rules the operator may have written: guessing at what
-    `mcp__plugin_socxen_exabeam__*` in `allow` means is exactly the kind of inference
+    `mcp__plugin_raffkin_exabeam__*` in `allow` means is exactly the kind of inference
     that produces a confidently wrong safety control.
     """
     additions = {tier: [] for tier in TIERS}
@@ -158,7 +158,7 @@ def apply_merge(settings, additions):
 
 def backup_path(path):
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    return "%s.socxen-backup-%s" % (path, stamp)
+    return "%s.raffkin-backup-%s" % (path, stamp)
 
 
 def write_settings(path, settings, backup):
@@ -179,7 +179,7 @@ def write_settings(path, settings, backup):
     tmp = None
     try:
         os.makedirs(directory, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(prefix=".socxen-settings-", dir=directory)
+        fd, tmp = tempfile.mkstemp(prefix=".raffkin-settings-", dir=directory)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(settings, fh, indent=2, ensure_ascii=False)
             fh.write("\n")
@@ -210,7 +210,7 @@ def describe(additions):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
-        description="Merge the socxen governance permissions snippet into settings.json")
+        description="Merge the Raffkin governance permissions snippet into settings.json")
     ap.add_argument("--snippet", required=True, help="path to settings.snippet.json")
     ap.add_argument("--settings", required=True, help="path to ~/.claude/settings.json")
     ap.add_argument("--dry-run", action="store_true",

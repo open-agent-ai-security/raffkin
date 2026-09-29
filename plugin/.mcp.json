@@ -3,7 +3,7 @@
     "exabeam": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "--quiet", "${CLAUDE_PLUGIN_ROOT}/connector/exabeam-mcp-bridge.py"]
+      "args": ["run", "--quiet", "--locked", "${CLAUDE_PLUGIN_ROOT}/connector/exabeam-mcp-bridge.py"]
     }
   }
 }

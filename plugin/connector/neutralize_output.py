@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Output-side active-content neutralizer -- the a10 (export / formula injection) fix.
 
-Applied to content socxen WRITES back through the bridge (case notes, alert/case updates) so a payload
+Applied to content Raffkin WRITES back through the bridge (case notes, alert/case updates) so a payload
 planted in telemetry cannot fire when that persisted artifact is later exported. Scope is deliberately
 narrow -- "do no harm; stop the obvious; document the exotic" -- to two ACTIVE-content forms:
 
@@ -16,7 +16,7 @@ narrow -- "do no harm; stop the obvious; document the exotic" -- to two ACTIVE-c
      attributes, srcset, CSS url() in style attributes and <style> blocks): the target is defanged
      (host -> [.], scheme -> hxxp, javascript: -> [:]) UNLESS it points into the operator's own tenant.
      "Clickable is decided by destination, not authorship" (#147): the model writes the text, so
-     "socxen wrote this link" carries no trust; a URL to the operator's own console is verifiable
+     "Raffkin wrote this link" carries no trust; a URL to the operator's own console is verifiable
      against config, anything else is not. The allowlist is derived from EXABEAM_MCP_URL by the bridge
      (tenant_hosts_from_url) -- never curated, never model-influenced -- and defaults to EMPTY, so with
      no config every link is defanged (the safe default the red-team harness grades under).
@@ -65,7 +65,10 @@ __all__ = ["neutralize_output", "redact_secrets", "tenant_hosts_from_url", "is_a
 # before generic tokens). Every pattern is anchored on a structural signal a legitimate value would not
 # carry, to keep false positives near zero:
 #   - AWS keys: the AKIA/ASIA prefix + fixed length
-#   - vendor tokens: distinctive, registered prefixes (ghp_, xoxb-, sk-, AIza, JWT eyJ...)
+#   - vendor tokens: distinctive, registered prefixes (ghp_, glpat-, xoxb-, sk_live_, AIza, JWT eyJ...);
+#     OpenAI/Anthropic sk- keys by shape -- a known sub-prefix (sk-proj-, sk-svcacct-, sk-admin-,
+#     sk-ant-api03-) or 32+ unbroken alphanumerics -- so a hostname or branch like sk-prd-db-0001 is left
+#     alone. Every lookahead is bounded, so a run like sk-sk-sk-... stays linear
 #   - private keys: the PEM armor
 #   - labeled secrets: a credential KEYWORD immediately preceding the value (password=, --secret-key X)
 #   - SSN: the exact \d{3}-\d{2}-\d{4} shape (rare in logs); credit cards are Luhn-verified below
@@ -77,6 +80,9 @@ _SECRET_PATTERNS = [
     ("token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
     ("token", re.compile(r"\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b")),
     ("token", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+    ("token", re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}")),
+    ("token", re.compile(r"\bsk-(?:(?:proj|svcacct|admin|ant-(?:api|admin)\d{2})-(?=[A-Za-z0-9_-]{0,64}\d)"
+                         r"[A-Za-z0-9_-]{20,}|(?=[A-Za-z0-9]{0,64}\d)[A-Za-z0-9]{32,})")),
     ("ssn", re.compile(r"\b(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b")),
 ]
 # Labeled secret: a credential keyword, a separator, then the value. Redacts only the VALUE, and only

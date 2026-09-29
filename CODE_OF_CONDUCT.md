@@ -5,12 +5,12 @@
 
 # Code of Conduct
 
-The socxen project adopts the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)**
+The Raffkin project adopts the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)**
 as its code of conduct. The full text is the canonical source; this file states
 only the project-specific reporting and enforcement details the Covenant requires.
 
 This applies to every project space — issues, pull requests, code reviews,
-discussions, and any other contact made in a socxen context, on or off GitHub.
+discussions, and any other contact made in a Raffkin context, on or off GitHub.
 
 ## Reporting
 

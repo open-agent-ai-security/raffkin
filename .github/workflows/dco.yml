@@ -1,11 +1,9 @@
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
-# DCO sign-off gate for external contributions. Every non-merge commit in a PR
-# must carry a Signed-off-by trailer (git commit -s) — see CONTRIBUTING.md.
-# Exabeam-internal authors and bots are exempt from the CI gate (though the
-# sign-off convention still applies): decided 2026-07-01, deferred in #51 until
-# outside contributions arrived.
+# DCO sign-off gate. Every non-merge commit in a PR must carry a Signed-off-by
+# trailer (git commit -s) — see CONTRIBUTING.md. Every human author is checked,
+# internal or external; bot commits are exempt because a bot cannot sign.
 name: DCO
 
 on:
@@ -21,7 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: External commits carry Signed-off-by
+      - name: Every commit carries Signed-off-by
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
@@ -30,7 +28,7 @@ jobs:
           for sha in $(git rev-list --no-merges "${BASE}..${HEAD}"); do
             email="$(git log -1 --format='%ae' "$sha")"
             case "$email" in
-              *@exabeam.com|*"[bot]"*) echo "exempt: ${sha:0:7} (${email})"; continue ;;
+              *"[bot]"*) echo "exempt (bot): ${sha:0:7} (${email})"; continue ;;
             esac
             if git log -1 --format='%B' "$sha" | grep -Eqi '^Signed-off-by: .+ <.+@.+>'; then
               echo "ok: ${sha:0:7} signed off by $(git log -1 --format='%an <%ae>' "$sha")"

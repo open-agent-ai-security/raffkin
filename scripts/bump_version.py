@@ -4,15 +4,17 @@
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Bump socxen's version everywhere it lives, in one shot.
+"""Bump Raffkin's version everywhere it lives, in one shot.
 
-Version lives in three coupled places; the invariant tests + CI fail if they drift, so bumping by hand
-is error-prone. This edits all of them and regenerates the AI BOM:
+Version is set in two places and generated into the rest; the invariant tests + CI fail if they drift, so
+bumping by hand is error-prone. This edits both and regenerates everything downstream:
 
   - `plugin/identity.json`                            → `version`  (the source; both manifests are
     regenerated from it by plugin/gen_identity.py)
   - `plugin/README.md`                                → the `version-vX.Y.Z` pill
+  - `plugin/identity.sh`                              → regenerated with the manifests
   - `security/aibom.cdx.json` / `aibom.html`   → regenerated (stamps the new version)
+  - `security/sbom.cdx.json` / `sbom.html`     → regenerated (stamps the new version)
 
 Then it verifies all agree — the same consistency `tests/test_repo_invariants.py` enforces — so CI
 stays green. It does NOT commit; review the diff and open a PR yourself.
@@ -82,6 +84,7 @@ def main(argv):
     if dry:
         for path, _ in edits:
             print(f"  would edit {path.relative_to(ROOT)}")
+        print("  would regenerate both host manifests + plugin/identity.sh (gen_identity.py)")
         print("  would regenerate security/aibom.cdx.json + security/aibom.html + security/sbom.cdx.json + security/sbom.html")
         return 0
 

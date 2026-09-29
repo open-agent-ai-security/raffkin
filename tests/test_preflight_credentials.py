@@ -51,3 +51,25 @@ def test_preflight_accepts_https_and_loopback_http(tmp_path, url):
 def test_preflight_fails_cleartext_before_the_bridge_starts(tmp_path, url, expect):
     out = _check(tmp_path, url)
     assert "CREDS_OK=0" in out and "FAIL: EXABEAM_MCP_URL" in out and expect in out, out
+
+
+def _preflight_with_fake_uv(tmp_path, version_line):
+    """preflight.sh --platform none with a `uv` on PATH that only answers --version."""
+    import os, subprocess
+    bin_ = tmp_path / "bin"; bin_.mkdir(exist_ok=True)
+    (bin_ / "uv").write_text(f"#!/bin/sh\ncase \"$1\" in --version) echo '{version_line}' ;; *) exit 1 ;; esac\n")
+    (bin_ / "uv").chmod(0o755)
+    env = dict(os.environ, HOME=str(tmp_path), PATH=str(bin_) + os.pathsep + os.environ.get("PATH", ""))
+    return subprocess.run(["bash", str(PREFLIGHT), "--platform", "none", "--skip-connectivity", "--no-color"],
+                          capture_output=True, text=True, env=env)
+
+
+def test_preflight_fails_a_uv_below_the_lock_floor_and_accepts_the_floor(tmp_path):
+    """#248: below uv 0.5.23 `uv run --locked` does not honor (or even accept) the script lock, so the
+    bridge would not start; preflight says so as a failure with the upgrade command. At and above the
+    floor, including a two-digit minor, it reads ok."""
+    old = _preflight_with_fake_uv(tmp_path, "uv 0.5.16 (fake)")
+    assert "older than 0.5.23" in old.stdout and "uv self update" in old.stdout and old.returncode == 1, old.stdout
+    for v in ("uv 0.5.23 (fake)", "uv 0.6.0 (fake)", "uv 0.11.24 (Homebrew 2026-06-23 aarch64-apple-darwin)"):
+        r = _preflight_with_fake_uv(tmp_path, v)
+        assert "uv present" in r.stdout and "older than" not in r.stdout, (v, r.stdout)

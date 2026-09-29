@@ -33,7 +33,7 @@ sweep (see Governance).
 
 ## Preflight — is the Exabeam MCP connected?
 
-Everything runs through the **Exabeam New-Scale MCP** (`exabeam_*` tools). socxen bundles this
+Everything runs through the **Exabeam New-Scale MCP** (`exabeam_*` tools). Raffkin bundles this
 connection. Confirm you can see `exabeam_*` tools; if unsure, ask the analyst to run `claude mcp list` (Codex: `codex mcp get exabeam`) in a terminal and look for
 `exabeam`. If it is not connected, stop and give the operator the setup steps (see
 `soc-investigate`'s preflight) — do not improvise or invent queue data.

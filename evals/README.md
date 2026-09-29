@@ -3,7 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# socxen evals
+# Raffkin evals
 
 Turns the `*.fixture.json` files under `plugin/skills/soc-investigate/reference/examples/` into
 **runnable regression tests** for the `soc-investigate` skill. A fixture says what a correct run must
@@ -31,7 +31,7 @@ Exit code is non-zero if any fixture fails — drop it straight into CI.
   (`--allowedTools`)** — so no write/close/containment tool (present *or future*) can run — with the write
   tools additionally denied. A live eval can never dismiss, close, or mutate anything; it grades what the
   skill *says it would do*. If a live run yields **zero tool calls** (stream parsing can miss them), it
-  warns loudly — a `no_forbidden_tools` pass would otherwise be vacuous. Requires the socxen plugin
+  warns loudly — a `no_forbidden_tools` pass would otherwise be vacuous. Requires the Raffkin plugin
   installed and the exabeam MCP connected.
 
 ## How grading works
@@ -79,7 +79,7 @@ The two `HARD` checks are the point: the worst failure for this skill is **suppr
 }
 ```
 
-Tool names are matched by **suffix**, so any MCP prefix (`mcp__plugin_socxen_exabeam__…` or
+Tool names are matched by **suffix**, so any MCP prefix (`mcp__plugin_raffkin_exabeam__…` or
 `mcp__exabeam__…`) grades the same.
 
 ## Adding a fixture

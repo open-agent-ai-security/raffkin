@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Logging (structured audit trail) — on by default · socxen Docs</title>
+<title>Logging (structured audit trail) — on by default · Raffkin Docs</title>
 <meta name="description" content="What it is: a structured, durable, machine-parseable record of what the agent did on every investigation — which Exabeam tools it called, how long they…">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://open-agent-ai-security.github.io/socxen/guide/logging.html">
+<link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/guide/logging.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="socxen">
-<meta property="og:title" content="Logging (structured audit trail) — on by default · socxen Docs">
+<meta property="og:site_name" content="Raffkin">
+<meta property="og:title" content="Logging (structured audit trail) — on by default · Raffkin Docs">
 <meta property="og:description" content="What it is: a structured, durable, machine-parseable record of what the agent did on every investigation — which Exabeam tools it called, how long they…">
-<meta property="og:url" content="https://open-agent-ai-security.github.io/socxen/guide/logging.html">
-<meta property="og:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/guide/logging.html">
+<meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Logging (structured audit trail) — on by default · socxen Docs">
+<meta name="twitter:title" content="Logging (structured audit trail) — on by default · Raffkin Docs">
 <meta name="twitter:description" content="What it is: a structured, durable, machine-parseable record of what the agent did on every investigation — which Exabeam tools it called, how long they…">
-<meta name="twitter:image" content="https://open-agent-ai-security.github.io/socxen/graphics/socxen-social.png">
+<meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <script type="application/ld+json">
 { "@context": "https://schema.org", "@type": "TechArticle", "headline": "Logging (structured audit trail) \u2014 on by default", "description": "What it is: a structured, durable, machine-parseable record of what the agent did on every investigation \u2014 which Exabeam tools it called, how long they\u2026",
-  "url": "https://open-agent-ai-security.github.io/socxen/guide/logging.html", "isPartOf": { "@type": "WebSite", "name": "socxen", "url": "https://open-agent-ai-security.github.io/socxen/" },
+  "url": "https://open-agent-ai-security.github.io/raffkin/guide/logging.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/raffkin/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
 <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -28,10 +28,10 @@
   Copyright 2026 Exabeam, Inc.
   SPDX-License-Identifier: Apache-2.0
 
-  socxen shared design system — single source of truth for the visual theme.
+  Raffkin shared design system — single source of truth for the visual theme.
   Derived from the Praxen design system (open-agent-ai-security/praxen,
   assets/praxen-theme.css) so the three project sites read as one family;
-  only the accent hue differs: Praxen orange → socxen lion gold.
+  only the accent hue differs: Praxen orange → Raffkin amber-gold.
 
   Consumed by two surfaces:
     - index.html / news.html (the marketing pages) LINK this file.
@@ -52,18 +52,18 @@
 
 /* ---------- 2 · Design tokens ---------- */
 :root {
-  --bg:          #0b0f1a;   /* a hair warmer than Praxen's navy — savanna night */
-  --bg-2:        #0e1320;
+  --bg:          #080a0d;   /* graphite-black, warmed locally by the amber brand glow */
+  --bg-2:        #101217;
   --panel:       rgba(255, 255, 255, 0.035);
   --panel-2:     rgba(255, 255, 255, 0.05);
   --border:      rgba(255, 255, 255, 0.09);
-  --border-hi:   rgba(242,189,92, 0.45);
-  --text:        #e9eff8;
-  --muted:       #9aabc0;
-  --muted-2:     #6f819a;
-  --gold:      #e6a23c;
-  --gold-2:    #f2bd5c;
-  --gold-deep: #c4841c;
+  --border-hi:   rgba(255,216,74, 0.45);
+  --text:        #f5f7fa;
+  --muted:       #a6b0bf;
+  --muted-2:     #707b8c;
+  --gold:        #f2b705;
+  --gold-2:      #ffd84a;
+  --gold-deep:   #b87400;
   --accent-2:    #2fbf9f;   /* signal teal — second hue (clean/resisted, terminal green) */
   --green:       #67d98b;
   --maxw:        1140px;
@@ -254,10 +254,10 @@ img { max-width: 100%; display: block; }
 <body class="docs-page">
 <header class="docs-top">
   <div class="docs-top-inner">
-    <a class="docs-brand" href="../"><img src="../graphics/brand/socxen-wordmark-dark-background.svg" alt="socxen" width="117" height="30"></a>
+    <a class="docs-brand" href="../"><img src="../graphics/brand/raffkin-wordmark-dark-background.svg" alt="Raffkin" width="117" height="30"></a>
     <div class="docs-top-links">
       <a href="../">Home</a>
-      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/socxen" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/open-agent-ai-security/raffkin" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>GitHub</a>
     </div>
   </div>
 </header>
@@ -268,7 +268,7 @@ img { max-width: 100%; display: block; }
 <p><strong>What it is:</strong> a structured, durable, machine-parseable record of what the agent did on every
 investigation — which Exabeam tools it called, how long they took, whether they succeeded, <strong>the gated
 action it took</strong> (which alert/case, to what disposition), and <strong>when the <a href="security-guardrails.html">security
-guardrails</a> fired</strong>. A good agent keeps an audit trail; socxen keeps one <strong>by
+guardrails</a> fired</strong>. A good agent keeps an audit trail; Raffkin keeps one <strong>by
 default</strong>, so a production tenant can reconstruct a session or drive anomaly detection instead of relying
 on the free-form investigation report alone.</p>
 <p>It runs inside the bundled connector (the local MCP bridge, the one place that sees every Exabeam call)
@@ -320,7 +320,7 @@ Events are written as newline-delimited JSON (one object per line) in the CIM-no
 </tbody>
 </table>
 <p>Every event also carries: <code>framework: "mcp"</code>, <code>agent_name</code> (the plugin's name from its <code>identity.json</code>
-— <code>socxen</code> here; a copy shipped under another name logs under that name), <code>skill_name: "soc-investigate"</code>,
+— <code>raffkin</code> here; a copy shipped under another name logs under that name), <code>skill_name: "soc-investigate"</code>,
 ULID <code>session_id</code> / <code>trace_id</code> / <code>span_id</code> for correlation, a <code>timestamp</code>, and host context
 (<code>host</code>, <code>user</code>, <code>os</code>, <code>arch</code>, <code>library_version</code>) for accountability.</p>
 <p>On a <code>tool_end</code>, three extra kinds of field appear when relevant:</p>
@@ -343,11 +343,11 @@ written in-band (a marker in alert data would be forgeable). A right-to-left mar
 a value is not proof of anything — Persian, Arabic and emoji use them legitimately — but on a homoglyph or
 bidi-shaped investigation it is the field to query.</p>
 <h2 id="the-gates-own-record">The gate's own record</h2>
-<p>The bundled Claude Code hook keeps a second, smaller log beside the telemetry: <code>~/.socxen/gate.jsonl</code>
-(<code>SOCXEN_GATE_LOG=off</code> disables it and says so on stderr; another path overrides; rotates at ~5 MB with
+<p>The bundled Claude Code hook keeps a second, smaller log beside the telemetry: <code>~/.raffkin/gate.jsonl</code>
+(<code>RAFFKIN_GATE_LOG=off</code> disables it and says so on stderr; another path overrides; rotates at ~5 MB with
 three backups). One line per decision:</p>
-<pre><code class="language-json">{&quot;ts&quot;: &quot;2026-09-05T16:01:26+00:00&quot;, &quot;tool&quot;: &quot;mcp__plugin_socxen_exabeam__exabeam_update_alert&quot;,
- &quot;decision&quot;: &quot;ask&quot;, &quot;reason&quot;: &quot;socxen gate: exabeam_update_alert dismisses or closes. It needs the analyst's explicit yes — ask, and wait.&quot;,
+<pre><code class="language-json">{&quot;ts&quot;: &quot;2026-09-05T16:01:26+00:00&quot;, &quot;tool&quot;: &quot;mcp__plugin_raffkin_exabeam__exabeam_update_alert&quot;,
+ &quot;decision&quot;: &quot;ask&quot;, &quot;reason&quot;: &quot;Raffkin gate: exabeam_update_alert dismisses or closes. It needs the analyst's explicit yes — ask, and wait.&quot;,
  &quot;target&quot;: {&quot;alertId&quot;: &quot;4471&quot;, &quot;alertStatus&quot;: &quot;DISMISSED&quot;}}
 </code></pre>
 <p>The same hook runs again after the call. An ask-tier call that <strong>completed</strong> is recorded as <code>approved</code>,
@@ -356,7 +356,7 @@ the session ran in a mode where nobody could answer (<code>bypassPermissions</co
 <code>ran_unasked</code> instead, because the ask did not hold for that call. That line should never appear; it
 exists so that a gate that somehow did not hold is visible in the record rather than silent. Both lines
 carry the host's <code>permission_mode</code> and <code>tool_use_id</code> when present, so a post line ties to its ask:</p>
-<pre><code class="language-json">{&quot;ts&quot;: &quot;2026-09-05T16:01:41+00:00&quot;, &quot;tool&quot;: &quot;mcp__plugin_socxen_exabeam__exabeam_update_alert&quot;,
+<pre><code class="language-json">{&quot;ts&quot;: &quot;2026-09-05T16:01:41+00:00&quot;, &quot;tool&quot;: &quot;mcp__plugin_raffkin_exabeam__exabeam_update_alert&quot;,
  &quot;decision&quot;: &quot;approved&quot;, &quot;reason&quot;: &quot;an ask-tier call completed after the gate asked: inferred from completion, an ask completes only on a yes&quot;,
  &quot;permission_mode&quot;: &quot;default&quot;, &quot;tool_use_id&quot;: &quot;toolu_01ABC&quot;,
  &quot;target&quot;: {&quot;alertId&quot;: &quot;4471&quot;, &quot;alertStatus&quot;: &quot;DISMISSED&quot;}}
@@ -401,32 +401,32 @@ omitted to avoid scattering it across every write.</p>
 <tbody>
 <tr>
 <td>Backend</td>
-<td><code>SOCXEN_OBSERVRA</code></td>
+<td><code>RAFFKIN_OBSERVRA</code></td>
 <td><code>jsonl</code> (set <code>off</code> to disable)</td>
 </tr>
 <tr>
 <td>File path</td>
-<td><code>SOCXEN_OBSERVRA_PATH</code></td>
-<td><code>~/.socxen/telemetry.jsonl</code></td>
+<td><code>RAFFKIN_OBSERVRA_PATH</code></td>
+<td><code>~/.raffkin/telemetry.jsonl</code></td>
 </tr>
 <tr>
 <td>Rotate at size</td>
-<td><code>SOCXEN_OBSERVRA_MAX_BYTES</code></td>
+<td><code>RAFFKIN_OBSERVRA_MAX_BYTES</code></td>
 <td><code>10485760</code> (10 MB)</td>
 </tr>
 <tr>
 <td>Backups kept</td>
-<td><code>SOCXEN_OBSERVRA_BACKUPS</code></td>
+<td><code>RAFFKIN_OBSERVRA_BACKUPS</code></td>
 <td><code>5</code></td>
 </tr>
 <tr>
 <td>Webhook destination</td>
-<td><code>SOCXEN_OBSERVRA_URL</code></td>
+<td><code>RAFFKIN_OBSERVRA_URL</code></td>
 <td>— (required for <code>webhook</code>)</td>
 </tr>
 <tr>
 <td>OTLP endpoint</td>
-<td><code>SOCXEN_OBSERVRA_ENDPOINT</code></td>
+<td><code>RAFFKIN_OBSERVRA_ENDPOINT</code></td>
 <td>— (else <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> / <code>..._LOGS_ENDPOINT</code>, else <code>http://localhost:4318</code>)</td>
 </tr>
 </tbody>
@@ -438,7 +438,7 @@ into the log: if telemetry disables itself (a misconfigured backend, a missing l
 printed to stderr only, because there is no longer a log to write it to.</p>
 <p>So the log <strong>rotates</strong> (<code>telemetry.jsonl</code> → <code>.1</code> → … → <code>.5</code>, oldest deleted) and is bounded to roughly
 <strong>60 MB</strong> by default. It never grows without limit.</p>
-<p>Other backends (opt-in via <code>SOCXEN_OBSERVRA=</code>): <code>exabeam</code> (routes telemetry back into Exabeam using the
+<p>Other backends (opt-in via <code>RAFFKIN_OBSERVRA=</code>): <code>exabeam</code> (routes telemetry back into Exabeam using the
 bridge's own creds), <code>otel</code> / <code>otel_log</code> (OpenTelemetry), <code>webhook</code>. These make network calls, so <code>jsonl</code>
 is the default. On first enable, the bridge prints one line to stderr naming the destination and how to
 turn it off — disclosed, not silent.</p>
@@ -449,19 +449,19 @@ case-note text, evidence, or payloads (the same privacy rules apply) — but you
 telemetry to that destination. Point them only at systems you control.</p>
 </blockquote>
 <h2 id="finding-and-reading-your-log">Finding and reading your log</h2>
-<p>By default it's at <strong><code>~/.socxen/telemetry.jsonl</code></strong> (rotated backups are <code>telemetry.jsonl.1</code> … <code>.5</code>). It's
+<p>By default it's at <strong><code>~/.raffkin/telemetry.jsonl</code></strong> (rotated backups are <code>telemetry.jsonl.1</code> … <code>.5</code>). It's
 one JSON object per line — read it with anything that speaks JSON lines:</p>
-<pre><code class="language-bash">tail -f ~/.socxen/telemetry.jsonl                      # watch events live
+<pre><code class="language-bash">tail -f ~/.raffkin/telemetry.jsonl                      # watch events live
 
 # the gated actions this session took (which alert, to what disposition):
 jq -c 'select(.event_type==&quot;tool_end&quot; and (.data|has(&quot;action.disposition&quot;)))
        | {tool: .tool_name, alert: .data.&quot;action.alertId&quot;, disp: .data.&quot;action.disposition&quot;}' \
-   ~/.socxen/telemetry.jsonl
+   ~/.raffkin/telemetry.jsonl
 
 # every time a guardrail fired:
 jq -c 'select(.data.defang_formula or .data.defang_link or .data.hygiene_stripped)
        | {tool: .tool_name, defang_formula: .data.defang_formula, defang_link: .data.defang_link,
-          hygiene: .data.hygiene_stripped}' ~/.socxen/telemetry.jsonl
+          hygiene: .data.hygiene_stripped}' ~/.raffkin/telemetry.jsonl
 </code></pre>
 <p>Events from one investigation share a <code>session_id</code>, so you can reconstruct a run by grouping on it.</p>
 <h2 id="fail-open">Fail-open</h2>
@@ -479,9 +479,11 @@ failed write is visible rather than vanishing into a library logger. One gap wor
 trail: if its internal queue fills, observra drops the oldest event and counts the drop rather than
 announcing it. The security guardrails are independent and keep running throughout.</p>
 <h2 id="turning-it-off">Turning it off</h2>
-<pre><code class="language-bash">export SOCXEN_OBSERVRA=off
+<pre><code class="language-bash">export RAFFKIN_OBSERVRA=off
 </code></pre>
-<p>Off means <em>off</em>: no file, and observra is never imported.</p>
+<p>Off means <em>off</em>: no file, and observra is never imported. The bridge says so on stderr when it starts —
+<code>bridge: observra logging is OFF (RAFFKIN_OBSERVRA=off) — this session is not recorded</code> — so an unrecorded
+session is never a silent one.</p>
 <h2 id="known-limitation">Known limitation</h2>
 <p>The trail records the <strong>gated action and its disposition deterministically at the write sink</strong>, and because
 the gate ships on, an <code>update_alert</code> / <code>update_case</code> write only reaches the bridge <em>after</em> the human
@@ -492,7 +494,7 @@ observed. Neither record names <strong>who</strong> answered: that lives in the 
 neither the hook nor the bridge can see. The operator is carried on every event as host context
 (<code>user</code>/<code>host</code>). Codex has no hook, so there the write event is the only
 approval record.</p></article>
-    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/socxen/blob/main/plugin/docs/logging.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
+    <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/docs/logging.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>
 </div>
 

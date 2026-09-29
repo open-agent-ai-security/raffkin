@@ -5,7 +5,7 @@
 
 # Installation & setup
 
-socxen is a plugin for **Claude Code** and **OpenAI Codex** that works your **Exabeam New-Scale** tenant
+Raffkin is a plugin for **Claude Code** and **OpenAI Codex** that works your **Exabeam New-Scale** tenant
 through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the same shape on both hosts: install the plugin, add one credentials
 file, check, and run your first investigation. Five minutes.
 
@@ -22,13 +22,15 @@ one, the call is refused.
 - **A supported model.** On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See [Security](security-guardrails.md#how-it-is-tested)
   for how the supported models are validated.
-- **[`uv`](https://docs.astral.sh/uv/)** on your `PATH`. It runs the bundled Exabeam connector and
-  installs the connector's own Python dependencies; there is nothing to `pip install`.
+- **[`uv`](https://docs.astral.sh/uv/) 0.5.23 or newer** on your `PATH`. It runs the bundled Exabeam
+  connector and installs the connector's own Python dependencies; there is nothing to `pip install`.
+  Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
+  honored, which is why the version matters (`uv self update` brings an older uv current).
 - **`python3` (3.7 or newer) on your `PATH`** — Claude Code only. The safety gate is a small Python script
   the host runs before each Exabeam call; without `python3` every gated call is refused. macOS and most
   Linux distributions already have it (`python3 --version`). Codex does not need it.
 - **An Exabeam New-Scale API key and secret**, created under **Settings → API Keys** in your New-Scale
-  console. Keys don't carry a role — you grant them **access entitlements**, and socxen gets exactly what
+  console. Keys don't carry a role — you grant them **access entitlements**, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
   coverage and detection content (rules, parsers, context tables), and to create cases and write case
   notes; a read-only key
@@ -39,20 +41,20 @@ one, the call is refused.
   (for example a demo or a dedicated tenant) have no region in the URL; ask your Exabeam administrator
   which region hosts them. The **Region Deployed** field under *Service Health and Consumption → License
   View* is **not** reliable for this — it may show a country rather than the hosting region.
-- **Windows:** socxen is not supported natively on Windows; use **WSL**. The diagnostics and the safety
+- **Windows:** Raffkin is not supported natively on Windows; use **WSL**. The diagnostics and the safety
   gate are shell scripts and Python, and the credentials file below is protected by Unix file
   permissions, which Git Bash on NTFS does not enforce — so Git Bash can run the scripts but leaves your
   key and secret unprotected. There is no PowerShell path.
 <!-- community-only -->
-- **Exabeam customers:** the supported build is delivered through the Exabeam Plug-in Forge, with its
-  own install command; your Exabeam representative can point you at it. These instructions cover the
-  community release; see [Support](support.md).
+- **Exabeam customers:** the supported build is delivered through the
+  [Exabeam Plug-in Forge](https://exabeam-labs.github.io/plugins/), with its own install command. These
+  instructions cover the community release; see [Support](support.md).
 <!-- /community-only -->
 <!-- distribution-only
 - **This copy is a distribution.** It is provided under the terms in its `LICENSE` file by the
   organization that distributes it, which also provides its support; see [Support](support.md).
 /distribution-only -->
-- **Your own subscription.** socxen runs inside your Claude Code or Codex plan. An investigation is a long
+- **Your own subscription.** Raffkin runs inside your Claude Code or Codex plan. An investigation is a long
   agent session and is billed by your provider like any other.
 
 ## Quick start — Claude Code
@@ -61,8 +63,8 @@ one, the call is refused.
 
 ```bash
 claude plugin marketplace add open-agent-ai-security/plugins
-claude plugin install socxen@open-agent-ai-security
-claude plugin list      # expect a block for socxen@open-agent-ai-security ending in: Status: ✔ enabled
+claude plugin install raffkin@open-agent-ai-security
+claude plugin list      # expect a block for raffkin@open-agent-ai-security ending in: Status: ✔ enabled
 ```
 
 If the block shows an error line under it, the plugin installed but did not load — see
@@ -87,7 +89,7 @@ missing. It lives in the installed plugin. Run it with the exact version step 1 
 the cache keeps earlier versions, and a wildcard would run the oldest one):
 
 ```bash
-bash ~/.claude/plugins/cache/open-agent-ai-security/socxen/<version>/preflight.sh
+bash ~/.claude/plugins/cache/open-agent-ai-security/raffkin/<version>/preflight.sh
 ```
 
 Expect `✓` on every line, including **`Exabeam MCP reachable`** and **`Human-in-the-loop gate ON`**. A
@@ -98,8 +100,8 @@ first. If you see `No credentials yet`, go back to step 2.
 
 > investigate alert `<alert id>`
 
-You can find an alert ID in the New-Scale console under **Threat Center → Alerts**; or ask socxen
-*"triage the queue"* first and pick one from the list it returns. socxen loads the `soc-investigate`
+You can find an alert ID in the New-Scale console under **Threat Center → Alerts**; or ask Raffkin
+*"triage the queue"* first and pick one from the list it returns. Raffkin loads the `soc-investigate`
 skill, queries Exabeam for the evidence (you will see the tool calls go by), and ends with a written
 report: the timeline, the evidence with its source, a MITRE mapping, a verdict, and a last line of
 `Taxonomy outcome: raised`, `auto_closed` or `fp_closed`. If it concludes the alert is a false
@@ -114,8 +116,8 @@ That is the whole setup. [Using the skills](usage.md) covers what else you can a
 
 ```bash
 codex plugin marketplace add open-agent-ai-security/plugins
-codex plugin add socxen@open-agent-ai-security
-codex plugin list      # expect: socxen@open-agent-ai-security  installed, enabled  <version>
+codex plugin add raffkin@open-agent-ai-security
+codex plugin list      # expect: raffkin@open-agent-ai-security  installed, enabled  <version>
 ```
 
 **2. Add your credentials** — the same file as for Claude Code, above (`~/.exabeam-mcp.env`, `https://`,
@@ -137,8 +139,8 @@ first. If you see `No credentials yet`, go back to step 2.
 > investigate alert `<alert id>`
 
 Same report, same last line, same question before any dismissal. One difference on Codex: it also asks
-you before socxen *opens* a case or writes a note, because Exabeam marks those tools as writes and Codex
-asks before every write. Noisier, not less safe. And if you script socxen with `codex exec`, where
+you before Raffkin *opens* a case or writes a note, because Exabeam marks those tools as writes and Codex
+asks before every write. Noisier, not less safe. And if you script Raffkin with `codex exec`, where
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.
 
@@ -147,11 +149,11 @@ through — the gate does not evaporate when the human does.
 ```bash
 # Claude Code
 claude plugin marketplace update open-agent-ai-security
-claude plugin update socxen@open-agent-ai-security
+claude plugin update raffkin@open-agent-ai-security
 
 # Codex
 codex plugin marketplace upgrade open-agent-ai-security
-codex plugin add socxen@open-agent-ai-security
+codex plugin add raffkin@open-agent-ai-security
 ```
 
 Both commands matter on Claude Code: the first refreshes the catalog, the second installs from it.
@@ -170,6 +172,7 @@ or fleet-wide in a managed `settings.json`:
 }
 ```
 
+
 ## Troubleshooting
 
 Run `preflight.sh` first (step 3 above); it checks the CLI, `uv`, the credentials file, the connection
@@ -184,18 +187,16 @@ to your tenant, and the safety gate, and names the failing step.
   lacks may come back empty rather than failing. See [Key entitlements](#key-entitlements).
 - **The skill says the Exabeam MCP is not connected.** The credentials file is missing or was added
   after the host started; add it and restart the host.
-- **`claude plugin list` shows an error beside socxen.** The plugin installed but did not load; run
-  `claude plugin update socxen@open-agent-ai-security` to get the current release, then restart.
-- **Two copies of socxen.** If you installed an early build from the retired `socxen@socxen`
-  marketplace, remove it first: `claude plugin marketplace remove socxen`, then install as in step 1.
+- **`claude plugin list` shows an error beside Raffkin.** The plugin installed but did not load; run
+  `claude plugin update raffkin@open-agent-ai-security` to get the current release, then restart.
 - **On Codex, no `exabeam` server appears.** Codex drops a bundled server silently if any part of its
-  configuration is invalid; run `codex plugin add socxen@open-agent-ai-security` again and re-check.
+  configuration is invalid; run `codex plugin add raffkin@open-agent-ai-security` again and re-check.
 
 ## Advanced: wiring the Exabeam MCP by hand (not recommended)
 
 You can register the remote Exabeam MCP in your host directly (`claude mcp add … exabeam …`) with a
 bearer token you mint yourself. Two things to know: the token expires in about four hours, and, more
-importantly, socxen's guardrails — the screening of what it reads, the neutralizing and masking of what
+importantly, Raffkin's guardrails — the screening of what it reads, the neutralizing and masking of what
 it writes, and the audit trail — live in the bundled connector, so
 none of them run when Claude Code talks to the remote MCP directly. Only the dismiss/close gate
 survives, and only if the server is named `exabeam`. Use this for a connectivity check, not for investigations you rely on.
@@ -203,7 +204,7 @@ survives, and only if the server is named `exabeam`. Use this for a connectivity
 ## Key entitlements
 
 Whoever grants the key's access entitlements can check against this list rather than guessing. These are
-the Exabeam MCP tools socxen calls, shown without their `exabeam_` prefix. Every containment or
+the Exabeam MCP tools Raffkin calls, shown without their `exabeam_` prefix. Every containment or
 rule-writing tool is refused before it reaches your tenant, and any tool not on this list asks you first.
 
 | Needed for | Tools |
@@ -217,11 +218,11 @@ rule-writing tool is refused before it reaches your tenant, and any tool not on 
 
 ```bash
 # Claude Code
-claude plugin uninstall socxen@open-agent-ai-security
+claude plugin uninstall raffkin@open-agent-ai-security
 claude plugin marketplace remove open-agent-ai-security   # optional; also removes other plugins from this catalog
 
 # Codex
-codex plugin remove socxen@open-agent-ai-security
+codex plugin remove raffkin@open-agent-ai-security
 codex plugin marketplace remove open-agent-ai-security   # optional; same caveat
 ```
 

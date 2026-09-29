@@ -1,15 +1,15 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156",
+  "serialNumber": "urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178",
   "version": 1,
   "metadata": {
     "component": {
-      "bom-ref": "socxen@0.9.0",
+      "bom-ref": "raffkin@1.0.0",
       "type": "application",
-      "name": "socxen",
-      "version": "0.9.0",
-      "description": "socxen — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
+      "name": "raffkin",
+      "version": "1.0.0",
+      "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
       "licenses": [
         {
           "license": {
@@ -27,16 +27,16 @@
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/open-agent-ai-security/socxen"
+          "url": "https://github.com/open-agent-ai-security/raffkin"
         },
         {
           "type": "website",
-          "url": "https://github.com/open-agent-ai-security/socxen"
+          "url": "https://github.com/open-agent-ai-security/raffkin"
         },
         {
           "type": "distribution",
           "url": "https://github.com/open-agent-ai-security/plugins",
-          "comment": "Claude Code plugin marketplace: socxen@open-agent-ai-security"
+          "comment": "Claude Code plugin marketplace: raffkin@open-agent-ai-security"
         },
         {
           "type": "bom",
@@ -93,7 +93,7 @@
       },
       {
         "name": "ai:auditTrail",
-        "value": "on by default, local, bounded: every call, gate decision and guardrail firing as metadata and safe identifiers, never case content (~/.socxen/)"
+        "value": "on by default, local, bounded: every call, gate decision and guardrail firing as metadata and safe identifiers, never case content (~/.raffkin/)"
       },
       {
         "name": "ai:secretsHandling",
@@ -104,14 +104,14 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-09-19T20:00:49Z"
+    "timestamp": "2026-09-28T19:37:18Z"
   },
   "components": [
     {
       "bom-ref": "model:anthropic-claude",
       "type": "machine-learning-model",
       "name": "Claude (Anthropic)",
-      "description": "Foundation model the skill runs on. Hosted API — weights are not distributed with socxen. The specific member (e.g. Opus / Sonnet) is selected at runtime by Claude Code, not pinned by socxen.",
+      "description": "Foundation model the skill runs on. Hosted API — weights are not distributed with Raffkin. The specific member (e.g. Opus / Sonnet) is selected at runtime by Claude Code, not pinned by Raffkin.",
       "supplier": {
         "name": "Anthropic",
         "url": [
@@ -143,7 +143,7 @@
       "bom-ref": "model:openai-codex",
       "type": "machine-learning-model",
       "name": "OpenAI model (via Codex)",
-      "description": "Foundation model the skills run on when the host is OpenAI Codex. Hosted API — weights are not distributed with socxen. The specific model and reasoning effort are selected by Codex, not pinned by socxen; the red-team floor is recorded per run in security/redteam/HISTORY.md.",
+      "description": "Foundation model the skills run on when the host is OpenAI Codex. Hosted API — weights are not distributed with Raffkin. The specific model and reasoning effort are selected by Codex, not pinned by Raffkin; the red-team floor is recorded per run in security/redteam/HISTORY.md.",
       "supplier": {
         "name": "OpenAI",
         "url": [
@@ -175,7 +175,7 @@
       "bom-ref": "artifact:soc-investigate-methodology",
       "type": "data",
       "name": "skill methodology (system prompts + reference corpus)",
-      "description": "The agent's instructions: the three skills' SKILL.md (rule-tuning, soc-investigate, triage-cases — investigation methodology, queue sweep, rule tuning; governance; output discipline) plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, triage taxonomy, containment list, worked examples). This prompt corpus — not a model — is the primary AI artifact socxen ships.",
+      "description": "The agent's instructions: the three skills' SKILL.md (rule-tuning, soc-investigate, triage-cases — investigation methodology, queue sweep, rule tuning; governance; output discipline) plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, triage taxonomy, containment list, worked examples). This prompt corpus — not a model — is the primary AI artifact Raffkin ships.",
       "licenses": [
         {
           "license": {
@@ -343,7 +343,7 @@
   ],
   "dependencies": [
     {
-      "ref": "socxen@0.9.0",
+      "ref": "raffkin@1.0.0",
       "dependsOn": [
         "model:anthropic-claude",
         "model:openai-codex",

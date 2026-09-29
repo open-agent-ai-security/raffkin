@@ -2,9 +2,9 @@
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
-# socxen preflight — read-only diagnostics, on any host agent.
+# Raffkin preflight — read-only diagnostics, on any host agent.
 #
-# Everything socxen needs to actually work is the same on Claude Code and on Codex:
+# Everything Raffkin needs to actually work is the same on Claude Code and on Codex:
 # credentials, a toolchain, and a bridge that can reach the tenant. Only the
 # human-in-the-loop gate is stored differently, so only the gate check branches.
 #
@@ -25,13 +25,13 @@
 # already defined them.
 
 # Identity from identity.sh (GENERATED from identity.json by gen_identity.py; no python3 needed). The same
-# SOCXEN_PLUGIN / SOCXEN_MARKETPLACE overrides install.sh honors apply here, so a remediation message
+# RAFFKIN_PLUGIN / RAFFKIN_MARKETPLACE overrides install.sh honors apply here, so a remediation message
 # names the key the operator actually installed. Both halves come from the same source or neither does:
 # a key stitched from one real half and one guessed half is one no marketplace serves.
 _PF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_PF_DIR/identity.sh" ]; then . "$_PF_DIR/identity.sh"; fi
-PLUGIN_NAME="${SOCXEN_PLUGIN:-${SOCXEN_ID_NAME:-}}"
-_PF_MKT="${SOCXEN_MARKETPLACE:-${SOCXEN_ID_MARKETPLACE_NAME:-}}"
+PLUGIN_NAME="${RAFFKIN_PLUGIN:-${RAFFKIN_ID_NAME:-}}"
+_PF_MKT="${RAFFKIN_MARKETPLACE:-${RAFFKIN_ID_MARKETPLACE_NAME:-}}"
 if [ -n "$PLUGIN_NAME" ] && [ -n "$_PF_MKT" ]; then
   PLUGIN_KEY="${PLUGIN_NAME}@${_PF_MKT}"
 else
@@ -70,15 +70,15 @@ fi
 
 # ---- host detection ----
 # Which agent is this install for? Both CLIs can be present on one machine, so an explicit
-# --platform always wins; otherwise prefer the one whose plugin cache actually holds socxen,
+# --platform always wins; otherwise prefer the one whose plugin cache actually holds Raffkin,
 # and fall back to whichever CLI exists.
 detect_platform() {
-  if [ -n "${SOCXEN_PLATFORM:-}" ]; then printf '%s' "$SOCXEN_PLATFORM"; return; fi
+  if [ -n "${RAFFKIN_PLATFORM:-}" ]; then printf '%s' "$RAFFKIN_PLATFORM"; return; fi
   local has_claude=0 has_codex=0
   command -v claude >/dev/null 2>&1 && has_claude=1
   command -v codex  >/dev/null 2>&1 && has_codex=1
   if [ "$has_claude" = 1 ] && [ "$has_codex" = 1 ]; then
-    # Both installed — let an actual socxen install break the tie.
+    # Both installed — let an actual Raffkin install break the tie.
     if codex mcp get exabeam >/dev/null 2>&1; then printf 'codex'; else printf 'claude'; fi
   elif [ "$has_codex" = 1 ]; then printf 'codex'
   elif [ "$has_claude" = 1 ]; then printf 'claude'
@@ -87,11 +87,25 @@ detect_platform() {
 
 # ---- shared checks (identical on every host) ----
 
+# The bridge is launched with `uv run --locked`: its dependencies are pinned by hash in the script lock
+# beside it, and uv refuses to start it if that lock is missing or stale instead of resolving without it
+# (#248). Script locks need uv 0.5.17; the `--locked` warning on scripts went away in 0.5.23, so that is
+# the floor. Below it the bridge does not start at all, which is the safe direction — say so here.
+UV_MIN="0.5.23"
+uv_version() { uv --version 2>/dev/null | awk '{print $2}'; }
+version_ge() {     # version_ge A B: true when A is at least B, numerically per dot-field
+  [ "$(printf '%s\n%s\n' "$2" "$1" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)" = "$2" ]
+}
 check_toolchain() {
   if command -v uv >/dev/null 2>&1; then
-    ok "uv present — $(uv --version 2>/dev/null)"
+    local uvv; uvv="$(uv_version)"
+    if [ -n "$uvv" ] && version_ge "$uvv" "$UV_MIN"; then
+      ok "uv present — $(uv --version 2>/dev/null)"
+    else
+      fail "uv ${uvv:-?} is older than ${UV_MIN} — the bundled Exabeam bridge starts with 'uv run --locked' so its hash-pinned dependencies are honored, and that needs uv ${UV_MIN} or newer; upgrade: uv self update (or https://docs.astral.sh/uv/)"
+    fi
   else
-    warn "uv not found — the bundled Exabeam bridge needs it: https://docs.astral.sh/uv/"
+    warn "uv not found — the bundled Exabeam bridge needs it (${UV_MIN} or newer): https://docs.astral.sh/uv/"
   fi
   if command -v python3 >/dev/null 2>&1; then
     if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 7) else 1)' 2>/dev/null; then
@@ -205,7 +219,7 @@ check_connectivity() {
     skip "MCP connectivity check skipped — bridge not found (run from a cloned repo)"
   else
     step "Connecting to Exabeam MCP via the bundled bridge…"
-    if out="$(uv run --quiet "$bridge" --check 2>&1)"; then
+    if out="$(uv run --quiet --locked "$bridge" --check 2>&1)"; then
       ok "Exabeam MCP reachable — ${out##*OK — }"
     else
       warn "Could not reach the Exabeam MCP: $(printf '%s' "$out" | tail -1) — check the region in EXABEAM_MCP_URL first (the slug from your console address), then the key and secret"

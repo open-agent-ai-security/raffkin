@@ -1,16 +1,16 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:53af36d8-eebd-50fa-bdfe-fac86b559040",
+  "serialNumber": "urn:uuid:3a98464c-e8f0-575a-bd9c-b3fd70f22866",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-19T20:00:49Z",
+    "timestamp": "2026-09-28T19:37:18Z",
     "tools": {
       "components": [
         {
           "type": "application",
           "name": "gen_sbom.py",
-          "description": "socxen's SBOM generator — reads the uv lockfile, writes CycloneDX",
+          "description": "Raffkin's SBOM generator — reads the uv lockfile, writes CycloneDX",
           "supplier": {
             "name": "Open Agent AI Security",
             "url": [
@@ -21,11 +21,11 @@
       ]
     },
     "component": {
-      "bom-ref": "socxen@0.9.0",
+      "bom-ref": "raffkin@1.0.0",
       "type": "application",
-      "name": "socxen",
-      "version": "0.9.0",
-      "description": "socxen plugin — the bundled Exabeam MCP bridge (plugin/connector/exabeam-mcp-bridge.py) and its locked Python dependency tree. The skills themselves are prompt/markdown and carry no runtime dependencies.",
+      "name": "raffkin",
+      "version": "1.0.0",
+      "description": "Raffkin plugin — the bundled Exabeam MCP bridge (plugin/connector/exabeam-mcp-bridge.py) and its locked Python dependency tree. The skills themselves are prompt/markdown and carry no runtime dependencies.",
       "licenses": [
         {
           "license": {
@@ -43,12 +43,12 @@
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/open-agent-ai-security/socxen"
+          "url": "https://github.com/open-agent-ai-security/raffkin"
         },
         {
           "type": "bom",
           "url": "aibom.cdx.json",
-          "comment": "The AI bill of materials for the same release (models, services, AI artifacts) — urn:uuid:39f13b5c-eb44-5a53-ba79-7cc3a7811156"
+          "comment": "The AI bill of materials for the same release (models, services, AI artifacts) — urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178"
         }
       ]
     },
@@ -60,31 +60,31 @@
     },
     "properties": [
       {
-        "name": "socxen:lockfile",
+        "name": "raffkin:lockfile",
         "value": "plugin/connector/exabeam-mcp-bridge.py.lock"
       },
       {
-        "name": "socxen:lockfileSha256",
+        "name": "raffkin:lockfileSha256",
         "value": "16168e3140674f781b8c776d81d5e44933e2aef0bb18a15d47bd69b07ec856bd"
       },
       {
-        "name": "socxen:lockRevision",
+        "name": "raffkin:lockRevision",
         "value": "3"
       },
       {
-        "name": "socxen:requiresPython",
+        "name": "raffkin:requiresPython",
         "value": ">=3.11"
       },
       {
-        "name": "socxen:resolutionMarkers",
+        "name": "raffkin:resolutionMarkers",
         "value": "python_full_version >= '3.14' and sys_platform == 'win32'; python_full_version >= '3.14' and sys_platform != 'win32'; python_full_version < '3.14' and sys_platform == 'win32'; python_full_version < '3.14' and sys_platform != 'win32'"
       },
       {
-        "name": "socxen:directDependencies",
+        "name": "raffkin:directDependencies",
         "value": "5"
       },
       {
-        "name": "socxen:lockedPackages",
+        "name": "raffkin:lockedPackages",
         "value": "33"
       }
     ]
@@ -109,11 +109,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -144,11 +144,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -179,11 +179,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -214,15 +214,15 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "direct"
         },
         {
-          "name": "socxen:specifier",
+          "name": "raffkin:specifier",
           "value": ">=2024,<2027"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -597,11 +597,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "88"
         }
       ],
@@ -632,11 +632,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -667,11 +667,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -878,11 +878,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "46"
         }
       ],
@@ -913,11 +913,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -948,11 +948,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -983,15 +983,15 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "direct"
         },
         {
-          "name": "socxen:specifier",
+          "name": "raffkin:specifier",
           "value": ">=0.27,<1"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1022,11 +1022,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1057,11 +1057,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1092,11 +1092,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1127,11 +1127,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1162,15 +1162,15 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "direct"
         },
         {
-          "name": "socxen:specifier",
+          "name": "raffkin:specifier",
           "value": ">=1.0,<2"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1201,15 +1201,15 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "direct"
         },
         {
-          "name": "socxen:specifier",
+          "name": "raffkin:specifier",
           "value": ">=1.1,<2"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1240,11 +1240,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1275,11 +1275,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1670,11 +1670,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "92"
         }
       ],
@@ -1705,11 +1705,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1740,11 +1740,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1775,11 +1775,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1810,11 +1810,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1845,11 +1845,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -1932,11 +1932,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "15"
         }
       ],
@@ -1967,11 +1967,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2458,11 +2458,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "116"
         }
       ],
@@ -2493,11 +2493,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2528,11 +2528,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2563,15 +2563,15 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "direct"
         },
         {
-          "name": "socxen:specifier",
+          "name": "raffkin:specifier",
           "value": ">=4.7,<5"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2602,11 +2602,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2637,11 +2637,11 @@
       ],
       "properties": [
         {
-          "name": "socxen:dependencyKind",
+          "name": "raffkin:dependencyKind",
           "value": "transitive"
         },
         {
-          "name": "socxen:artifactsLocked",
+          "name": "raffkin:artifactsLocked",
           "value": "2"
         }
       ],
@@ -2656,7 +2656,7 @@
   ],
   "dependencies": [
     {
-      "ref": "socxen@0.9.0",
+      "ref": "raffkin@1.0.0",
       "dependsOn": [
         "pkg:pypi/certifi@2026.7.22",
         "pkg:pypi/httpx@0.28.1",
