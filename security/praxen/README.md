@@ -38,7 +38,47 @@ defeated on the shipped default path* — not a hardening opportunity. For an ag
 reads attacker-influenceable telemetry and writes dispositions into a production SOC
 platform, that is the class of defect that must not reach a tag.
 
-## Current status — remit v1.8 @ `0e58da8` (2026-09-24, `dev` on the 1.0 glide path)
+## Current status — remit v1.9 @ `adc6014` (2026-09-28, the 1.0.0 release candidate)
+
+| | |
+|---|---|
+| Scanned | **`gate/1.0.0`** (`adc6014`): the rename to Raffkin (#274) plus the 1.0.0 release (#275): version bump, CHANGELOG, pre-release wording removed, URLs to the renamed repository. On top of the 09-24 tree: the redactor's `sk-`/`glpat-` shapes (#268), soc-investigate's Flagged line (#271), the release-step docs (#270). |
+| Scanner | **Praxen 2.0.0-beta.1**, **Claude Opus 5.5**, **high thinking mode**, **+ threat model**, in a clean headless session (no conversation context, no project files, the workspace a pinned worktree), 23 min. |
+| **Critical findings** | **0 — gate PASSES** |
+| Other findings | 0 High · **4 Medium** · 4 Low — all 8 CONFIRMED by the audit pass (one count in `-001` corrected, 68 → 70 names); 2 remit clauses flagged (R-24, R-49), both already in #267 |
+| Weighted RAISE posture | **3.30 / 5** (Established) |
+| Remit coverage | Remit **v1.9** · 71 rules as extracted — 51 verified · 7 partial · 0 gap · 13 enforcement-not-possible |
+| Threat model | 21 nodes · 26 edges · 8 trust boundaries · 2 attack paths — [`-threatmodel.html`](results/2026-09-28-raffkin-1.0-rc-threatmodel.html) |
+
+RAISE categories: Limit Your Domain 3 · Balance Your Knowledge Base 3 · Implement Zero Trust 3 · Manage
+Your Supply Chain 4 · Build an AI Red Team 4 · Monitor Continuously 3.
+
+Artifacts: [report](results/2026-09-28-raffkin-1.0-rc.html) · [findings JSON](results/2026-09-28-raffkin-1.0-rc.json) ·
+[audit](results/2026-09-28-raffkin-1.0-rc-audit.md) · [text](results/2026-09-28-raffkin-1.0-rc.txt) ·
+[threat model](results/2026-09-28-raffkin-1.0-rc-threatmodel.html) ([json](results/2026-09-28-raffkin-1.0-rc-threatmodel.json)).
+
+**The findings.** The scanner's summary: the approval hook ships inside the plugin, is active on install and
+denies or asks on any fault; the bridge screens every read, including tool definitions, neutralizes every
+known write, and refuses a case created already closed; dependencies are hash-pinned. The recurring gap is
+that controls enumerate names where the remit asks for classes, and each falls back to a human prompt rather
+than an open path. Mediums: the deny list is exact names, so a future rule-write or containment tool under a
+new name asks rather than being denied (`-001`; the remit side is #267); write neutralization covers the named
+free-text fields only (`-002`, the documented design); the queue sweep's no-write rule is prompt-only up to the
+escalation budget on Claude Code, and on Codex the approval policy governs (`-003`, #247's designed
+threshold); a close's audit record omits `closedReason` (`-004`, carried). Lows: neutralization counts are
+dropped when an upstream call fails (`-005`); preflight's Codex check does not cover `exabeam_send_email`
+(`-006`, carried); tool definitions are not compared across sessions (`-007`, a declared residual); the
+credentials file's permissions are not enforced (`-008`).
+
+**Against the 09-24 scan** (0 High · 4 Medium · 2 Low, RAISE 3.70): the unlabeled-key redactor Medium and the
+missing Flagged-line Medium are closed in this tree (#268, #271) and do not recur. RAISE 3.70 → 3.30 is Zero
+Trust 4 → 3, where the scanner records both scores as defensible and takes the lower; on a tree whose
+functional change since 09-24 is those two fixes, that is inside the run-to-run range measured on
+2026-09-08. The Critical count, which is the gate, is 0 on both.
+
+**Disposition:** maintainer review pending.
+
+## Previous — remit v1.8 @ `0e58da8` (2026-09-24, `dev` on the 1.0 glide path)
 
 | | |
 |---|---|
