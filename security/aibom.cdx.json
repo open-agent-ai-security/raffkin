@@ -89,7 +89,7 @@
       },
       {
         "name": "ai:guardrails",
-        "value": "permission tiers 21 allow / 3 ask / 70 deny from one tier file (permissions.json → hook, Codex policy, published permission snippet for fleet policy); input canonicalizer on every read and on the remote's tool definitions (hashed per session); output neutralizer on every write (formulas inert, links de-fanged unless into the operator's tenant, secrets and structured identifiers masked); updates carry state only; a create_case with a closing disposition is refused; in-prompt ask-before-close as the model-side layer"
+        "value": "permission tiers 22 allow / 4 ask / 70 deny from one tier file (permissions.json → hook, Codex policy, published permission snippet for fleet policy); input canonicalizer on every read and on the remote's tool definitions (hashed per session); output neutralizer on every write (formulas inert, links de-fanged unless into the operator's tenant, secrets and structured identifiers masked); updates carry state only; a create_case with a closing disposition is refused; in-prompt ask-before-close as the model-side layer"
       },
       {
         "name": "ai:auditTrail",
@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-09-28T19:37:18Z"
+    "timestamp": "2026-09-30T14:35:19Z"
   },
   "components": [
     {
@@ -295,6 +295,14 @@
           }
         }
       ]
+    },
+    {
+      "bom-ref": "pkg:pypi/keyring",
+      "type": "library",
+      "name": "keyring",
+      "version": ">=25,<26",
+      "purl": "pkg:pypi/keyring",
+      "description": "Connector dependency (keyring>=25,<26), resolved by uv at runtime (PEP 723)."
     }
   ],
   "services": [
@@ -359,7 +367,8 @@
         "pkg:pypi/httpx",
         "pkg:pypi/certifi",
         "pkg:pypi/observra",
-        "pkg:pypi/typing_extensions"
+        "pkg:pypi/typing_extensions",
+        "pkg:pypi/keyring"
       ]
     },
     {

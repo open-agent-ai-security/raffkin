@@ -97,13 +97,16 @@ def build_bom(timestamp):
     deps, requires_python = _pep723("plugin/connector/exabeam-mcp-bridge.py")
     toolmap = (ROOT / "plugin/skills/soc-investigate/reference/tool-map.md").read_text()
     names = set(re.findall(r"\bexabeam_[a-z_]+", toolmap))
-    # A tool denied "ahead of the MCP exposing it" is a proxy-only name, not a live tool: the count is
-    # what the live MCP exposes, which is what tool-map.md's own header states (cross-checked below).
-    proxy_only = set()
-    for line in toolmap.splitlines():                   # every name on a line that carries the phrase
-        if "ahead of the MCP exposing it" in line:
-            proxy_only |= set(re.findall(r"`(exabeam_[a-z_]+)`", line))
-    tool_count = len(names - proxy_only)
+    # The count is what the LIVE MCP exposes, which is what tool-map.md's own header states
+    # (cross-checked below). Two kinds of name in the map are not that, and each is marked by a
+    # phrase on its own line: a tool denied "ahead of the MCP exposing it" is proxy-only, and one
+    # "answered by the bridge" is local -- the bridge handles it and never forwards it, so the MCP
+    # does not expose it and never will.
+    not_live = set()
+    for line in toolmap.splitlines():                   # every name on a line that carries a phrase
+        if "ahead of the MCP exposing it" in line or "answered by the bridge" in line.lower():
+            not_live |= set(re.findall(r"`(exabeam_[a-z_]+)`", line))
+    tool_count = len(names - not_live)
     header_count = int(re.search(r"The (\d+) tools exposed by the live MCP", toolmap).group(1))
     if header_count != tool_count:
         sys.exit(f"tool-map.md header says {header_count} tools, the map lists {tool_count} live names — fix the map")
