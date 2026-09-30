@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:3a98464c-e8f0-575a-bd9c-b3fd70f22866",
+  "serialNumber": "urn:uuid:8feee4bc-9d26-542a-b9ae-fa2af9b9e44b",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-28T19:37:18Z",
+    "timestamp": "2026-09-30T14:27:30Z",
     "tools": {
       "components": [
         {
@@ -61,11 +61,11 @@
     "properties": [
       {
         "name": "raffkin:lockfile",
-        "value": "plugin/connector/exabeam-mcp-bridge.py.lock"
+        "value": "plugin\\connector\\exabeam-mcp-bridge.py.lock"
       },
       {
         "name": "raffkin:lockfileSha256",
-        "value": "16168e3140674f781b8c776d81d5e44933e2aef0bb18a15d47bd69b07ec856bd"
+        "value": "36952327eb872266ba3028e63b9e99ef2ae68fe4d94b2f468a25146c37986981"
       },
       {
         "name": "raffkin:lockRevision",
@@ -81,11 +81,11 @@
       },
       {
         "name": "raffkin:directDependencies",
-        "value": "5"
+        "value": "6"
       },
       {
         "name": "raffkin:lockedPackages",
-        "value": "33"
+        "value": "44"
       }
     ]
   },
@@ -175,6 +175,41 @@
         {
           "alg": "SHA-256",
           "content": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/backports-tarfile@1.2.0",
+      "type": "library",
+      "name": "backports-tarfile",
+      "version": "1.2.0",
+      "purl": "pkg:pypi/backports-tarfile@1.2.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d75e02c268746e1b8144c278978b6e98e85de6ad16f8e4b0844a154557eca991"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "77e284d754527b01fb1e6fa8a1afe577858ebe4e9dad8919e34c862cb399bc34"
         }
       ],
       "properties": [
@@ -1074,6 +1109,181 @@
       ]
     },
     {
+      "bom-ref": "pkg:pypi/importlib-metadata@9.0.1",
+      "type": "library",
+      "name": "importlib-metadata",
+      "version": "9.0.1",
+      "purl": "pkg:pypi/importlib-metadata@9.0.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ab830580bc0ef3db61ce8fae716389e5462b67e033018bab6d8f80ef17172f99"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/jaraco-classes@3.4.0",
+      "type": "library",
+      "name": "jaraco-classes",
+      "version": "3.4.0",
+      "purl": "pkg:pypi/jaraco-classes@3.4.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "47a024b51d0239c0dd8c8540c6c7f484be3b8fcf0b2d85c13825780d3b3f3acd"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "f662826b6bed8cace05e7ff873ce0f9283b5c924470fe664fff1c2f00f581790"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/jaraco-context@6.1.2",
+      "type": "library",
+      "name": "jaraco-context",
+      "version": "6.1.2",
+      "purl": "pkg:pypi/jaraco-context@6.1.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f1a6c9d391e661cc5b8d39861ff077a7dc24dc23833ccee564b234b81c82dfe3"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "bf8150b79a2d5d91ae48629d8b427a8f7ba0e1097dd6202a9059f29a36379535"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/jaraco-functools@4.6.0",
+      "type": "library",
+      "name": "jaraco-functools",
+      "version": "4.6.0",
+      "purl": "pkg:pypi/jaraco-functools@4.6.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "880c577ec9720b3a052d5bc611fb9f2269b3d87902ef42440df443b88e443280"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "99e3dc0060c5cbe8fcd1cdb36258e2a65ca40f1566b2033b12abb1bb44dd3c30"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/jeepney@0.9.0",
+      "type": "library",
+      "name": "jeepney",
+      "version": "0.9.0",
+      "purl": "pkg:pypi/jeepney@0.9.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf0e9e845622b81e4a28df94c40345400256ec608d0e55bb8a3feaa9163f5732"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "97e5714520c16fc0a45695e5365a2e11b81ea79bba796e26f9f1d178cb182683"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:pypi/jsonschema@4.26.0",
       "type": "library",
       "name": "jsonschema",
@@ -1144,6 +1354,45 @@
       ]
     },
     {
+      "bom-ref": "pkg:pypi/keyring@25.7.0",
+      "type": "library",
+      "name": "keyring",
+      "version": "25.7.0",
+      "purl": "pkg:pypi/keyring@25.7.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fe01bd85eb3f8fb3dd0405defdeac9a5b4f6f0439edbb3149577f244a2e8245b"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "be4a0b195f149690c166e850609a477c532ddbfbaed96a404d4e43f8d5e2689f"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "direct"
+        },
+        {
+          "name": "raffkin:specifier",
+          "value": ">=25,<26"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:pypi/mcp@1.29.0",
       "type": "library",
       "name": "mcp",
@@ -1168,6 +1417,41 @@
         {
           "name": "raffkin:specifier",
           "value": ">=1.0,<2"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/more-itertools@11.1.0",
+      "type": "library",
+      "name": "more-itertools",
+      "version": "11.1.0",
+      "purl": "pkg:pypi/more-itertools@11.1.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "48e8f4d9e7e5878571ecf6f2b4e57634f93cd474cc8cfbd2376f2d11b396e30d"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "4b65538ae22f6fed0ce4874efd317463a7489796a0939fa66824dd542125a192"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
         },
         {
           "name": "raffkin:artifactsLocked",
@@ -1949,6 +2233,41 @@
       ]
     },
     {
+      "bom-ref": "pkg:pypi/pywin32-ctypes@0.2.3",
+      "type": "library",
+      "name": "pywin32-ctypes",
+      "version": "0.2.3",
+      "purl": "pkg:pypi/pywin32-ctypes@0.2.3",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d162dc04946d704503b2edc4d55f3dba5c1d539ead017afa00142c38b9885755"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "8a1513379d709975552d202d942d9837758905c8d01eb82b8bcc30918929e7b8"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:pypi/referencing@0.37.0",
       "type": "library",
       "name": "referencing",
@@ -2475,6 +2794,41 @@
       ]
     },
     {
+      "bom-ref": "pkg:pypi/secretstorage@3.5.0",
+      "type": "library",
+      "name": "secretstorage",
+      "version": "3.5.0",
+      "purl": "pkg:pypi/secretstorage@3.5.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "0ce65888c0725fcb2c5bc0fdb8e5438eece02c523557ea40ce0703c266248137"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:pypi/sse-starlette@3.4.8",
       "type": "library",
       "name": "sse-starlette",
@@ -2652,6 +3006,41 @@
           "comment": "resolved from this index"
         }
       ]
+    },
+    {
+      "bom-ref": "pkg:pypi/zipp@4.1.0",
+      "type": "library",
+      "name": "zipp",
+      "version": "4.1.0",
+      "purl": "pkg:pypi/zipp@4.1.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4cb57381f544315db7688e976e922a2b18cdb513d21cc194eb42232ba2a3e602"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "25ad4e16390cd314347dd8f1de67a2ac538ae658ed4ab9db16029c07c188e97f"
+        }
+      ],
+      "properties": [
+        {
+          "name": "raffkin:dependencyKind",
+          "value": "transitive"
+        },
+        {
+          "name": "raffkin:artifactsLocked",
+          "value": "2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://pypi.org/simple",
+          "comment": "resolved from this index"
+        }
+      ]
     }
   ],
   "dependencies": [
@@ -2660,6 +3049,7 @@
       "dependsOn": [
         "pkg:pypi/certifi@2026.7.22",
         "pkg:pypi/httpx@0.28.1",
+        "pkg:pypi/keyring@25.7.0",
         "pkg:pypi/mcp@1.29.0",
         "pkg:pypi/observra@1.1.0",
         "pkg:pypi/typing-extensions@4.16.0"
@@ -2678,6 +3068,10 @@
     },
     {
       "ref": "pkg:pypi/attrs@26.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/backports-tarfile@1.2.0",
       "dependsOn": []
     },
     {
@@ -2735,6 +3129,34 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:pypi/importlib-metadata@9.0.1",
+      "dependsOn": [
+        "pkg:pypi/zipp@4.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jaraco-classes@3.4.0",
+      "dependsOn": [
+        "pkg:pypi/more-itertools@11.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jaraco-context@6.1.2",
+      "dependsOn": [
+        "pkg:pypi/backports-tarfile@1.2.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jaraco-functools@4.6.0",
+      "dependsOn": [
+        "pkg:pypi/more-itertools@11.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jeepney@0.9.0",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:pypi/jsonschema@4.26.0",
       "dependsOn": [
         "pkg:pypi/attrs@26.1.0",
@@ -2747,6 +3169,18 @@
       "ref": "pkg:pypi/jsonschema-specifications@2025.9.1",
       "dependsOn": [
         "pkg:pypi/referencing@0.37.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/keyring@25.7.0",
+      "dependsOn": [
+        "pkg:pypi/importlib-metadata@9.0.1",
+        "pkg:pypi/jaraco-classes@3.4.0",
+        "pkg:pypi/jaraco-context@6.1.2",
+        "pkg:pypi/jaraco-functools@4.6.0",
+        "pkg:pypi/jeepney@0.9.0",
+        "pkg:pypi/pywin32-ctypes@0.2.3",
+        "pkg:pypi/secretstorage@3.5.0"
       ]
     },
     {
@@ -2767,6 +3201,10 @@
         "pkg:pypi/typing-inspection@0.4.4",
         "pkg:pypi/uvicorn@0.52.1"
       ]
+    },
+    {
+      "ref": "pkg:pypi/more-itertools@11.1.0",
+      "dependsOn": []
     },
     {
       "ref": "pkg:pypi/observra@1.1.0",
@@ -2822,6 +3260,10 @@
       "dependsOn": []
     },
     {
+      "ref": "pkg:pypi/pywin32-ctypes@0.2.3",
+      "dependsOn": []
+    },
+    {
       "ref": "pkg:pypi/referencing@0.37.0",
       "dependsOn": [
         "pkg:pypi/attrs@26.1.0",
@@ -2832,6 +3274,13 @@
     {
       "ref": "pkg:pypi/rpds-py@2026.6.3",
       "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/secretstorage@3.5.0",
+      "dependsOn": [
+        "pkg:pypi/cryptography@50.0.0",
+        "pkg:pypi/jeepney@0.9.0"
+      ]
     },
     {
       "ref": "pkg:pypi/sse-starlette@3.4.8",
@@ -2863,6 +3312,10 @@
         "pkg:pypi/click@8.4.2",
         "pkg:pypi/h11@0.16.0"
       ]
+    },
+    {
+      "ref": "pkg:pypi/zipp@4.1.0",
+      "dependsOn": []
     }
   ]
 }
