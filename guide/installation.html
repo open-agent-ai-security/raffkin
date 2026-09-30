@@ -262,7 +262,7 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#more-than-one-tenant">More than one tenant</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="installation-setup">Installation &amp; setup</h1>
 <p>Raffkin is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
@@ -381,6 +381,56 @@ you before Raffkin <em>opens</em> a case or writes a note, because Exabeam marks
 asks before every write. Noisier, not less safe. And if you script Raffkin with <code>codex exec</code>, where
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.</p>
+<h2 id="more-than-one-tenant">More than one tenant</h2>
+<p>The file above holds one tenant. If you work several -- an MSSP book of clients, a partner's
+environments, or demo alongside production -- use a <strong>registry</strong>, and keep the credentials in your
+operating system's credential store instead of a file.</p>
+<p><strong>The registry</strong> -- <code>~/.raffkin/config.json</code>. Nothing in it is a credential:</p>
+<pre><code class="language-json">{
+  &quot;default_tenant&quot;: &quot;acme&quot;,
+  &quot;tenants&quot;: {
+    &quot;acme&quot;:   { &quot;api_server&quot;: &quot;https://api.us-west.exabeam.cloud/mcp&quot;,    &quot;region&quot;: &quot;US West&quot; },
+    &quot;globex&quot;: { &quot;api_server&quot;: &quot;https://api.eu-central.exabeam.cloud/mcp&quot;, &quot;region&quot;: &quot;EU Central&quot; }
+  }
+}
+</code></pre>
+<p><strong>The credentials</strong> go in the OS store, two entries per tenant. The value is prompted for, so it
+never appears on the command line or in your shell history:</p>
+<pre><code class="language-bash">keyring set raffkin/acme client_id
+keyring set raffkin/acme client_secret
+</code></pre>
+<p>That is Windows Credential Manager (DPAPI), macOS Keychain, or the Linux Secret Service --
+encrypted at rest and unlocked by your OS login. Raffkin implements no cryptography of its own; it
+delegates to the platform. The <code>keyring</code> CLI ships with the library Raffkin already depends on, so
+there is nothing extra to install.</p>
+<p><strong>Switching.</strong> With a registry configured, two extra tools appear:</p>
+<blockquote>
+<p>list the tenants</p>
+<p>switch to globex</p>
+</blockquote>
+<p><code>exabeam_switch_tenant</code> is <strong>gated <code>ask</code></strong> -- it changes which tenant every later call reaches, so
+you confirm it like any other consequential action. On switch the upstream session and the cached
+token are both dropped: a session belongs to one tenant and is never reused across a switch, and
+two tenants' credentials never live in the process at the same time. Switching back re-mints a
+token, about a fifth of a second against a four-hour token.</p>
+<p><code>RAFFKIN_TENANT=&lt;name&gt;</code> selects the active tenant for a scripted run. It names a tenant; it never
+carries a credential.</p>
+<p><strong>Nothing changes if you have one tenant.</strong> With no registry, Raffkin reads <code>~/.exabeam-mcp.env</code>
+exactly as before, does not consult the credential store at all, and does not offer the tenant
+tools.</p>
+<h3 id="what-the-credential-store-buys-and-what-it-does-not">What the credential store buys, and what it does not</h3>
+<p>Worth being straight about. Moving the key out of a file removes the ways it leaks by accident: a
+backup or sync agent sweeping your home directory, a crash dump, an accidental <code>cat</code> on a shared
+screen, a <code>grep -r</code> for secrets. It does <strong>not</strong> stop malware already running as you -- that can
+ask the same keychain the same question. This narrows the accidental exposure, not the targeted
+one.</p>
+<p>On Linux the store needs a Secret Service to be running (gnome-keyring, KWallet). On a headless
+box there may not be one; Raffkin says so by name rather than reporting "no credentials", and the
+single-tenant file path still works.</p>
+<p>The registry itself is written <code>0600</code> where the OS enforces it. On Windows/NTFS <code>chmod</code> only
+toggles the read-only bit, the same caveat that applies to <code>~/.exabeam-mcp.env</code> under Git Bash --
+tolerable for this file only because it holds no credentials. The worst it discloses is which
+tenants you work.</p>
 <h2 id="updating">Updating</h2>
 <pre><code class="language-bash"># Claude Code
 claude plugin marketplace update open-agent-ai-security

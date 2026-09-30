@@ -144,6 +144,73 @@ asks before every write. Noisier, not less safe. And if you script Raffkin with 
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.
 
+## More than one tenant
+
+The file above holds one tenant. If you work several -- an MSSP book of clients, a partner's
+environments, or demo alongside production -- use a **registry**, and keep the credentials in your
+operating system's credential store instead of a file.
+
+**The registry** -- `~/.raffkin/config.json`. Nothing in it is a credential:
+
+```json
+{
+  "default_tenant": "acme",
+  "tenants": {
+    "acme":   { "api_server": "https://api.us-west.exabeam.cloud/mcp",    "region": "US West" },
+    "globex": { "api_server": "https://api.eu-central.exabeam.cloud/mcp", "region": "EU Central" }
+  }
+}
+```
+
+**The credentials** go in the OS store, two entries per tenant. The value is prompted for, so it
+never appears on the command line or in your shell history:
+
+```bash
+keyring set raffkin/acme client_id
+keyring set raffkin/acme client_secret
+```
+
+That is Windows Credential Manager (DPAPI), macOS Keychain, or the Linux Secret Service --
+encrypted at rest and unlocked by your OS login. Raffkin implements no cryptography of its own; it
+delegates to the platform. The `keyring` CLI ships with the library Raffkin already depends on, so
+there is nothing extra to install.
+
+**Switching.** With a registry configured, two extra tools appear:
+
+> list the tenants
+
+> switch to globex
+
+`exabeam_switch_tenant` is **gated `ask`** -- it changes which tenant every later call reaches, so
+you confirm it like any other consequential action. On switch the upstream session and the cached
+token are both dropped: a session belongs to one tenant and is never reused across a switch, and
+two tenants' credentials never live in the process at the same time. Switching back re-mints a
+token, about a fifth of a second against a four-hour token.
+
+`RAFFKIN_TENANT=<name>` selects the active tenant for a scripted run. It names a tenant; it never
+carries a credential.
+
+**Nothing changes if you have one tenant.** With no registry, Raffkin reads `~/.exabeam-mcp.env`
+exactly as before, does not consult the credential store at all, and does not offer the tenant
+tools.
+
+### What the credential store buys, and what it does not
+
+Worth being straight about. Moving the key out of a file removes the ways it leaks by accident: a
+backup or sync agent sweeping your home directory, a crash dump, an accidental `cat` on a shared
+screen, a `grep -r` for secrets. It does **not** stop malware already running as you -- that can
+ask the same keychain the same question. This narrows the accidental exposure, not the targeted
+one.
+
+On Linux the store needs a Secret Service to be running (gnome-keyring, KWallet). On a headless
+box there may not be one; Raffkin says so by name rather than reporting "no credentials", and the
+single-tenant file path still works.
+
+The registry itself is written `0600` where the OS enforces it. On Windows/NTFS `chmod` only
+toggles the read-only bit, the same caveat that applies to `~/.exabeam-mcp.env` under Git Bash --
+tolerable for this file only because it holds no credentials. The worst it discloses is which
+tenants you work.
+
 ## Updating
 
 ```bash

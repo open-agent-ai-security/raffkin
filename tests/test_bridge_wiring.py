@@ -53,6 +53,14 @@ class _TextContent:                                     # the bridge builds one 
 _stubs["mcp.types"].TextContent = _TextContent
 
 
+class _Tool:                                            # the bridge declares the local tenant tools with
+    def __init__(self, **kw): self.__dict__.update(kw)  # these; keep them constructible and comparable
+    def __repr__(self): return f"_Tool({self.__dict__.get('name')})"
+
+
+_stubs["mcp.types"].Tool = _Tool
+
+
 class _Server:                                          # identity decorators for @server.list_tools/call_tool
     def __init__(self, *a, **k): pass
     def list_tools(self): return lambda f: f

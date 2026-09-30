@@ -24,7 +24,8 @@
         "exabeam_create_case",
         "exabeam_create_case_notes",
         "exabeam_parser_list",
-        "exabeam_get_parser_details"
+        "exabeam_get_parser_details",
+        "exabeam_list_tenants"
       ],
       "prefixes": [
         "plugin"
@@ -34,7 +35,8 @@
       "tools": [
         "exabeam_update_alert",
         "exabeam_update_case",
-        "exabeam_send_email"
+        "exabeam_send_email",
+        "exabeam_switch_tenant"
       ],
       "prefixes": [
         "plugin",
