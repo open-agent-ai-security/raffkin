@@ -190,7 +190,9 @@ def test_governed_tools_are_all_documented_in_tool_map():
     # + exabeam_analytics_rule_details (#143, allow) + the two parser reads the proxy defines, classified
     # allow ahead of exposure (Praxen 2026-09-07-005). exabeam_create_analytics_rule is governed too, on
     # the DENY tier, so it is not in this allow+ask count — test_deny_list_matches_containment_doc pins it.
-    assert len(canonical) == 24, f"expected 24 governed Exabeam tools, got {len(canonical)}: {sorted(canonical)}"
+    # + exabeam_list_tenants (allow) and exabeam_switch_tenant (ask): the bridge's own multi-tenant
+    # tools. They are governed like any other — switching changes which tenant every later call reaches.
+    assert len(canonical) == 26, f"expected 26 governed Exabeam tools, got {len(canonical)}: {sorted(canonical)}"
     undocumented = sorted(t for t in canonical if t not in TOOL_MAP_MD)
     assert not undocumented, f"governed tools missing from tool-map.md: {undocumented}"
 

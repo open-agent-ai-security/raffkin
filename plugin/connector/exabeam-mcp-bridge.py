@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["mcp>=1.0,<2", "httpx>=0.27,<1", "certifi>=2024,<2027", "observra>=1.1,<2", "typing_extensions>=4.7,<5"]
+# dependencies = ["mcp>=1.0,<2", "httpx>=0.27,<1", "certifi>=2024,<2027", "observra>=1.1,<2", "typing_extensions>=4.7,<5", "keyring>=25,<26"]
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
@@ -38,11 +38,12 @@ from urllib.parse import urlparse
 
 import certifi
 import httpx
+import tenants
 from mcp import ClientSession, McpError
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent
+from mcp.types import TextContent, Tool
 
 _VERIFY = ssl.create_default_context(cafile=certifi.where())
 _token = {"value": None, "exp": 0.0}
@@ -64,7 +65,16 @@ def load_env(path="~/.exabeam-mcp.env"):
 
 
 CFG = load_env()
-URL = CFG.get("EXABEAM_MCP_URL", "")
+
+# ---- which tenant (#TBD: multi-tenant) -------------------------------------------------------------
+# URL/KEY/SECRET stay module globals because every consumer reads them by name at call time, so one
+# rebind moves the whole bridge. They are no longer bound to one plaintext file:
+# tenants.resolve_tenant reads the non-secret registry (~/.raffkin/config.json) for which tenants
+# exist and where each one's gateway is, and takes the credential from the OS credential store.
+# With no registry it returns exactly what load_env() produced, so an operator who has not opted
+# in sees no change at all.
+TENANT = tenants.resolve_tenant(load_env=load_env)
+URL = TENANT.api_server
 
 
 def _is_loopback(host):
@@ -97,8 +107,8 @@ def url_transport_problem(url):
                 f"(the value must start with https://)")
     return (f"EXABEAM_MCP_URL={url!r} uses {scheme}://, which would send the client id, secret and bearer token "
             f"in the clear; only https:// is accepted (plain http is allowed to a loopback host only)")
-KEY = CFG.get("EXABEAM_API_KEY", "")
-SECRET = CFG.get("EXABEAM_API_SECRET", "")
+KEY = TENANT.key
+SECRET = TENANT.secret
 
 
 def _token_fresh():
@@ -296,6 +306,42 @@ class _Upstream:
             except BaseException:  # noqa: BLE001, S110 — teardown is best effort; the session is gone either way
                 pass
         self._task = self._close = self._session = None
+
+    async def switch(self, name):
+        """Point the bridge at another tenant. Returns the new tenant's name.
+
+        Everything that identifies a tenant moves together, under the session lock, so no call can
+        be in flight against the old tenant while the new one is being bound:
+
+        * the upstream session is dropped (its DELETE sent) -- a session is authenticated to ONE
+          tenant and can never be reused across a switch;
+        * the cached token is discarded rather than kept per tenant. Keeping tenant A's token warm
+          while working tenant B would mean two tenants' credentials live in the process at once,
+          which is exactly what this change exists to avoid. The cost is one token mint on switch
+          back, roughly 200 ms, against a 4-hour token;
+        * ``ALLOWED_LINK_HOSTS`` is recomputed. This one is a security control, not configuration:
+          it decides which hosts stay clickable in what Raffkin writes back. Leaving it stale would
+          neutralize tenant B's output against tenant A's allowlist. In practice
+          ``tenant_hosts_from_url`` yields exactly one host with no wildcard, so a switch between
+          two tenants in the SAME region does not move it -- only a cross-region switch does. The
+          window is narrow, and it is closed here rather than left to be found.
+
+        The old tenant's key and secret are dropped with the rebind; nothing caches them.
+        """
+        global TENANT, URL, KEY, SECRET, ALLOWED_LINK_HOSTS
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:
+            new = tenants.resolve_tenant(name, load_env=load_env)  # raises before any teardown
+            problem = url_transport_problem(new.api_server)
+            if problem:
+                raise tenants.TenantError(f"tenant {new.name!r}: {problem}")
+            await self.drop()
+            _token["value"], _token["exp"] = None, 0.0
+            self._tools = None                          # the tool list is per-session
+            TENANT, URL, KEY, SECRET = new, new.api_server, new.key, new.secret
+            ALLOWED_LINK_HOSTS = tenant_hosts_from_url(URL)
+            return new.name
 
     async def session(self):
         if self._lock is None:
@@ -998,11 +1044,38 @@ def _audit_fields(obj, into=None):
     return into
 
 
+# ---- local tenant tools ----------------------------------------------------------------------------
+# Two tools the bridge answers itself rather than forwarding. They exist ONLY when a registry is
+# configured: a single-tenant operator should not be shown a switch for a thing they do not have.
+# Both carry the exabeam_ prefix so the shipped PreToolUse gate matches them like any other tool --
+# switching is classified `ask`, because it changes which tenant every subsequent call reaches.
+_TENANT_TOOLS = [
+    Tool(name="exabeam_list_tenants",
+         description="List the Exabeam tenants this bridge is configured for, and which is active. "
+                     "Read-only; never returns a credential.",
+         inputSchema={"type": "object", "properties": {}}),
+    Tool(name="exabeam_switch_tenant",
+         description="Point the bridge at a different Exabeam tenant for the rest of the session. "
+                     "Drops the current session and token; every later call goes to the new tenant.",
+         inputSchema={"type": "object", "required": ["tenant"],
+                      "properties": {"tenant": {"type": "string",
+                                                "description": "Tenant name from exabeam_list_tenants."}}}),
+]
+
+
+def _multi_tenant():
+    """True when the operator has a registry. Single-tenant installs never see the tenant tools."""
+    try:
+        return bool(tenants.load_registry().get("tenants"))
+    except tenants.TenantError:
+        return False
+
+
 @server.list_tools()
 async def list_tools():
     t0 = time.perf_counter()
     try:
-        return await UPSTREAM.tools()
+        return (await UPSTREAM.tools()) + (_TENANT_TOOLS if _multi_tenant() else [])
     except Exception as e:
         leaf = _Leaf(e)
         if telemetry.enabled():
@@ -1065,9 +1138,42 @@ def _safe_text(text, cap=300):
         return str(text)[:cap]
 
 
+async def _tenant_tool(name, arguments):
+    """Answer the two local tenant tools, or return None to let the call go upstream.
+
+    Handled here, before the upstream path, because there is no upstream tool to forward to. The
+    PreToolUse gate has already run by this point -- it fires on the tool NAME before the call
+    reaches the bridge -- so a switch the analyst declined never arrives.
+
+    Neither tool can return a credential: one lists names, the other returns the name it switched
+    to. The registry they read holds no secrets by construction.
+    """
+    if name == "exabeam_list_tenants":
+        known = tenants.list_tenants()
+        return [TextContent(type="text", text=json.dumps(
+            {"active": TENANT.name, "tenants": known,
+             "note": "Names only. Credentials live in the operator's own secret store."}))]
+    if name == "exabeam_switch_tenant":
+        wanted = (arguments or {}).get("tenant", "")
+        try:
+            now = await UPSTREAM.switch(wanted)
+        except tenants.TenantError as e:
+            # The operator's own configuration is wrong, not the platform: say what to fix, and do
+            # not dress it as an upstream failure.
+            raise ValueError(f"{BRIDGE_REFUSAL_MARK} exabeam_switch_tenant: {e}") from e
+        sys.stderr.write(f"bridge: active tenant -> {now}\n")
+        return [TextContent(type="text", text=json.dumps(
+            {"active": now, "note": "Session and token dropped; later calls go to this tenant."}))]
+    return None
+
+
 @server.call_tool()
 async def call_tool(name, arguments):
     t0 = time.perf_counter()
+    if name in ("exabeam_list_tenants", "exabeam_switch_tenant"):
+        local = await _tenant_tool(name, arguments)
+        if local is not None:
+            return local
     log_on = telemetry.enabled()                                     # decide once; when off, do zero extra work
     if log_on:
         telemetry.tool_start(name)
@@ -1257,14 +1363,18 @@ async def _serve():
 def main():
     if not (URL and KEY and SECRET):
         sys.stderr.write(
-            "exabeam-mcp-bridge: missing credentials. Create ~/.exabeam-mcp.env with "
-            "EXABEAM_MCP_URL, EXABEAM_API_KEY, EXABEAM_API_SECRET "
-            "(see docs/installation.md, section Credentials).\n"
+            "exabeam-mcp-bridge: missing credentials. Either create ~/.exabeam-mcp.env with "
+            "EXABEAM_MCP_URL, EXABEAM_API_KEY, EXABEAM_API_SECRET (single tenant), or add a tenant "
+            f"to {tenants.registry_path()} with an api_server, and put its credentials in the "
+            "OS store with 'keyring set raffkin/<tenant> client_id' (and client_secret). "
+            "See docs/installation.md, section Credentials.\n"
         )
         sys.exit(1)
     problem = url_transport_problem(URL)
     if problem:                                   # #174: never post credentials over a scheme we do not trust
-        sys.stderr.write(f"exabeam-mcp-bridge: refusing to start -- {problem}. Fix ~/.exabeam-mcp.env and "
+        where = (f"tenant {TENANT.name!r} in {tenants.registry_path()}"
+                 if TENANT.name != "default" else "~/.exabeam-mcp.env")
+        sys.stderr.write(f"exabeam-mcp-bridge: refusing to start -- {problem}. Fix {where} and "
                          "restart the host agent (preflight.sh checks this too).\n")
         sys.exit(1)
     # Announce loudly. A dry run mistaken for a live one wastes an exercise; a live run mistaken for a
