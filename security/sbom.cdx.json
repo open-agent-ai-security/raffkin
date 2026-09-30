@@ -61,7 +61,7 @@
     "properties": [
       {
         "name": "raffkin:lockfile",
-        "value": "plugin\\connector\\exabeam-mcp-bridge.py.lock"
+        "value": "plugin/connector/exabeam-mcp-bridge.py.lock"
       },
       {
         "name": "raffkin:lockfileSha256",
