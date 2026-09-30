@@ -62,6 +62,8 @@ class B trials graded landed were confirmed benign from their transcripts (#278)
 
 - **The bridge launches with `uv run --locked`**, and preflight checks the uv version that honors the
   lock (#248).
+- **The bridge's lock pins PyJWT 2.15.1** (was 2.13.0), clearing the dependency audit on the PyJWT
+  advisories published 2026-09-28. PyJWT comes in through `mcp`; the bridge does not decode tokens.
 - **Worker Remit v1.8** (#218, #219) and **v1.9** (the name).
 - **The Praxen gate scan and the red team's Opus sweep run on Claude Opus 5.5** (#269). Sonnet 4.6 stays
   the red-team gate.

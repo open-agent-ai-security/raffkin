@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:3a98464c-e8f0-575a-bd9c-b3fd70f22866",
+  "serialNumber": "urn:uuid:47da4f42-141b-5839-96d3-41283bcc3633",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-28T19:37:18Z",
+    "timestamp": "2026-09-30T20:23:04Z",
     "tools": {
       "components": [
         {
@@ -65,7 +65,7 @@
       },
       {
         "name": "raffkin:lockfileSha256",
-        "value": "16168e3140674f781b8c776d81d5e44933e2aef0bb18a15d47bd69b07ec856bd"
+        "value": "37de1cb19636fb246b8aae4037855c495ba3c04be08d13b05020e50ad052ae7a"
       },
       {
         "name": "raffkin:lockRevision",
@@ -1722,20 +1722,20 @@
       ]
     },
     {
-      "bom-ref": "pkg:pypi/pyjwt@2.13.0",
+      "bom-ref": "pkg:pypi/pyjwt@2.15.1",
       "type": "library",
       "name": "pyjwt",
-      "version": "2.13.0",
-      "purl": "pkg:pypi/pyjwt@2.13.0",
+      "version": "2.15.1",
+      "purl": "pkg:pypi/pyjwt@2.15.1",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423"
+          "content": "4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8"
         },
         {
           "alg": "SHA-256",
-          "content": "66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728"
+          "content": "42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193"
         }
       ],
       "properties": [
@@ -2758,7 +2758,7 @@
         "pkg:pypi/jsonschema@4.26.0",
         "pkg:pypi/pydantic-settings@2.15.0",
         "pkg:pypi/pydantic@2.13.4",
-        "pkg:pypi/pyjwt@2.13.0",
+        "pkg:pypi/pyjwt@2.15.1",
         "pkg:pypi/python-multipart@0.0.32",
         "pkg:pypi/pywin32@312",
         "pkg:pypi/sse-starlette@3.4.8",
@@ -2802,7 +2802,7 @@
       ]
     },
     {
-      "ref": "pkg:pypi/pyjwt@2.13.0",
+      "ref": "pkg:pypi/pyjwt@2.15.1",
       "dependsOn": []
     },
     {
