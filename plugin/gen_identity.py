@@ -393,6 +393,12 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
+DISTRIBUTION_LISTING_KEYS = ("icon", "documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl")
+# Anthropic's plugin directory reads these from .claude-plugin/plugin.json for the listing; Claude Code
+# ignores them at load time and `claude plugin validate` rejects them in a marketplace entry, so the
+# manifest is the only place they can go. They describe the LISTING, which is per-distribution -- the
+# community listing and a vendor's are different entries -- so they live in the distribution block and
+# are emitted only when set. `icon` is a plugin-relative path to an image shipped in the payload.
 DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support")   # prose only, filled into the distribution-only text:
 # the distributor's name, the name of the terms the copy is licensed under, and its support page (a URL)
 _VENDOR_FALLBACK = "the organization that distributes it"
@@ -414,15 +420,37 @@ def manifest_fields(identity):
     software's license: it drives the SPDX headers, the README badge and identity.sh, and is untouched by
     the block, so the source stays under its own license while the package states the distribution's."""
     dist = identity.get("distribution") or {}
-    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS) - set(DISTRIBUTION_PROSE_KEYS))
+    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS) - set(DISTRIBUTION_PROSE_KEYS) - set(DISTRIBUTION_LISTING_KEYS))
     if unknown:
-        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS}, got {unknown}")
+        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS + DISTRIBUTION_LISTING_KEYS}, got {unknown}")
     return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
 
 
+def listing_fields(identity):
+    """The directory-listing fields, for the Claude manifest only, omitted when unset. `icon` must be a
+    plugin-relative path (the image ships in the payload); the four URL fields must be https://."""
+    dist = identity.get("distribution") or {}
+    out = {}
+    for k in DISTRIBUTION_LISTING_KEYS:
+        v = dist.get(k)
+        if v is None:
+            continue
+        if not isinstance(v, str) or not v.strip():
+            sys.exit(f"identity.json distribution.{k} must be a non-empty string, got {v!r}")
+        if k == "icon":
+            if not v.startswith("./") or ".." in v.split("/"):
+                sys.exit(f"identity.json distribution.icon must be a plugin-relative path starting './', got {v!r}")
+            if not (HERE / v[2:]).is_file():
+                sys.exit(f"identity.json distribution.icon names {v!r}, which is not a file in the payload")
+        elif not v.startswith("https://"):
+            sys.exit(f"identity.json distribution.{k} must be an https:// URL, got {v!r}")
+        out[k] = v
+    return out
+
 def build(identity, perms):
     common = {k: identity[k] for k in ("name", "version", "description", "author")} | manifest_fields(identity)
-    claude = {**common, "keywords": identity["keywords"] + identity["hostKeywords"]["claude"], "skills": "./skills/"}
+    claude = {**common, "keywords": identity["keywords"] + identity["hostKeywords"]["claude"], "skills": "./skills/",
+              **listing_fields(identity)}
     # The bundled PreToolUse hook (#148) is deliberately NOT declared here. Claude Code loads
     # hooks/hooks.json from the standard path automatically, so declaring that same path makes the loader
     # see the file twice and fail the WHOLE plugin load -- skills, MCP server and gate together (#197).
