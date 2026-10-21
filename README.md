@@ -67,30 +67,31 @@ scripts/       release tooling
 
 ## Where releases go
 
-This repository is the **source**. It is not what most people install. A release reaches users through
-three channels, and they do not work the same way — which matters when you change anything under
-`plugin/`.
+This repository is the **source**. It is not what people install. Two distributions are cut from it,
+and each one has to serve all three hosts.
 
-| Channel | What it serves | How a user installs |
-|---|---|---|
-| **`open-agent-ai-security/plugins`** — the community catalog | a `git-subdir` entry pointing at this repo's `plugin/` at a pinned commit. Nothing is copied. | `claude plugin marketplace add open-agent-ai-security/plugins` then `claude plugin install raffkin@open-agent-ai-security` |
-| **`Exabeam-Labs/plugins`** — the Exabeam Plug-in Catalog | a **vendored copy**: `git archive` of this repo's `plugin/` at a pinned commit, re-keyed to `soc` and relicensed through a declared overlay, committed as `soc/`. | `claude plugin marketplace add Exabeam-Labs/plugins` then `claude plugin install soc@exabeam` |
-| **Google Antigravity** | neither catalog — `agy` installs **directly from a repository subpath**. | `agy plugin install https://github.com/<org>/<repo>/tree/main/<path>` |
+|  | Claude Code | OpenAI Codex | Google Antigravity |
+|---|---|---|---|
+| **Community** — bleeding edge, Apache-2.0, served by `open-agent-ai-security/plugins` | `raffkin@open-agent-ai-security` | `raffkin@open-agent-ai-security` | `agy plugin install …/raffkin/tree/main/plugin` |
+| **Supported** — the Exabeam listing, served by `Exabeam-Labs/plugins` | `soc@exabeam` | `soc@exabeam` | `agy plugin install …/plugins/tree/main/soc` |
 
-Three consequences worth holding on to:
+How each distribution is built from this repo:
 
-- **The community channel is a pointer; the Exabeam channel is a copy.** A change here reaches community
-  users when the catalog's pin moves, and reaches Exabeam customers only when the build is re-vendored
-  and blessed. The two can be on different versions, deliberately.
-- **Antigravity bypasses both catalogs.** It reads `plugin/.antigravity-plugin/plugin.json` and installs
-  the directory it was pointed at. So the community install path is this repo's `plugin/`, and the
-  supported one is the catalog's `soc/` — the same tree, different addresses. The install command in the
-  guide is therefore per-distribution (`{{antigravity_install}}`), because nothing in the vendoring
-  rewrites a source-repo URL.
-- **The vendored copy regenerates itself.** `vendor_plugin.py` applies the identity overlay and then runs
-  the payload's own `gen_identity.py`, so all three host manifests, the permission snippet and
-  `identity.sh` follow from one field. Hand-editing anything inside a vendored payload is what the
-  catalog's validator exists to refuse.
+- **Community** is a **pointer.** The catalog entry is a `git-subdir` source naming this repo's `plugin/`
+  at a pinned commit; nothing is copied. Moving the pin ships a new version.
+- **Supported** is a **copy.** `vendor_plugin.py` takes a `git archive` of `plugin/` at a pinned commit,
+  applies the declared identity overlay (re-keying `raffkin` → `soc` and relicensing), re-runs the
+  payload's own `gen_identity.py`, and commits the result as `soc/`. A build reaches customers only when
+  it is re-vendored and blessed, so the two distributions can sit on different versions on purpose.
+
+Two things about Antigravity, because it is the host that behaves differently:
+
+- **It does not use a plugin marketplace.** `agy` installs whatever directory a GitHub subpath URL points
+  at — this repo's `plugin/` for community, the catalog's `soc/` for supported. Same tree, two addresses.
+- **Nothing in the vendoring rewrites a source-repo URL.** The install key and the marketplace repo are
+  substituted on re-key; a subpath URL is neither. So the Antigravity command in the guide is
+  per-distribution (`{{antigravity_install}}` in the identity overlay) — otherwise the supported build's
+  own documentation would tell customers to install the community one.
 
 ## Working on Raffkin
 
