@@ -174,6 +174,13 @@ bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
 
 > investigate alert `<alert id>`
 
+### Where this install comes from
+
+Antigravity does not use a plugin marketplace — `agy` installs the directory the URL points at. The
+community build lives in Raffkin's own repository; the Exabeam-supported build is a vendored copy of
+the same tree, served from the Exabeam Plug-in Catalog under its own terms and support. The command
+above is the one for *this* copy; the other build has its own.
+
 ### What is different on this host
 
 Raffkin's three skills and the Exabeam connection work the same way here. **The bundled

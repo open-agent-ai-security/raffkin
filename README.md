@@ -65,6 +65,33 @@ tests/         deterministic invariants, run in CI
 scripts/       release tooling
 ```
 
+## Where releases go
+
+This repository is the **source**. It is not what most people install. A release reaches users through
+three channels, and they do not work the same way — which matters when you change anything under
+`plugin/`.
+
+| Channel | What it serves | How a user installs |
+|---|---|---|
+| **`open-agent-ai-security/plugins`** — the community catalog | a `git-subdir` entry pointing at this repo's `plugin/` at a pinned commit. Nothing is copied. | `claude plugin marketplace add open-agent-ai-security/plugins` then `claude plugin install raffkin@open-agent-ai-security` |
+| **`Exabeam-Labs/plugins`** — the Exabeam Plug-in Catalog | a **vendored copy**: `git archive` of this repo's `plugin/` at a pinned commit, re-keyed to `soc` and relicensed through a declared overlay, committed as `soc/`. | `claude plugin marketplace add Exabeam-Labs/plugins` then `claude plugin install soc@exabeam` |
+| **Google Antigravity** | neither catalog — `agy` installs **directly from a repository subpath**. | `agy plugin install https://github.com/<org>/<repo>/tree/main/<path>` |
+
+Three consequences worth holding on to:
+
+- **The community channel is a pointer; the Exabeam channel is a copy.** A change here reaches community
+  users when the catalog's pin moves, and reaches Exabeam customers only when the build is re-vendored
+  and blessed. The two can be on different versions, deliberately.
+- **Antigravity bypasses both catalogs.** It reads `plugin/.antigravity-plugin/plugin.json` and installs
+  the directory it was pointed at. So the community install path is this repo's `plugin/`, and the
+  supported one is the catalog's `soc/` — the same tree, different addresses. The install command in the
+  guide is therefore per-distribution (`{{antigravity_install}}`), because nothing in the vendoring
+  rewrites a source-repo URL.
+- **The vendored copy regenerates itself.** `vendor_plugin.py` applies the identity overlay and then runs
+  the payload's own `gen_identity.py`, so all three host manifests, the permission snippet and
+  `identity.sh` follow from one field. Hand-editing anything inside a vendored payload is what the
+  catalog's validator exists to refuse.
+
 ## Working on Raffkin
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — branching (`dev` → `main`), tests, review, cutting a release.
