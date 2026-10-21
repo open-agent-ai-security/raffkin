@@ -148,10 +148,18 @@ through — the gate does not evaporate when the human does.
 
 **1. Install the plugin.** Antigravity installs from a GitHub subpath into `~/.gemini/config/plugins/`:
 
+<!-- community-only -->
 ```bash
 agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
 agy plugin list      # expect: raffkin
 ```
+<!-- /community-only -->
+<!-- distribution-only
+```bash
+agy plugin install {{antigravity_install}}
+agy plugin list      # expect: the plugin name in this copy's manifest
+```
+/distribution-only -->
 
 **2. Add your credentials** — the same file as the other hosts (`~/.exabeam-mcp.env`, `https://`,
 `chmod 600`).

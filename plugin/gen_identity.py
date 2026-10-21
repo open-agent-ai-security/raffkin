@@ -396,7 +396,7 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
-DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support")   # prose only, filled into the distribution-only text:
+DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support", "antigravityInstall")   # prose only, filled into the distribution-only text:
 # the distributor's name, the name of the terms the copy is licensed under, and its support page (a URL)
 _VENDOR_FALLBACK = "the organization that distributes it"
 
@@ -407,7 +407,13 @@ def _distribution_tokens(dist):
     vendor = dist.get("vendor") or _VENDOR_FALLBACK
     terms = f"{dist['terms']} (see `LICENSE`)" if dist.get("terms") else "the terms in its `LICENSE` file"
     support = f"[{dist.get('vendor') or 'its'} support]({dist['support']})" if dist.get("support") else f"the support path of {vendor}"
-    return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support}
+    # Antigravity installs from a GitHub subpath, not from a marketplace key, so rewrite_docs's
+    # key/repo substitutions cannot re-point it: the source repo is not the marketplace repo. A
+    # distribution sets its own URL here, or the prose says to ask rather than naming the community
+    # build -- which is what an un-rewritten URL would otherwise do.
+    agy = dist.get("antigravityInstall") or "<the subpath URL for this distribution — ask its maintainer>"
+    return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support,
+            "{{antigravity_install}}": agy}
 
 
 def manifest_fields(identity):

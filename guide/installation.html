@@ -383,9 +383,20 @@ nobody is at the keyboard, Codex cancels any write that needs an approval rather
 through — the gate does not evaporate when the human does.</p>
 <h2 id="quick-start-google-antigravity">Quick start — Google Antigravity</h2>
 <p><strong>1. Install the plugin.</strong> Antigravity installs from a GitHub subpath into <code>~/.gemini/config/plugins/</code>:</p>
+<!-- community-only -->
+
 <pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
 agy plugin list      # expect: raffkin
 </code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin install {{antigravity_install}}
+agy plugin list      # expect: the plugin name in this copy's manifest
+</code></pre>
+
+/distribution-only -->
+
 <p><strong>2. Add your credentials</strong> — the same file as the other hosts (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
 <code>chmod 600</code>).</p>
 <p><strong>3. Check the setup.</strong></p>
