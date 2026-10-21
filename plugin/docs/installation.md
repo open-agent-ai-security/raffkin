@@ -144,6 +144,49 @@ asks before every write. Noisier, not less safe. And if you script Raffkin with 
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.
 
+## Quick start — Google Antigravity
+
+**1. Install the plugin.** Antigravity installs from a GitHub subpath into `~/.gemini/config/plugins/`:
+
+```bash
+agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+agy plugin list      # expect: raffkin
+```
+
+**2. Add your credentials** — the same file as the other hosts (`~/.exabeam-mcp.env`, `https://`,
+`chmod 600`).
+
+**3. Check the setup.**
+
+```bash
+bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
+```
+
+**4. Run your first investigation.** In an Antigravity session:
+
+> investigate alert `<alert id>`
+
+### What is different on this host
+
+Raffkin's three skills and the Exabeam connection work the same way here. **The bundled
+human-in-the-loop gate does not.**
+
+On Claude Code the gate is a `PreToolUse` hook that denies containment outright, forces an explicit
+yes on dismiss/close and mail, and holds even under `--dangerously-skip-permissions`. On Codex the
+equivalent comes from its approval policy. On Antigravity **neither applies**: approval behaviour is
+whatever Antigravity itself does for MCP tools, and Raffkin's deny tier, ask tier and per-session
+write budget are not in force.
+
+What still protects you here, because it lives in the connector rather than the host: containment and
+rule-write tools are refused at the bridge, what the model reads is screened for injected
+instructions, what it writes back is neutralized, and every call is on the audit trail.
+
+Treat Antigravity as the host where **you** are the approval step. Antigravity supports `PreToolUse`
+hooks with allow/deny/ask, so porting the gate is tracked in
+[raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305) — it is not shipped until
+it has been driven against a live `agy`, because a gate whose matcher never fires reports success and
+protects nothing.
+
 ## Updating
 
 ```bash

@@ -652,6 +652,29 @@ def test_docs_describe_the_gate_that_ships():
     assert re.match(matcher, "mcp__exabeam__exabeam_update_alert"), "installation.md says the hook covers a manual `exabeam` server"
 
 
+def test_the_antigravity_manifest_declares_the_mcp_server():
+    """#304: Antigravity does not auto-discover the MCP config the way Claude Code does — the manifest
+    has to name it. Without `mcpServers` the plugin still installs and still loads its three skills, and
+    every one of them has no Exabeam tool to call: a plugin that looks installed and does nothing.
+
+    It also pins the Marketplace-required fields, and that the file it points at is the Antigravity one:
+    .mcp.json carries ${CLAUDE_PLUGIN_ROOT}, which Antigravity does not resolve, so pointing there would
+    hand it an unrunnable command.
+    """
+    m = json.loads((ROOT / "plugin" / ".antigravity-plugin" / "plugin.json").read_text())
+    assert m.get("mcpServers") == "./.mcp.antigravity.json", (
+        f"the Antigravity manifest must name the Antigravity MCP file, got {m.get('mcpServers')!r}")
+    mcp = ROOT / "plugin" / ".mcp.antigravity.json"
+    assert mcp.is_file(), "the payload must ship .mcp.antigravity.json"
+    text = mcp.read_text()
+    assert "${PLUGIN_ROOT}" in text and "${CLAUDE_PLUGIN_ROOT}" not in text, (
+        "the Antigravity MCP file must use ${PLUGIN_ROOT}; Antigravity does not resolve ${CLAUDE_PLUGIN_ROOT}")
+    for field in ("displayName", "logo", "suggestedPrompts"):
+        assert m.get(field), f"{field} is required for an Antigravity Marketplace listing"
+    assert (ROOT / "plugin" / m["logo"]).is_file(), f"the logo must ship in the payload: {m['logo']}"
+    assert 1 <= len(m["suggestedPrompts"]) <= 3, "Antigravity shows at most 3 suggested prompts"
+
+
 def test_the_gate_ships_but_no_manifest_names_it():
     """#197: the gate is registered by SHIPPING hooks/hooks.json, never by declaring it.
 

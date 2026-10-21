@@ -28,11 +28,21 @@
     ],
     "codex": [
       "codex"
+    ],
+    "antigravity": [
+      "antigravity",
+      "security",
+      "soc"
     ]
   },
   "mcpServer": "exabeam",
   "marketplace": {
     "repo": "open-agent-ai-security/plugins",
     "name": "open-agent-ai-security"
-  }
+  },
+  "suggestedPrompts": [
+    "Investigate Exabeam alert <alert id> and give me a verdict",
+    "Triage my open Exabeam case queue and tell me what to look at first",
+    "Find the noisiest Exabeam detection rules and propose tuning"
+  ]
 }

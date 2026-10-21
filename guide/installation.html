@@ -262,7 +262,7 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#quick-start-google-antigravity">Quick start — Google Antigravity</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="installation-setup">Installation &amp; setup</h1>
 <p>Raffkin is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
@@ -381,6 +381,36 @@ you before Raffkin <em>opens</em> a case or writes a note, because Exabeam marks
 asks before every write. Noisier, not less safe. And if you script Raffkin with <code>codex exec</code>, where
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.</p>
+<h2 id="quick-start-google-antigravity">Quick start — Google Antigravity</h2>
+<p><strong>1. Install the plugin.</strong> Antigravity installs from a GitHub subpath into <code>~/.gemini/config/plugins/</code>:</p>
+<pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+agy plugin list      # expect: raffkin
+</code></pre>
+<p><strong>2. Add your credentials</strong> — the same file as the other hosts (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
+<code>chmod 600</code>).</p>
+<p><strong>3. Check the setup.</strong></p>
+<pre><code class="language-bash">bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
+</code></pre>
+<p><strong>4. Run your first investigation.</strong> In an Antigravity session:</p>
+<blockquote>
+<p>investigate alert <code>&lt;alert id&gt;</code></p>
+</blockquote>
+<h3 id="what-is-different-on-this-host">What is different on this host</h3>
+<p>Raffkin's three skills and the Exabeam connection work the same way here. <strong>The bundled
+human-in-the-loop gate does not.</strong></p>
+<p>On Claude Code the gate is a <code>PreToolUse</code> hook that denies containment outright, forces an explicit
+yes on dismiss/close and mail, and holds even under <code>--dangerously-skip-permissions</code>. On Codex the
+equivalent comes from its approval policy. On Antigravity <strong>neither applies</strong>: approval behaviour is
+whatever Antigravity itself does for MCP tools, and Raffkin's deny tier, ask tier and per-session
+write budget are not in force.</p>
+<p>What still protects you here, because it lives in the connector rather than the host: containment and
+rule-write tools are refused at the bridge, what the model reads is screened for injected
+instructions, what it writes back is neutralized, and every call is on the audit trail.</p>
+<p>Treat Antigravity as the host where <strong>you</strong> are the approval step. Antigravity supports <code>PreToolUse</code>
+hooks with allow/deny/ask, so porting the gate is tracked in
+<a href="https://github.com/open-agent-ai-security/raffkin/issues/305">raffkin#305</a> — it is not shipped until
+it has been driven against a live <code>agy</code>, because a gate whose matcher never fires reports success and
+protects nothing.</p>
 <h2 id="updating">Updating</h2>
 <pre><code class="language-bash"># Claude Code
 claude plugin marketplace update open-agent-ai-security

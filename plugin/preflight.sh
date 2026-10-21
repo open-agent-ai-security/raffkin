@@ -14,7 +14,7 @@
 #
 # Usage:
 #   preflight.sh                       detect the host agent and check everything
-#   preflight.sh --platform codex      force a host (claude | codex | none)
+#   preflight.sh --platform codex      force a host (claude | codex | antigravity | none)
 #   preflight.sh --skip-connectivity   skip the live MCP call
 #   preflight.sh --no-color
 #
@@ -369,6 +369,13 @@ check_gate_reach() {
 check_gate() {
   local platform="$1" state
   case "$platform" in
+    antigravity)
+      # Antigravity supports PreToolUse hooks with allow/deny/ask, so the bundled gate is portable in
+      # principle -- but it namespaces MCP servers as <plugin>-<server>, and the tool-name format the
+      # matcher and gate.py key on has not been verified against a live `agy`. Reporting a gate we have
+      # not driven is how "0 HOOK MISS" came to mean nothing on the red-team's hook leg; so this says
+      # what is true today instead.
+      warn "Human-in-the-loop gate NOT active on this host — the bundled hook is wired for Claude Code; on Antigravity, dismiss/close and containment are governed by Antigravity's own tool-approval behaviour. Raffkin's deny tier and session write budget do not apply here (raffkin#305)" ;;
     codex)
       state="$(gate_state_codex)"
       case "$state" in
@@ -412,7 +419,7 @@ preflight_main() {
     case "$1" in
       --platform=*) platform="${1#*=}" ;;
       --platform)   shift; platform="${1:-}"
-                    [ -n "$platform" ] || { printf '--platform needs a value (claude|codex|none)\n' >&2; return 2; } ;;
+                    [ -n "$platform" ] || { printf '--platform needs a value (claude|codex|antigravity|none)\n' >&2; return 2; } ;;
       --skip-connectivity) SKIP_CONN=1 ;;
       --no-color) USE_COLOR=0 ;;
       -h|--help) awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; return 0 ;;
@@ -421,8 +428,8 @@ preflight_main() {
     shift
   done
   case "${platform:-auto}" in
-    claude|codex|none|auto) ;;
-    *) printf 'unknown platform: %s (want claude|codex|none)\n' "$platform" >&2; return 2 ;;
+    claude|codex|antigravity|none|auto) ;;
+    *) printf 'unknown platform: %s (want claude|codex|antigravity|none)\n' "$platform" >&2; return 2 ;;
   esac
   [ "$platform" = "auto" ] && platform=""
   [ -n "$platform" ] || platform="$(detect_platform)"
@@ -435,6 +442,9 @@ preflight_main() {
   case "$platform" in
     claude) ok "Claude Code — $(claude --version 2>/dev/null | head -1)" ;;
     codex)  ok "OpenAI Codex — $(codex --version 2>/dev/null | head -1)" ;;
+    antigravity)
+            if command -v agy >/dev/null 2>&1; then ok "Google Antigravity — $(agy --version 2>/dev/null | head -1)"
+            else warn "Google Antigravity CLI ('agy') not found on PATH — the checks below still apply to the installed plugin"; fi ;;
     *)      warn "No host agent CLI found (looked for 'claude' and 'codex')" ;;
   esac
 

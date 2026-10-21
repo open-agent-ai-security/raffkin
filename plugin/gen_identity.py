@@ -12,6 +12,7 @@
 Generated:
   .claude-plugin/plugin.json                    Claude Code manifest
   .codex-plugin/plugin.json                     Codex manifest (same skills, Codex-only fields)
+  .antigravity-plugin/plugin.json               Google Antigravity manifest (skills + MCP + Marketplace fields)
   skills/soc-investigate/settings.snippet.json  the permission gate — every rule spelled out under the
                                                 bundled-MCP prefix mcp__plugin_<name>_<server>__ and/or the
                                                 manual prefix mcp__<server>__, from the bare-name tiers in
@@ -46,10 +47,12 @@ PERMISSIONS = HERE / "skills" / "soc-investigate" / "permissions.json"
 OUT = {
     "claude": HERE / ".claude-plugin" / "plugin.json",
     "codex": HERE / ".codex-plugin" / "plugin.json",
+    "antigravity": HERE / ".antigravity-plugin" / "plugin.json",
+    "antigravity_mcp": HERE / ".mcp.antigravity.json",
     "snippet": HERE / "skills" / "soc-investigate" / "settings.snippet.json",
     "shell": HERE / "identity.sh",
 }
-MCP_FILES = (".mcp.json", ".mcp.codex.json")
+MCP_FILES = (".mcp.json", ".mcp.codex.json", ".mcp.antigravity.json")
 
 
 def load(p):
@@ -440,7 +443,29 @@ def build(identity, perms):
     for tier, spec in perms["tiers"].items():
         tiers[tier] = [pre[p] + t for p in spec["prefixes"] for t in spec["tools"]]
     snippet = {"permissions": tiers}
-    return {"claude": claude, "codex": codex, "snippet": snippet, "shell": shell_include(identity, perms)}
+    # Antigravity resolves components from the plugin ROOT, and takes the manifest from
+    # .antigravity-plugin/plugin.json when a repo already keeps provider manifests in dot-folders --
+    # which is what its own guide recommends for a layout like ours. Unlike Claude Code it does NOT
+    # auto-discover the MCP config, so the server has to be named here or the skills load with no
+    # Exabeam tools at all. displayName, logo and suggestedPrompts are required for a Marketplace
+    # listing; category is recommended.
+    antigravity = {**common, "displayName": identity["displayName"],
+                   "keywords": identity["keywords"] + identity["hostKeywords"]["antigravity"],
+                   "skills": ["./skills"],
+                   "mcpServers": "./.mcp.antigravity.json",
+                   "logo": "assets/logo.svg",
+                   "category": identity["category"],
+                   "suggestedPrompts": identity["suggestedPrompts"]}
+    # Antigravity resolves ${PLUGIN_ROOT}, not ${CLAUDE_PLUGIN_ROOT}: pointing it at .mcp.json would
+    # hand it a command with an unresolved variable and the bridge would never start. So the Antigravity
+    # MCP file is generated FROM .mcp.json with the variable swapped -- one source for the launch command,
+    # so a change there (the --locked flag, #255) cannot reach one host and miss the other.
+    mcp = json.loads((HERE / ".mcp.json").read_text())
+    antigravity_mcp = json.loads(
+        json.dumps(mcp).replace("${CLAUDE_PLUGIN_ROOT}", "${PLUGIN_ROOT}"))
+    return {"claude": claude, "codex": codex, "antigravity": antigravity,
+            "antigravity_mcp": antigravity_mcp, "snippet": snippet,
+            "shell": shell_include(identity, perms)}
 
 
 def render(obj):
