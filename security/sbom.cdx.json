@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:47da4f42-141b-5839-96d3-41283bcc3633",
+  "serialNumber": "urn:uuid:32ddf7d0-d539-556a-b70d-713e204f3c35",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-30T20:23:04Z",
+    "timestamp": "2026-10-22T01:03:40Z",
     "tools": {
       "components": [
         {
@@ -65,7 +65,7 @@
       },
       {
         "name": "raffkin:lockfileSha256",
-        "value": "37de1cb19636fb246b8aae4037855c495ba3c04be08d13b05020e50ad052ae7a"
+        "value": "7736a2c408900b2949303f5c84a807c0e932a88faac730ee42f1aeed260b761f"
       },
       {
         "name": "raffkin:lockRevision",
@@ -196,20 +196,20 @@
       ]
     },
     {
-      "bom-ref": "pkg:pypi/certifi@2026.7.22",
+      "bom-ref": "pkg:pypi/certifi@2026.10.19",
       "type": "library",
       "name": "certifi",
-      "version": "2026.7.22",
-      "purl": "pkg:pypi/certifi@2026.7.22",
+      "version": "2026.10.19",
+      "purl": "pkg:pypi/certifi@2026.10.19",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "741e2c3b351ddf169a738da9f2c048608ff7f2c5cc02f1ebc6b118bb090d5d55"
+          "content": "035c1e85572b141bf1c3a3eff0e33a8eb74917522f2559075ff8d2fea780a1ae"
         },
         {
           "alg": "SHA-256",
-          "content": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+          "content": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
         }
       ],
       "properties": [
@@ -1144,20 +1144,20 @@
       ]
     },
     {
-      "bom-ref": "pkg:pypi/mcp@1.29.0",
+      "bom-ref": "pkg:pypi/mcp@1.30.0",
       "type": "library",
       "name": "mcp",
-      "version": "1.29.0",
-      "purl": "pkg:pypi/mcp@1.29.0",
+      "version": "1.30.0",
+      "purl": "pkg:pypi/mcp@1.30.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "52d01f334de1868cc3bb2d6604931126a67631f99a6c5d3b82ba47290315ec36"
+          "content": "445414625fce5c295faa505bb11bacece661ab6f4028d57c935db57820b7a3e4"
         },
         {
           "alg": "SHA-256",
-          "content": "f5a075bb611f23d6f4d080c6a1699fa62772eebc562ba9e66b306ddde1c755f7"
+          "content": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0"
         }
       ],
       "properties": [
@@ -2658,9 +2658,9 @@
     {
       "ref": "raffkin@1.0.0",
       "dependsOn": [
-        "pkg:pypi/certifi@2026.7.22",
+        "pkg:pypi/certifi@2026.10.19",
         "pkg:pypi/httpx@0.28.1",
-        "pkg:pypi/mcp@1.29.0",
+        "pkg:pypi/mcp@1.30.0",
         "pkg:pypi/observra@1.1.0",
         "pkg:pypi/typing-extensions@4.16.0"
       ]
@@ -2681,7 +2681,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:pypi/certifi@2026.7.22",
+      "ref": "pkg:pypi/certifi@2026.10.19",
       "dependsOn": []
     },
     {
@@ -2713,7 +2713,7 @@
     {
       "ref": "pkg:pypi/httpcore@1.0.9",
       "dependsOn": [
-        "pkg:pypi/certifi@2026.7.22",
+        "pkg:pypi/certifi@2026.10.19",
         "pkg:pypi/h11@0.16.0"
       ]
     },
@@ -2721,7 +2721,7 @@
       "ref": "pkg:pypi/httpx@0.28.1",
       "dependsOn": [
         "pkg:pypi/anyio@4.14.2",
-        "pkg:pypi/certifi@2026.7.22",
+        "pkg:pypi/certifi@2026.10.19",
         "pkg:pypi/httpcore@1.0.9",
         "pkg:pypi/idna@3.18"
       ]
@@ -2750,7 +2750,7 @@
       ]
     },
     {
-      "ref": "pkg:pypi/mcp@1.29.0",
+      "ref": "pkg:pypi/mcp@1.30.0",
       "dependsOn": [
         "pkg:pypi/anyio@4.14.2",
         "pkg:pypi/httpx-sse@0.4.3",

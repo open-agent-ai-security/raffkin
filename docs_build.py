@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["markdown>=3.5"]
+# dependencies = ["markdown==3.11.2"]   # PINNED: an unbounded range makes the built HTML drift with
+#                                       # whatever version resolved that day, so the "no drift" gate
+#                                       # goes red on a release nobody here made. 3.11.2 renders
+#                                       # nested emphasis as <strong>, an older one as doubled <em>.
+#                                       # Bump deliberately, and commit the re-rendered guide/ with it.
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
