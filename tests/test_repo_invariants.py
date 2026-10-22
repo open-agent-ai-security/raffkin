@@ -739,8 +739,11 @@ def test_rule_write_tools_are_denied_and_documented():
     assert "On Antigravity neither denial is in force" in TOOL_MAP_MD, \
         "tool-map must not imply the deny tier holds on every host"
     rt = (ROOT / "plugin" / "skills" / "rule-tuning" / "SKILL.md").read_text()
-    assert "on Google Antigravity nothing of this plugin's does" in rt, \
+    assert "On Google Antigravity nothing of this plugin's does" in rt, \
         "rule-tuning must name the host where the denial is absent"
+    # These two names are not hypothetical: they are on the live tenant surface (verified 2026-10-21,
+    # 27 tools, two of them deny-tier). The skill must not soften that to "may expose".
+    assert "confirmed present on a tenant" in rt, "rule-tuning must not hedge an exposure we observed"
     codex = _load("plugin/.mcp.codex.json")
     assert "exabeam_create_analytics_rule" in codex["exabeam"]["disabled_tools"]
 

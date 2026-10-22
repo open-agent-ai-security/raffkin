@@ -30,11 +30,11 @@ The distinction that defines this skill:
 > volume alone. Tuning a loud-but-precise rule is a *miss you caused.*
 
 This skill is **read-only and propose-only.** The MCP does expose rule writes
-(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`) on some tenants — whether yours does
-depends on the key's entitlements, so never assume they are absent. On Claude Code and Codex the host gate
-denies them; **on Google Antigravity nothing of this plugin's does**, so the rule is yours to keep. That
-split does not change your job either way: you diagnose and recommend; detection engineering applies.
-Never call them, and never claim you changed a rule.
+(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`) — confirmed present on a tenant
+entitled for detection content, so never assume they are absent. On Claude Code and Codex the host gate
+denies them. **On Google Antigravity nothing of this plugin's does: your refusal to call them is the only
+control there.** That split does not change your job either way: you diagnose and recommend; detection
+engineering applies. Never call them, and never claim you changed a rule.
 
 ## Preflight — is the Exabeam MCP connected?
 

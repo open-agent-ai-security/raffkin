@@ -443,9 +443,16 @@ reads is screened for injected instructions, what it writes back is neutralized 
 carrying a closing disposition is refused, and every call is on the audit trail. Those run on every host.</p>
 <p>What does <strong>not</strong> protect you here is the deny tier. It is a <em>host</em> control on both other hosts — the
 bundled hook on Claude Code, <code>disabled_tools</code> on Codex — and the connector does not re-implement it, so on
-Antigravity a containment or rule-write tool the Exabeam MCP offers is not refused by anything of ours.
-Today the MCP exposes no containment tool at all, so there is nothing to call; treat that as the reason to
-read every write, not as a guarantee, because it changes when the tool surface does.</p>
+Antigravity a containment or rule-write tool the Exabeam MCP offers is not refused by anything of ours.</p>
+<p><strong>This is not hypothetical.</strong> A tenant entitled for detection content exposes
+<code>exabeam_create_analytics_rule</code> and <code>exabeam_update_analytics_rule</code>, and on this host nothing of ours
+stands between the model and a rule write — only the skills' own instruction never to call them.
+Containment tools are a different case: the Exabeam MCP exposes none today, so there is nothing to call
+even unguarded, and that holds only until the tool surface changes.</p>
+<p><strong>The control you have is the key.</strong> Entitlements are enforced by Exabeam, not by the host, so they are
+the one limit that holds on every host equally. If you run on Antigravity, do not entitle the key for
+detection-content <em>writes</em> — <code>rule-tuning</code> only ever needs reads. See
+<a href="#key-entitlements">Key entitlements</a>.</p>
 <p>Treat Antigravity as the host where <strong>you</strong> are the approval step: read each Exabeam write before you
 allow it, and never leave a session running unattended.</p>
 <!-- community-only -->
