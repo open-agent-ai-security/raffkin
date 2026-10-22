@@ -10,13 +10,17 @@ Raffkin is a plugin for **Claude Code**, **OpenAI Codex** and **Google Antigravi
 same shape on all three hosts: install the plugin, add one credentials file, check, and run your first
 investigation. Five minutes.
 
-On **all three hosts** the safety gate is on from the moment the plugin is installed: dismissing an
-alert or closing a case always asks you first, and containment is never executed. Nothing to configure for
-that. On Claude Code and Antigravity the gate is a hook inside the plugin; on Codex it comes from the
-approval policy the package sets. On Claude Code it runs even when you start with permission prompts turned
-off: containment is still refused, and a dismiss or close still needs a yes. Its deny on containment and
-its ask on dismiss and close still fire in those modes, and if nobody is there to give one, the call is
-refused.
+On **all three hosts** the safety gate is on from the moment the plugin is installed: containment is
+never executed, and in an attended session dismissing an alert or closing a case always asks you first.
+Nothing to configure for that. On Claude Code and Antigravity the gate is a hook inside the plugin; on
+Codex it comes from the approval policy the package sets.
+
+Start a session with permission prompts turned off and the two halves part company. **Containment stays
+refused on every host** — on Antigravity that is measured, not assumed. The ask does not hold everywhere:
+on Claude Code a dismiss or close still needs a yes, and if nobody is there to give one the call is
+refused; on **Antigravity the host overrides the gate's ask and the call runs unasked**, so read "always
+asks you first" on that host as *attended sessions only*. See
+[What is different on this host](#what-is-different-on-this-host).
 
 **Antigravity differs in what has been *tested*, not in what is enforced** — no release has been
 red-teamed on a Gemini model. Read
@@ -273,7 +277,9 @@ So on this host:
 - the **ask tier** is enforced in a normal session and is **not** enforced under that flag. Neither is
   `force_ask`, the decision the host documents as "always prompt the user, ignoring cached permissions".
   Both were probed and both were overridden, so there is **no hook-level way to force a prompt** on this
-  host once that flag is set;
+  host once that flag is set. One limit of that measurement: a tool that ran under the flag cannot tell
+  us whether the host recognised the decision and auto-approved it, or did not recognise it and treated
+  it as no objection. Either way the call was not stopped;
 - a completed ask-tier call is therefore recorded as `ran_consent_unconfirmed` rather than `approved`,
   because the gate cannot see whether a human answered. An `approved` line is evidence of consent; that
   line is not.
@@ -304,9 +310,9 @@ compares a tool name against a static tier file and writes a line.
 
 One smaller difference shows up in the log rather than in what is enforced: Antigravity does not tell a
 hook which permission mode the session is running in. On Claude Code that lets the audit trail
-distinguish an ask a human answered from one that completed in an unattended mode; here a completed
-ask-tier call is recorded as `approved` without that distinction. Records written on this host carry
-`"host": "antigravity"` so the log never has to be guessed at.
+distinguish an ask a human answered from one that completed in an unattended mode; here the gate cannot
+make that distinction, so it does not claim it — see `ran_consent_unconfirmed` above. Records written on
+this host carry `"host": "antigravity"` so the log never has to be guessed at.
 
 What runs identically on every host, because it lives in the connector rather than the host: what the
 model reads is screened for injected instructions, what it writes back is neutralized and masked, a

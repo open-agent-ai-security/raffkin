@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -557,14 +558,22 @@ def test_the_antigravity_hook_refuses_when_no_interpreter_can_run_the_gate(tmp_p
     """
     name = json.loads((PLUGIN / "identity.json").read_text())["name"]
     spec = AGY_HOOKS[f"{name}-gate"]
-    empty = tmp_path / "empty-bin"
-    empty.mkdir()
+    # Only the shell utilities, so the fault under test is the MISSING INTERPRETER and nothing else. An
+    # entirely empty PATH has no `cat` either, and that is a different fault with a different refusal
+    # (the payload never arrives at all) -- checked separately at the end.
+    bin_only = tmp_path / "sh-utils-only"
+    bin_only.mkdir()
+    for tool in ("cat", "grep"):
+        src = shutil.which(tool)
+        if not src:
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
+        (bin_only / tool).symlink_to(src)
     step = json.dumps(agy_step(tool="exabeam_search_cases", server="exabeam"))   # an ALLOW-tier call
 
-    def run(event):
+    def run(event, path=str(bin_only), payload=step):
         command = spec[event][0]["hooks"][0]["command"]
-        r = subprocess.run(["/bin/sh", "-c", command], input=step, capture_output=True, text=True,
-                           cwd=str(PLUGIN), env={"PATH": str(empty)})
+        r = subprocess.run(["/bin/sh", "-c", command], input=payload, capture_output=True, text=True,
+                           cwd=str(PLUGIN), env={"PATH": path})
         assert r.stdout.strip(), f"{event} printed nothing: this host would hear no decision — {r.stderr}"
         return json.loads(r.stdout)
 
@@ -576,6 +585,13 @@ def test_the_antigravity_hook_refuses_when_no_interpreter_can_run_the_gate(tmp_p
 
     # Post expects the empty object. Anything else and this host marks the tool call itself failed.
     assert run("PostToolUse") == {}
+
+    # Nothing on PATH at all: still a refusal, and it names the fault it can actually see.
+    nothing = run("PreToolUse", path=str(tmp_path / "empty-bin"))
+    assert nothing["decision"] == "deny", nothing
+    assert "standard input" in nothing["reason"], (
+        f"with no `cat` the payload never arrived, so the refusal should say that rather than blame the "
+        f"interpreters: {nothing}")
 
 
 def test_the_fallback_cannot_fire_once_the_gate_has_already_decided():
@@ -821,3 +837,68 @@ def test_a_completed_ask_on_this_host_does_not_claim_consent():
     assert "NOT evidenced" in rec["reason"], f"the reason must say what it cannot vouch for: {rec['reason']!r}"
     assert rec.get("target") == {"caseId": "ZZZZ-GATE-TEST-0000", "stage": "CLOSED"}, (
         f"positional arg index other than arg0 lost the target: {rec.get('target')!r}")
+
+
+def test_an_empty_payload_is_refused_before_any_interpreter_runs(tmp_path):
+    """Review: `cat` missing left `_in` empty, python3 SUCCEEDED on empty input so the fallback never
+    ran, and the gate's catch-all answered `ask` -- the one decision this host overrides under
+    --dangerously-skip-permissions. So a containment call silently dropped from deny to ask whenever an
+    interpreter was present and `cat` was not. The empty test now comes before the interpreters."""
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    cmd = AGY_HOOKS[f"{name}-gate"]["PreToolUse"][0]["hooks"][0]["command"]
+    assert cmd.index('[ -z "$_in" ]') < cmd.index("python3"), (
+        "the empty-payload test must come before the interpreter stages, or python3 succeeds on the "
+        "empty input and answers for it")
+
+    no_cat = tmp_path / "no-cat"
+    no_cat.mkdir()
+    for tool in ("grep", "python3"):
+        src = shutil.which(tool)
+        if not src:
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
+        (no_cat / tool).symlink_to(src)
+
+    ours = agy_step(tool="exabeam_isolate_host", server=f"{name}_exabeam")
+    r = subprocess.run(["/bin/sh", "-c", cmd], input=json.dumps(ours), capture_output=True, text=True,
+                       cwd=str(PLUGIN), env={"PATH": str(no_cat), "RAFFKIN_GATE_LOG": "off"})
+    assert json.loads(r.stdout).get("decision") == "deny", (
+        f"with no `cat` the payload never reaches the gate, and a containment call was not refused: "
+        f"{r.stdout!r}")
+
+
+def test_the_gate_itself_refuses_an_empty_payload_on_this_host():
+    """The same refusal where the gate can be run directly, not only in the chain that feeds it. Claude
+    Code is deliberately left as it was: there `ask` already refuses when nobody can answer."""
+    def run(*flags):
+        return subprocess.run([sys.executable, str(HOOK), *flags], input="", capture_output=True,
+                              text=True, env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+
+    agy = json.loads(run("--antigravity").stdout)
+    assert agy.get("decision") == "deny", f"an unreadable step must not be read as no objection: {agy!r}"
+    assert json.loads(run("--antigravity", "--post").stdout) == {}, (
+        "a record the gate cannot write is not a decision to make")
+    claude = json.loads(run().stdout)["hookSpecificOutput"]
+    assert claude["permissionDecision"] == "ask", "Claude Code's behaviour on an empty payload changed"
+
+
+def test_an_empty_payload_refusal_cannot_be_mistaken_for_a_live_gate():
+    """preflight proves the gate is armed by matching the words of its tier refusal. If the empty-payload
+    deny shared those words, an install that delivers nothing to the hook would PASS preflight -- the
+    false-pass shape review has found twice now. The two refusals must have no phrase in common."""
+    def words(s):
+        return {w for w in re.findall(r"[a-z]{4,}", s.lower())}
+
+    out = subprocess.run([sys.executable, str(HOOK), "--antigravity"], input="", capture_output=True,
+                         text=True, env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+    empty = json.loads(out.stdout)["reason"]
+    tier = subprocess.run([sys.executable, str(HOOK), "--antigravity"],
+                          input=json.dumps(agy_step(tool="exabeam_isolate_host",
+                                                    server="raffkin_exabeam")),
+                          capture_output=True, text=True,
+                          env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+    reason = json.loads(tier.stdout)["reason"]
+    assert "containment" in reason, "the tier refusal no longer says what preflight matches on"
+    assert "containment" not in empty.lower(), (
+        "the empty-payload refusal borrows the word preflight matches on, so a hook that is handed "
+        "nothing would be reported as a gate that refuses containment")
+    assert not (words(empty) & {"containment", "action", "tiers"}), empty

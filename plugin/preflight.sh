@@ -411,7 +411,7 @@ check_gate() {
       elif ! grep -q '"PreToolUse"' "$hookfile" 2>/dev/null; then
         fail "Gate is OFF — ${hookfile} declares no PreToolUse handler, so nothing is consulted before an Exabeam write; reinstall the plugin"
       elif [ -z "$runner" ]; then
-        fail "Gate is OFF — neither 'python3' nor 'uv' is on PATH, so the hook cannot start. A hook that cannot start returns no decision, which this host reads as no objection: ${PRODUCT_NAME}'s deny tier would NOT be in force. Install uv (https://docs.astral.sh/uv/) — the Exabeam connector needs it too"
+        fail "Gate is OFF — neither 'python3' nor 'uv' is on PATH, so the hook cannot start and the shell fallback answers instead. That fallback refuses EVERY Exabeam call, reads included: containment is still never executed, but there is no ask tier and no write budget, and ${PRODUCT_NAME} cannot work a case in this state. Install uv (https://docs.astral.sh/uv/) — the Exabeam connector needs it too"
       else
         # Read the hook the way the HOST reads it, then run exactly what it says. The earlier version
         # invoked gate.py itself and only grepped for "PreToolUse", so it reported the gate ON with the

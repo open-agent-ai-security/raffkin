@@ -191,7 +191,20 @@ Only grep's exit **1** — ran cleanly, our server is not in this step — stand
 refuses; anything above 1 (127 when grep itself is missing, 2 on an error) means the step could not be
 *read*, which is not the same as reading that it belongs to someone else, so that refuses too. The first
 cut of this keyed on success versus failure and so failed open exactly when the machine was most broken:
-no interpreter and no grep answered `{}` to a containment call. The
+no interpreter and no grep answered `{}` to a containment call.
+
+**An empty payload is refused before any interpreter is tried, because `python3` succeeds on empty
+input.** The chain reads stdin once into `_in` so a later stage can still see a payload an earlier one
+consumed, which means `_in` is empty whenever something upstream failed to deliver it — review found
+`cat` missing is enough. With an interpreter present the gate was then reached with nothing to read, its
+catch-all answered `ask`, and on Antigravity `ask` is the one decision `--dangerously-skip-permissions`
+overrides: a containment call dropped silently from refused to permitted, in the one state where no log
+line explains why. So the empty test now comes first in the chain, and `gate.py --antigravity` denies an
+empty payload on its own account as well, for the case where it is run directly. The two refusals are
+worded to share no phrase, because `preflight.sh` proves the gate is live by matching the words of the
+tier refusal — had the empty-payload deny borrowed them, an install that delivers nothing to its hook
+would have *passed* its own diagnostic. Claude Code is deliberately unchanged: `ask` there already
+refuses when nobody can answer. The
 host needs a POSIX shell and `python3` 3.7+ (or `uv`) on `PATH`; without one, every gated call is refused
 on both hook hosts, not allowed. The installer and `preflight.sh` verify that
 the **installed** copy carries the hook before they report the gate as on (Praxen 2026-09-07-002: an
@@ -281,6 +294,10 @@ attempt on purpose, so the hook's save is observable.
 - Neither host's fallback covers the hook being killed at its `timeout` — the shell dies with the command,
   so nothing writes a decision. Unmeasured, but the gate reads one JSON object, compares a name against a
   static file and appends a line; the 20s budget is three orders of magnitude clear of that.
+- The refusals the shell writes, and the gate's `AGY_NO_GATE` / `AGY_NO_INPUT` reasons, name the product
+  in prose that a re-key does not rewrite, so a vendored `soc` build refuses in Raffkin's words. One
+  upside, found in review: `preflight.sh`'s reason matching is therefore re-key-safe and a re-keyed copy
+  passes it unchanged. Tracked for the re-vendor rather than fixed here.
 - Antigravity does not tell a hook which permission mode the session is in, so the gate log cannot
   distinguish an ask a human answered from one that completed unattended there, as the Claude Code record
   can. Records carry `"host"` so the log is never ambiguous about which guarantee applied.

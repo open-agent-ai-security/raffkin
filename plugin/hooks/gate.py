@@ -559,7 +559,25 @@ def main(argv=None) -> int:
     host = "antigravity" if "--antigravity" in argv else "claude"
     tool, target, ctx = "", {}, {}
     try:
-        event = json.load(sys.stdin)
+        raw = sys.stdin.read()
+        # Nothing on stdin is not "somebody else's call". It means whatever feeds this hook is broken:
+        # review found that with `cat` missing the shell chain delivers an empty payload, python3 then
+        # SUCCEEDS on it, the fallback never runs, and the JSONDecodeError below answers `ask` -- the one
+        # decision this host overrides under --dangerously-skip-permissions, so the deny tier would be
+        # lost in exactly that state. The shell chain now refuses an empty payload before reaching any
+        # interpreter; this is the same refusal written where the gate itself can be run directly.
+        # Claude Code is left alone on purpose: there `ask` already refuses when nobody can answer.
+        if host == "antigravity" and not post and not raw.strip():
+            # Deliberately worded to share no phrase with the tier refusal: preflight proves the gate is
+            # armed by matching that refusal, and an empty-payload deny must fail that check rather than
+            # satisfy it. A deny is still the right answer to the host; it is not evidence of a live gate.
+            reason = ("Raffkin gate received no payload on standard input, so it could read nothing about "
+                      "this step and refuses rather than standing aside.")
+            log_decision({"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                          "tool": "", "decision": "deny", "reason": reason, "host": host})
+            emit(host, "deny", reason)
+            return 0
+        event = json.loads(raw)
         if host == "antigravity":
             tool, args, what = agy_call(event)
             if what == OTHER:

@@ -61,7 +61,7 @@ flowchart LR
 
 ## The guardrails, in brief
 
-- **The gate ships on.** A dismiss or close always asks the analyst; containment tools are refused outright; any tool the gate has not classified asks rather than runs. It holds even when the host runs with permission prompts switched off.
+- **The gate ships on.** A dismiss or close asks the analyst; containment tools are refused outright; any tool the gate has not classified asks rather than runs. The refusal of containment holds even when the host runs with permission prompts switched off. The ask holds in that state on Claude Code and Codex; on Antigravity the host overrides it, so there the ask is an attended-session control — [what that means](installation.md#what-is-different-on-this-host).
 - **What it reads is screened.** Hidden-character smuggling is stripped from telemetry before the model sees it; the tool definitions the Exabeam MCP hands it are hashed and screened too.
 - **What it writes is de-activated.** Spreadsheet formulas, clickable links and secrets are neutralized in anything Raffkin persists — case notes, updates, outbound mail.
 - **What it did is recorded.** Tool calls, gated decisions and guardrail firings, never case content, in `~/.raffkin/telemetry.jsonl`.

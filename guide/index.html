@@ -362,7 +362,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 </pre>
 <h2 id="the-guardrails-in-brief">The guardrails, in brief</h2>
 <ul>
-<li><strong>The gate ships on.</strong> A dismiss or close always asks the analyst; containment tools are refused outright; any tool the gate has not classified asks rather than runs. It holds even when the host runs with permission prompts switched off.</li>
+<li><strong>The gate ships on.</strong> A dismiss or close asks the analyst; containment tools are refused outright; any tool the gate has not classified asks rather than runs. The refusal of containment holds even when the host runs with permission prompts switched off. The ask holds in that state on Claude Code and Codex; on Antigravity the host overrides it, so there the ask is an attended-session control — <a href="installation.html#what-is-different-on-this-host">what that means</a>.</li>
 <li><strong>What it reads is screened.</strong> Hidden-character smuggling is stripped from telemetry before the model sees it; the tool definitions the Exabeam MCP hands it are hashed and screened too.</li>
 <li><strong>What it writes is de-activated.</strong> Spreadsheet formulas, clickable links and secrets are neutralized in anything Raffkin persists — case notes, updates, outbound mail.</li>
 <li><strong>What it did is recorded.</strong> Tool calls, gated decisions and guardrail firings, never case content, in <code>~/.raffkin/telemetry.jsonl</code>.</li>

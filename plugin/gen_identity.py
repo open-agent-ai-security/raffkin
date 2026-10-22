@@ -544,13 +544,23 @@ AGY_NO_GATE = ("Raffkin gate could not run, so this call cannot be checked again
                "no python3 and no uv on PATH, or the gate script itself could not be executed. The gate "
                "fails closed, so the call is refused. See the installation guide for this host.")
 
+# A separate refusal for an empty payload, because it is a different fault with a different fix and
+# naming the wrong one sends whoever reads it looking for an interpreter that is already there. It also
+# shares no phrase with the tier refusal preflight matches on, so an install that delivers nothing to the
+# hook fails preflight instead of satisfying it.
+AGY_NO_INPUT = ("Raffkin gate received no payload on standard input, so it could read nothing about this "
+                "step and refuses rather than standing aside. Something between the host and the hook is "
+                "dropping the payload: check that cat, printf and grep are on the PATH the host launches "
+                "hooks with.")
+
 
 def antigravity_hooks(identity, server):
     gate = "./hooks/gate.py"           # cwd for a hook command is the directory holding hooks.json
     deny = json.dumps({"decision": "deny", "reason": AGY_NO_GATE}, separators=(",", ":"))
-    if "'" in deny:                    # the fallback is a single-quoted shell word; an apostrophe ends it
-        sys.exit("AGY_NO_GATE must not contain an apostrophe: it would terminate the shell string early "
-                 "and the hook would emit broken JSON instead of a refusal")
+    no_input = json.dumps({"decision": "deny", "reason": AGY_NO_INPUT}, separators=(",", ":"))
+    if "'" in deny or "'" in no_input:  # the fallback is a single-quoted shell word; an apostrophe ends it
+        sys.exit("AGY_NO_GATE and AGY_NO_INPUT must not contain an apostrophe: it would terminate the "
+                 "shell string early and the hook would emit broken JSON instead of a refusal")
     # The matcher is the STEP type, so with no interpreter this fallback is handed every MCP call on the
     # machine -- another server's `create_pull_request` included. Denying all of them protects nothing of
     # ours and is how a control gets switched off by whoever it annoys, so the shell reads the step it was
@@ -567,26 +577,34 @@ def antigravity_hooks(identity, server):
     # python3 that reads the payload and exits 1, and the fallback then handed `grep` nothing, which
     # exited 1 ("not ours") and answered {} to a containment call. That is the shape of every crash in
     # gate.py AFTER it has read stdin. An empty `_in` now refuses.
-    refuse_if_ours = (f'if [ -z "$_in" ]; then printf \'%s\' \'{deny}\'; '
+    refuse_if_ours = (f'if [ -z "$_in" ]; then printf \'%s\' \'{no_input}\'; '
                       f'else printf \'%s\' "$_in" | grep -qi {server}; _rc=$?; '
                       f"if [ $_rc -eq 1 ]; then printf '%s' '{{}}'; else printf '%s' '{deny}'; fi; fi")
-    def run(*flags, fallback):
+    # An empty payload is answered BEFORE any interpreter is tried, because python3 SUCCEEDS on empty
+    # input: review ran the chain with `cat` missing and the gate answered `ask` (its own catch-all for an
+    # unreadable event) instead of denying, which is the one decision this host overrides under
+    # --dangerously-skip-permissions. The fallback keeps its own empty test as well, so the refusal is
+    # still correct if that snippet is ever reached or read on its own.
+    def run(*flags, fallback, empty):
         args = " ".join(("", *flags)).rstrip()
-        return (f'_in=$(cat); printf \'%s\' "$_in" | python3 {gate}{args}'
+        return (f'_in=$(cat); if [ -z "$_in" ]; then printf \'%s\' \'{empty}\'; '
+                f'else printf \'%s\' "$_in" | python3 {gate}{args}'
                 f' || printf \'%s\' "$_in" | uv run --quiet --no-project {gate}{args}'
                 # a brace group needs the terminating semicolon; `{ cmd }` is a syntax error in sh
-                f" || {{ {fallback}; }}")
-    group = lambda *flags, fallback: [{"matcher": "mcp_tool|call_mcp_tool",
-                             "hooks": [{"type": "command", "command": run(*flags, fallback=fallback),
+                f" || {{ {fallback}; }}; fi")
+    group = lambda *flags, fallback, empty: [{"matcher": "mcp_tool|call_mcp_tool",
+                             "hooks": [{"type": "command",
+                                        "command": run(*flags, fallback=fallback, empty=empty),
                                         "timeout": HOOK_TIMEOUT}]}]
     # Keyed on the plugin's own name: hook files from several plugins are merged into one map, so a fixed
     # key would collide with another copy of this payload (the vendored one installs alongside, #306).
     # Pre refuses; post answers with the empty object its contract asks for. A post hook that cannot run
     # loses an audit record, which is a real loss, but it is not a decision to make -- and this host marks
     # the tool call failed if the hook says anything else.
-    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=refuse_if_ours),
+    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=refuse_if_ours,
+                                                             empty=no_input),
                                          "PostToolUse": group("--antigravity", "--post",
-                                                              fallback="printf '%s' '{}'")}}
+                                                              fallback="printf '%s' '{}'", empty="{}")}}
 
 
 def build(identity, perms):

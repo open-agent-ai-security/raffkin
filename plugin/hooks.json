@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "_in=$(cat); printf '%s' \"$_in\" | python3 ./hooks/gate.py --antigravity || printf '%s' \"$_in\" | uv run --quiet --no-project ./hooks/gate.py --antigravity || { if [ -z \"$_in\" ]; then printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate could not run, so this call cannot be checked against the permission tiers: no python3 and no uv on PATH, or the gate script itself could not be executed. The gate fails closed, so the call is refused. See the installation guide for this host.\"}'; else printf '%s' \"$_in\" | grep -qi exabeam; _rc=$?; if [ $_rc -eq 1 ]; then printf '%s' '{}'; else printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate could not run, so this call cannot be checked against the permission tiers: no python3 and no uv on PATH, or the gate script itself could not be executed. The gate fails closed, so the call is refused. See the installation guide for this host.\"}'; fi; fi; }",
+            "command": "_in=$(cat); if [ -z \"$_in\" ]; then printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate received no payload on standard input, so it could read nothing about this step and refuses rather than standing aside. Something between the host and the hook is dropping the payload: check that cat, printf and grep are on the PATH the host launches hooks with.\"}'; else printf '%s' \"$_in\" | python3 ./hooks/gate.py --antigravity || printf '%s' \"$_in\" | uv run --quiet --no-project ./hooks/gate.py --antigravity || { if [ -z \"$_in\" ]; then printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate received no payload on standard input, so it could read nothing about this step and refuses rather than standing aside. Something between the host and the hook is dropping the payload: check that cat, printf and grep are on the PATH the host launches hooks with.\"}'; else printf '%s' \"$_in\" | grep -qi exabeam; _rc=$?; if [ $_rc -eq 1 ]; then printf '%s' '{}'; else printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate could not run, so this call cannot be checked against the permission tiers: no python3 and no uv on PATH, or the gate script itself could not be executed. The gate fails closed, so the call is refused. See the installation guide for this host.\"}'; fi; fi; }; fi",
             "timeout": 20
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "_in=$(cat); printf '%s' \"$_in\" | python3 ./hooks/gate.py --antigravity --post || printf '%s' \"$_in\" | uv run --quiet --no-project ./hooks/gate.py --antigravity --post || { printf '%s' '{}'; }",
+            "command": "_in=$(cat); if [ -z \"$_in\" ]; then printf '%s' '{}'; else printf '%s' \"$_in\" | python3 ./hooks/gate.py --antigravity --post || printf '%s' \"$_in\" | uv run --quiet --no-project ./hooks/gate.py --antigravity --post || { printf '%s' '{}'; }; fi",
             "timeout": 20
           }
         ]

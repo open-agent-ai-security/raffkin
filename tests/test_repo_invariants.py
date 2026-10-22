@@ -16,6 +16,7 @@ Run:  uv run --with pytest pytest -q tests/
 """
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -667,7 +668,17 @@ def test_docs_describe_the_gate_that_ships():
         assert "does not go through the plugin's hook" not in text, where
         assert "turn the hard gate off" not in text, where
         assert "cannot grant silent reads" not in text, where
-        assert "still fire in those modes" in text, f"{where} must say the hook's deny/ask hold under skip-permissions"
+        # Review of #306: the page used to promise both halves of the gate under skip-permissions on all
+        # three hosts. Measurement says only one half is true on Antigravity, so the page must now make
+        # the deny unconditional AND scope the ask. Both directions are asserted, because dropping either
+        # is a lie: silence about the ask oversells, silence about the deny gives away the one guarantee
+        # that was measured to hold.
+        assert "refused on every host" in text, (
+            f"{where} must still say containment is refused with permission prompts switched off — "
+            "that is the guarantee we measured")
+        assert "attended sessions only" in text, (
+            f"{where} must scope the ask tier: on Antigravity the host overrides it under "
+            "--dangerously-skip-permissions")
         assert "under a name the hook does not match" not in text, f"{where}: neither the hook nor the rules cover another server name"
     body = (SKILL_DIR / "SKILL.md").read_text()
     assert "hooks/gate.py" in body, "the skill body must name the bundled hook as the Claude-side gate"
@@ -808,11 +819,16 @@ def test_the_antigravity_hook_file_arms_the_same_gate():
         "PostToolUse must fall back to the empty object its contract asks for, or a hook that cannot run "
         "marks the tool call itself failed")
     # The fallback is a brace group, and `{ cmd }` without the terminating semicolon is a syntax error in
-    # sh -- which would make the hook print nothing at all in exactly the state it exists to cover.
+    # sh -- which would make the hook print nothing at all in exactly the state it exists to cover. Asking
+    # sh itself rather than matching the end of the string: the chain now wraps the whole thing in an
+    # `if`, so the brace group is no longer last, and a positional check would have to be rewritten every
+    # time the shape changes while proving less than the parser does.
     for event, cmd in (("PreToolUse", pre), ("PostToolUse", post)):
         if "|| {" in cmd:
-            assert cmd.rstrip().endswith("; }"), (
+            assert "; }" in cmd, (
                 f"{event}'s fallback brace group is not terminated with '; }}', so sh cannot parse it")
+        parsed = subprocess.run(["/bin/sh", "-n", "-c", cmd], capture_output=True, text=True)
+        assert parsed.returncode == 0, f"{event}'s command is not valid sh: {parsed.stderr.strip()}"
     assert "--post" in spec["PostToolUse"][0]["hooks"][0]["command"], "the post-call record must pass --post"
     assert "--post" not in spec["PreToolUse"][0]["hooks"][0]["command"], "the decision must not be made as a record"
 
