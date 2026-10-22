@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/gate.py --antigravity || uv run --quiet --no-project ./hooks/gate.py --antigravity || printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate could not run: neither python3 nor uv is on PATH, so this call cannot be checked against the permission tiers. The gate fails closed, so every Exabeam call is refused until an interpreter is available. See the installation guide for this host.\"}'",
+            "command": "python3 ./hooks/gate.py --antigravity || uv run --quiet --no-project ./hooks/gate.py --antigravity || { grep -qi exabeam; _rc=$?; if [ $_rc -eq 1 ]; then printf '%s' '{}'; else printf '%s' '{\"decision\":\"deny\",\"reason\":\"Raffkin gate could not run, so this call cannot be checked against the permission tiers: no python3 and no uv on PATH, or the gate script itself could not be executed. The gate fails closed, so the call is refused. See the installation guide for this host.\"}'; fi; }",
             "timeout": 20
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/gate.py --antigravity --post || uv run --quiet --no-project ./hooks/gate.py --antigravity --post || printf '%s' '{}'",
+            "command": "python3 ./hooks/gate.py --antigravity --post || uv run --quiet --no-project ./hooks/gate.py --antigravity --post || { printf '%s' '{}'; }",
             "timeout": 20
           }
         ]

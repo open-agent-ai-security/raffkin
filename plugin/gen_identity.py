@@ -538,21 +538,35 @@ HOOK_TIMEOUT = 20
 # append a second object to a decision already on stdout. What it does NOT cover is the host killing the
 # command at `timeout` -- the shell dies with it, so no fallback runs (recorded as a residual in
 # security/design/human-in-the-loop-gate.md).
-AGY_NO_GATE = ("Raffkin gate could not run: neither python3 nor uv is on PATH, so this call cannot be checked "
-               "against the permission tiers. The gate fails closed, so every Exabeam call is refused until "
-               "an interpreter is available. See the installation guide for this host.")
+AGY_NO_GATE = ("Raffkin gate could not run, so this call cannot be checked against the permission tiers: "
+               "no python3 and no uv on PATH, or the gate script itself could not be executed. The gate "
+               "fails closed, so the call is refused. See the installation guide for this host.")
 
 
-def antigravity_hooks(identity):
+def antigravity_hooks(identity, server):
     gate = "./hooks/gate.py"           # cwd for a hook command is the directory holding hooks.json
     deny = json.dumps({"decision": "deny", "reason": AGY_NO_GATE}, separators=(",", ":"))
     if "'" in deny:                    # the fallback is a single-quoted shell word; an apostrophe ends it
         sys.exit("AGY_NO_GATE must not contain an apostrophe: it would terminate the shell string early "
                  "and the hook would emit broken JSON instead of a refusal")
+    # The matcher is the STEP type, so with no interpreter this fallback is handed every MCP call on the
+    # machine -- another server's `create_pull_request` included. Denying all of them protects nothing of
+    # ours and is how a control gets switched off by whoever it annoys, so the shell reads the step it was
+    # given and refuses only the ones naming our server. `grep` on stdin is the whole test available
+    # without an interpreter; a free-text argument mentioning Exabeam on somebody else's call is refused
+    # too, which is the conservative direction and only while the gate is already broken.
+    # Only grep's exit 1 -- "ran fine, our server is not in this step" -- stands aside. 0 is ours, and
+    # anything above 1 (127 when grep itself is missing, 2 on an error) means the step could not be READ,
+    # which is not the same as reading that it is somebody else's. Those refuse. Written this way round
+    # because the first cut keyed on success/failure and failed open exactly when the machine was most
+    # broken: no interpreter AND no grep answered {} on a containment call.
+    refuse_if_ours = (f"grep -qi {server}; _rc=$?; "
+                      f"if [ $_rc -eq 1 ]; then printf '%s' '{{}}'; else printf '%s' '{deny}'; fi")
     def run(*flags, fallback):
         args = " ".join(("", *flags)).rstrip()
         return (f"python3 {gate}{args} || uv run --quiet --no-project {gate}{args}"
-                f" || printf '%s' '{fallback}'")
+                # a brace group needs the terminating semicolon; `{ cmd }` is a syntax error in sh
+                f" || {{ {fallback}; }}")
     group = lambda *flags, fallback: [{"matcher": "mcp_tool|call_mcp_tool",
                              "hooks": [{"type": "command", "command": run(*flags, fallback=fallback),
                                         "timeout": HOOK_TIMEOUT}]}]
@@ -561,8 +575,9 @@ def antigravity_hooks(identity):
     # Pre refuses; post answers with the empty object its contract asks for. A post hook that cannot run
     # loses an audit record, which is a real loss, but it is not a decision to make -- and this host marks
     # the tool call failed if the hook says anything else.
-    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=deny),
-                                         "PostToolUse": group("--antigravity", "--post", fallback="{}")}}
+    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=refuse_if_ours),
+                                         "PostToolUse": group("--antigravity", "--post",
+                                                              fallback="printf '%s' '{}'")}}
 
 
 def build(identity, perms):
@@ -640,7 +655,7 @@ def build(identity, perms):
         if isinstance(server, dict):
             server.pop("type", None)
     return {"claude": claude, "codex": codex, "antigravity": antigravity,
-            "antigravity_mcp": antigravity_mcp, "antigravity_hooks": antigravity_hooks(identity),
+            "antigravity_mcp": antigravity_mcp, "antigravity_hooks": antigravity_hooks(identity, perms["server"]),
             "snippet": snippet, "shell": shell_include(identity, perms)}
 
 

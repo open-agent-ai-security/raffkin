@@ -141,10 +141,16 @@ def is_bundled(tool_name: str, name) -> bool:
     """Exactly the bundled bridge, under either host's namespacing: Claude Code prefixes a plugin's MCP
     server `plugin_<name>_<server>`, Antigravity `<plugin>_<server>`. No substring, no case games.
 
+    Antigravity's own guide spells that namespace with a HYPHEN (`<plugin>-<server>`) while the payload we
+    modelled used an underscore, and no live call has settled which one it sends (#305). Both are accepted,
+    because being wrong costs the bundled allow tier: review measured `raffkin-exabeam` losing every
+    allow-tier read, the `create_case` ask and the #247 write budget, while only the deny tier survived.
+
     A bare `exabeam` is deliberately NOT bundled on either host: that is what a hand-wired server is
     called, on Antigravity as much as on Claude Code, so it gets the operator's own rules and not our
     allow."""
-    return bool(name) and server_of(tool_name) in (f"plugin_{name}_{SERVER}", f"{name}_{SERVER}")
+    return bool(name) and server_of(tool_name) in (f"plugin_{name}_{SERVER}", f"{name}_{SERVER}",
+                                                   f"plugin-{name}-{SERVER}", f"{name}-{SERVER}")
 
 
 def load_tiers(plugin_root: Path):
@@ -381,8 +387,38 @@ def _find_named(obj, pattern=None, depth=0) -> str:
     return ""
 
 
+def _agy_tool_name(raw: str) -> str:
+    """The tool alone, out of whatever spelling the step used for it.
+
+    Observed and documented spellings put the server in front of the tool: `raffkin_exabeam/isolate_host`,
+    and the `mcp__<server>__<tool>` form if a step ever carries one. Taking the last segment is what lets
+    the tier lookup see the same bare name Claude Code's `bare()` sees."""
+    tool = (raw or "").strip().rsplit("/", 1)[-1]
+    if "__" in tool:
+        tool = tool.rsplit("__", 1)[-1]
+    return tool if re.fullmatch(r"[A-Za-z0-9_.-]+", tool or "") else ""
+
+
+def _agy_args(inner: dict, args: dict) -> dict:
+    """The call's arguments, from the JSON string this host prefers or a plain object if it sent one."""
+    raw = _first_str(inner, _JSON_ARG_KEYS)
+    if raw:
+        try:
+            payload = json.loads(raw)
+        except Exception:  # noqa: BLE001 — unparseable arguments cost the record its target, never the decision
+            payload = {}
+        if isinstance(payload, dict) and payload:
+            return payload
+    for src in (inner, args):
+        for k in _DICT_ARG_KEYS:
+            v = src.get(k)
+            if isinstance(v, dict):
+                return v
+    return {}
+
+
 # What agy_call() concluded about a step, which is NOT the same question as what to decide:
-OURS, OTHER, UNKNOWN = "ours", "other", "unknown"
+OURS, OTHER, UNKNOWN, UNREADABLE = "ours", "other", "unknown", "unreadable"
 
 
 def agy_call(event) -> tuple[str, dict, str]:
@@ -394,6 +430,9 @@ def agy_call(event) -> tuple[str, dict, str]:
       OURS     an Exabeam tool: judge it.
       OTHER    the step named a tool or a server, and it is not ours: no decision, quietly. Another
                server's calls must not collect our verdicts.
+      UNREADABLE  the step named OUR server but no tool we could read: ask. Standing aside here is the
+               hole review found -- our own server's calls going unjudged because the tool name was spelled
+               somewhere we do not look.
       UNKNOWN  the step named NOTHING we could recognise. This is the fail-open hole: the payload shape
                here is read from the host's documented contract and its proto descriptor, not from a live
                call, and if it differs then every Exabeam call lands in this branch. Returning OTHER for it
@@ -407,31 +446,30 @@ def agy_call(event) -> tuple[str, dict, str]:
         return "", {}, UNKNOWN
     inner = args.get("toolCall") or args.get("tool_call")
     inner = inner if isinstance(inner, dict) else {}
-    tool = _first_str(inner, _NAME_KEYS) or _find_named(args, _AGY_TOOL)
+    named_server = _first_str(args, _SERVER_KEYS) or _first_str(inner, _SERVER_KEYS)
+    # Deliberately NOT the loose _find_named(args) here: `serverName` is a name-ish key, so a step whose
+    # tool sits under a key we do not read would come back with the SERVER as its tool and be reported as
+    # an unclassified tool rather than an unreadable step. The loose search stays below, where all it does
+    # is tell "somebody else's call" apart from "a shape we cannot read".
+    tool = _agy_tool_name(_first_str(inner, _NAME_KEYS) or _find_named(args, _AGY_TOOL))
+
+    if SERVER in named_server.lower():
+        # OUR server, so the step is ours whatever the tool is called. Deciding this from the tool name
+        # instead is what review caught: half the deny tier is written in bare spellings (`isolate_host`,
+        # `disable_account`, `lock_account`, `revoke_session`...) because a hand-wired server exposes them
+        # that way, and every one of them was getting no decision here while Claude Code denied it.
+        if not tool:
+            return "", {}, UNREADABLE       # our server, unreadable tool: ask, never stand aside
+        return f"mcp__{named_server}__{tool}", _agy_args(inner, args), OURS
+    if named_server:
+        return "", {}, OTHER                # somebody else's server: their calls are not ours to judge
+    # Nothing said which server. The tool naming itself `exabeam_*` is then the only evidence, and it is
+    # enough to judge on -- but not enough to call it the BUNDLED bridge, so an allow-tier read falls
+    # through to the operator's own rules rather than being waved past on a guess.
     if not _AGY_TOOL.match(tool):
-        # Did it name anything at all? A server or tool we can read and that is not ours is a step we
-        # understand and should leave alone; naming nothing is a shape we do not understand.
-        named = _first_str(args, _SERVER_KEYS) or tool or _find_named(args)
-        return "", {}, (OTHER if named else UNKNOWN)
-    # No serverName in the payload still means the tool named itself an Exabeam tool, so it is ours and is
-    # judged; what it is not is the BUNDLED bridge, so an allow-tier read falls through rather than
-    # being waved past on a guess.
-    server = _first_str(args, _SERVER_KEYS) or SERVER
-    payload = {}
-    raw = _first_str(inner, _JSON_ARG_KEYS)
-    if raw:
-        try:
-            payload = json.loads(raw)
-        except Exception:  # noqa: BLE001 — unparseable arguments cost the record its target, never the decision
-            payload = {}
-    if not isinstance(payload, dict) or not payload:
-        for src in (inner, args):
-            for k in _DICT_ARG_KEYS:
-                v = src.get(k)
-                if isinstance(v, dict):
-                    return f"mcp__{server}__{tool}", v, OURS
-        payload = {}
-    return f"mcp__{server}__{tool}", payload, OURS
+        return "", {}, (OTHER if (tool or _find_named(args)) else UNKNOWN)
+    server = SERVER
+    return f"mcp__{server}__{tool}", _agy_args(inner, args), OURS
 
 
 def emit(host: str, decision: str, reason: str) -> None:
@@ -460,11 +498,14 @@ def main(argv=None) -> int:
             if what == OTHER:
                 emit(host, NO_DECISION, "")
                 return 0                   # not an Exabeam MCP call: this host's matcher sees them all
-            if what == UNKNOWN:
+            if what in (UNKNOWN, UNREADABLE):
                 if post:
                     print(json.dumps({}))
                     return 0               # a record we cannot write is not a decision to make
-                reason = ("Raffkin gate: this host handed the hook an MCP call it could not identify — no "
+                reason = ("Raffkin gate: this step names the Exabeam MCP server but no tool name the gate "
+                          "could read, so it cannot tell which tier the call belongs to and asks rather "
+                          "than standing aside." if what == UNREADABLE else
+                          "Raffkin gate: this host handed the hook an MCP call it could not identify — no "
                           "tool name and no server name in the step. The gate cannot tell whether this is an "
                           "Exabeam call, so it asks rather than standing aside.")
                 log_decision({"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),

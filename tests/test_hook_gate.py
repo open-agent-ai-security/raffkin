@@ -588,3 +588,98 @@ def test_the_fallback_cannot_fire_once_the_gate_has_already_decided():
         assert isinstance(c, ast.Constant) and c.value == 0, (
             f"main() can return {ast.unparse(c)}; a non-zero exit after printing would append the "
             "Antigravity fallback to a decision already on stdout")
+
+
+def _bare_deny_names():
+    """The deny-tier entries written WITHOUT the `exabeam_` prefix. They exist because a hand-wired server
+    exposes containment under its bare verb, and they are the half of the tier that review found going
+    unjudged on Antigravity."""
+    tiers = json.loads((PLUGIN / "skills" / "soc-investigate" / "permissions.json").read_text())["tiers"]
+    return [t for t in tiers["deny"]["tools"] if not t.startswith("exabeam_")]
+
+
+def test_a_bare_deny_tier_name_on_our_server_is_denied():
+    """Review, blocking item 1: `agy_call()` decided "ours" from the tool-name regex `^exabeam_`, so a
+    containment call spelled `isolate_host` on our own server returned OTHER and got NO decision, while
+    Claude Code denied the same call. The server is what makes a step ours; the tool name only says which
+    tier it lands in."""
+    bare = _bare_deny_names()
+    assert bare, "the deny tier no longer carries bare spellings — this test is guarding nothing"
+    for name in bare:
+        for server in ("raffkin_exabeam", "raffkin-exabeam", "exabeam"):
+            out = run_agy(agy_step(tool=name, server=server))
+            assert out.get("decision") == "deny", (
+                f"{name} on {server} answered {out} — a containment tool on the Exabeam server must be "
+                "refused whatever spelling the host hands over")
+
+
+def test_the_tool_name_may_arrive_prefixed_by_its_server():
+    """`<server>/<tool>` is how the host's own guide spells a namespaced call, and `mcp__a__b` is the shape
+    a step could carry if it echoed Claude's naming. Both must reduce to the bare tool the tiers use."""
+    for spelling in ("raffkin_exabeam/exabeam_isolate_host", "raffkin_exabeam/isolate_host",
+                     "mcp__raffkin_exabeam__exabeam_isolate_host"):
+        out = run_agy(agy_step(tool=spelling, server="raffkin_exabeam"))
+        assert out.get("decision") == "deny", f"{spelling} answered {out}, so the tier lookup never saw the tool"
+
+
+def test_our_server_with_an_unreadable_tool_asks_and_says_why():
+    """Review's third case: the tool name present but under a key the gate does not read. The step names
+    OUR server, so standing aside is the hole; and the reason must not claim no server was named, which
+    is what the first fix printed because `serverName` is itself a name-ish key."""
+    out = run_agy(agy_step(tool=None, server="raffkin_exabeam", extra={"identifier": "exabeam_isolate_host"}))
+    assert out.get("decision") == "ask", f"a call on our server that cannot be read must ask, got {out}"
+    assert "no tool name and no server name" not in out["reason"], (
+        f"the reason contradicts the payload, which named our server: {out['reason']!r}")
+    assert "server" in out["reason"], f"the reason should say what it could and could not read: {out['reason']!r}"
+
+
+def test_either_separator_keeps_the_bundled_tiers():
+    """Review, blocking item 2: the host's guide namespaces servers `<plugin>-<server>` while the payload
+    we modelled used `_`, and no live call has settled it (#305). With the hyphen unrecognised, the deny
+    tier still held but the bundled allow, the ask and the #247 write budget were all lost — so the gate
+    looked fine on the one tier that is loudest and had quietly stopped governing the rest."""
+    for server in ("raffkin_exabeam", "raffkin-exabeam"):
+        allow = run_agy(agy_step(tool="exabeam_get_case_details", server=server))
+        assert allow.get("decision") == "allow", (
+            f"an allow-tier read on {server} answered {allow}: not recognised as the bundled bridge, so the "
+            "plugin's own permission grant does not apply")
+        ask = run_agy(agy_step(tool="exabeam_update_case", server=server))
+        assert ask.get("decision") == "ask", f"an ask-tier write on {server} answered {ask}"
+
+
+def test_the_shell_fallback_refuses_our_calls_and_only_ours(tmp_path):
+    """Review, should-fix item 4. The matcher is the step type, so with no interpreter the fallback is
+    handed every MCP call on the machine. Denying all of them protects nothing of ours and is how a
+    control gets switched off by whoever it annoys. It reads the step with `grep`, the only test available
+    without an interpreter — and only grep's exit 1, a clean "our server is not in here", stands aside.
+    A missing grep (127) cannot read the step at all, so it refuses."""
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    cmd = AGY_HOOKS[f"{name}-gate"]["PreToolUse"][0]["hooks"][0]["command"]
+    grep_only = tmp_path / "grep-only"
+    grep_only.mkdir()
+    for candidate in ("/usr/bin/grep", "/bin/grep"):
+        if os.path.exists(candidate):
+            (grep_only / "grep").symlink_to(candidate)
+            break
+    else:
+        import pytest
+        pytest.skip("no grep on this machine to build the probe PATH with")
+
+    def run(step, path):
+        r = subprocess.run(["/bin/sh", "-c", cmd], input=json.dumps(step), capture_output=True,
+                           text=True, cwd=str(PLUGIN), env={"PATH": path})
+        assert r.stdout.strip(), f"the fallback printed nothing, so this host would hear no decision: {r.stderr}"
+        return json.loads(r.stdout)
+
+    ours = agy_step(tool="exabeam_isolate_host", server="raffkin_exabeam")
+    theirs = {"conversationId": "c", "stepIdx": 1,
+              "toolCall": {"name": "mcp_tool", "args": {"serverName": "github",
+                                                        "toolCall": {"toolName": "create_pull_request"}}}}
+    assert run(ours, str(grep_only))["decision"] == "deny"
+    assert run(theirs, str(grep_only)) == {}, (
+        "another server's call was refused by a gate that is not even running — the deny the operator "
+        "turns off because it blocks their pull requests")
+    # Neither interpreter NOR grep: the step cannot be read, so it is not somebody else's by default.
+    assert run(ours, "/nonexistent")["decision"] == "deny"
+    assert run(theirs, "/nonexistent")["decision"] == "deny", (
+        "with no way to read the step, standing aside is a guess in the ungated direction")

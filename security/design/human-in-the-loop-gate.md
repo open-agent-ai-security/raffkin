@@ -72,6 +72,34 @@ status is verified from the installed plugin's load state. `scripts/merge_permis
 repository for a fleet that wants to generate from it. Applied, the two agree on every tool because both
 are generated from the same file (§5).
 
+### What makes a step ours on Antigravity
+
+Claude Code hands the hook a tool name (`mcp__plugin_<name>_exabeam__<tool>`) and the server is right
+there in it. Antigravity hands over a step whose tool name is always `mcp_tool`, with the real call
+nested inside, so the adapter in `plugin/hooks/gate.py` has to reconstruct the same two facts — which
+server, which tool — from a payload shape read off the host's contract rather than a live call.
+
+**The server decides whether a step is ours; the tool name only decides which tier it lands in.** Getting
+that the wrong way round is the defect review caught in the first cut: it tested the tool name against
+`^exabeam_` first, so a containment call spelled `isolate_host` on our own server was classified as
+somebody else's and got no decision at all, while Claude Code denied the identical call. That is not a
+corner: the deny tier carries the bare spellings deliberately, because a hand-wired server exposes
+containment under its bare verb, and every one of them was unenforced here.
+
+Three further spellings are normalised to the bare tool the tiers are written in: `<server>/<tool>`,
+`mcp__<server>__<tool>`, and the plain name. Where the server is ours but no tool name can be read, the
+step **asks** — it is the one case where standing aside would mean declining to judge a call on our own
+bridge. Where nothing at all can be read, it also asks, with a different reason, because the two are
+genuinely different failures and an operator reading the log should not be told the server was unnamed
+when it was not.
+
+**Both namespace separators are accepted.** The host's guide spells a plugin's server
+`<plugin>-<server>`; the payload this adapter was modelled on used `<plugin>_<server>`. No live call has
+settled which one it sends (#305), and the cost of guessing wrong is not symmetric: with the hyphen
+unrecognised, review measured the deny tier still holding while the bundled allow tier, the ask tier and
+the #247 write budget were all silently lost. The gate would have looked healthy on the loudest tier
+while having stopped governing the rest.
+
 ## 3. Which servers the hook governs
 
 The hook matches on the bare tool name (the last `__` segment), so a renamed server cannot move a tool
@@ -107,10 +135,20 @@ Claude Code `hooks/hooks.json` turns a non-zero exit into a block (`|| exit 2`, 
 component — #296). Antigravity has no equivalent: a `deny` object on stdout is its only hard block, and
 the host's own changelog records its permission manager being fixed to handle "empty decision strings
 returned by pre-tool hooks" safely rather than erroring — so there, a hook that produces nothing is a
-hook that is never heard. `plugin/hooks.json` therefore ends its command with a literal `deny` written by
-the shell (`|| printf '%s' '{"decision":"deny",...}'`), which fires only when neither `python3` nor `uv`
-could run the gate; every path through `main()` returns 0, so the fallback can never append itself to a
-decision already on stdout, and a test asserts that property of `main()` rather than trusting it. The
+hook that is never heard. `plugin/hooks.json` therefore ends its command with a refusal written by the
+shell, which fires only when neither `python3` nor `uv` could run the gate; every path through `main()`
+returns 0, so the fallback can never append itself to a decision already on stdout, and a test asserts
+that property of `main()` rather than trusting it.
+
+That refusal is **scoped to our own server, and the scoping is what makes it survivable.** The matcher is
+the step type, so with no interpreter the fallback is handed every MCP call on the machine — another
+server's `create_pull_request` included. A control that denies a developer's pull requests is a control
+they switch off, so the shell reads the step with `grep`, the only test available without an interpreter.
+Only grep's exit **1** — ran cleanly, our server is not in this step — stands aside. `0` is ours and
+refuses; anything above 1 (127 when grep itself is missing, 2 on an error) means the step could not be
+*read*, which is not the same as reading that it belongs to someone else, so that refuses too. The first
+cut of this keyed on success versus failure and so failed open exactly when the machine was most broken:
+no interpreter and no grep answered `{}` to a containment call. The
 host needs a POSIX shell and `python3` 3.7+ (or `uv`) on `PATH`; without one, every gated call is refused
 on both hook hosts, not allowed. The installer and `preflight.sh` verify that
 the **installed** copy carries the hook before they report the gate as on (Praxen 2026-09-07-002: an

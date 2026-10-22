@@ -520,16 +520,33 @@ def test_install_never_claims_the_hook_gates_without_checking_the_installed_plug
 
 
 def _shell_code_only(text):
-    """Shell source with comments and quoted strings removed.
+    """Shell source with comments and quoted strings removed, so a scan sees CODE and not prose.
 
-    A tripwire, not a parser: the point is that a mutating command must not appear in
-    *code*, while the same word is fine inside a message ("consider: chmod 600 ..."),
-    which is where every legitimate occurrence in preflight.sh lives."""
-    lines = [l for l in text.splitlines() if not l.lstrip().startswith("#")]
-    body = "\n".join(lines)
-    body = re.sub(r'"(?:[^"\\]|\\.)*"', '""', body)
-    body = re.sub(r"'(?:[^'])*'", "''", body)
-    return body
+    A tripwire, not a parser -- but it has to lex quotes the way sh does, because preflight.sh contains
+    both apostrophes inside double-quoted operator messages ("the host's own command") and an embedded
+    python reader inside a single-quoted block that itself contains double quotes. Any single regex
+    mis-pairs one of those and leaks message text back in as code: a two-pass strip (all "..." then all
+    '...') desynchronises on the python block, and one left-to-right alternation desynchronises on the
+    apostrophes. So: scan once, and let whichever quote opens first decide where the span ends, which is
+    the rule the shell actually applies."""
+    src = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
+    out, i, n = [], 0, len(src)
+    while i < n:
+        c = src[i]
+        if c == '"':                       # double-quoted: backslash escapes, an apostrophe is literal
+            i += 1
+            while i < n and src[i] != '"':
+                i += 2 if src[i] == "\\" else 1
+            i += 1
+            out.append("''")
+        elif c == "'":                     # single-quoted: everything up to the next quote, no escapes
+            j = src.find("'", i + 1)
+            i = n if j < 0 else j + 1
+            out.append("''")
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def test_preflight_never_writes():
@@ -780,9 +797,15 @@ def test_the_antigravity_hook_file_arms_the_same_gate():
     assert pre.index("uv run") < pre.rindex("deny"), "the refusal must come after the fallback, not instead of it"
     post = spec["PostToolUse"][0]["hooks"][0]["command"]
     assert "deny" not in post, "a post-call record is not a decision; a deny here would mark the call failed"
-    assert post.rstrip().endswith("'{}'"), (
+    assert "printf '%s' '{}'" in post, (
         "PostToolUse must fall back to the empty object its contract asks for, or a hook that cannot run "
         "marks the tool call itself failed")
+    # The fallback is a brace group, and `{ cmd }` without the terminating semicolon is a syntax error in
+    # sh -- which would make the hook print nothing at all in exactly the state it exists to cover.
+    for event, cmd in (("PreToolUse", pre), ("PostToolUse", post)):
+        if "|| {" in cmd:
+            assert cmd.rstrip().endswith("; }"), (
+                f"{event}'s fallback brace group is not terminated with '; }}', so sh cannot parse it")
     assert "--post" in spec["PostToolUse"][0]["hooks"][0]["command"], "the post-call record must pass --post"
     assert "--post" not in spec["PreToolUse"][0]["hooks"][0]["command"], "the decision must not be made as a record"
 
