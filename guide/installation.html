@@ -286,15 +286,17 @@ red-teamed on a Gemini model. Read
 <li><strong>A supported model.</strong> On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See <a href="security-guardrails.html#how-it-is-tested">Security</a>
   for how the supported models are validated. <strong>The Gemini models Antigravity runs are not in that
-  validation set</strong> — no release has been driven against them, so treat Antigravity as unvalidated on the
-  model axis as well as the gate axis.</li>
+  validation set</strong> — no release has been red-teamed on one, so treat Antigravity as unvalidated on the
+  model axis. The gate itself runs there; it is the model behind it that is untested.</li>
 <li><strong><a href="https://docs.astral.sh/uv/"><code>uv</code></a> 0.5.23 or newer</strong> on your <code>PATH</code>. It runs the bundled Exabeam
   connector and installs the connector's own Python dependencies; there is nothing to <code>pip install</code>.
   Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
   honored, which is why the version matters (<code>uv self update</code> brings an older uv current).</li>
-<li><strong><code>python3</code> (3.7 or newer) on your <code>PATH</code></strong> — Claude Code only. The safety gate is a small Python script
-  the host runs before each Exabeam call; without <code>python3</code> every gated call is refused. macOS and most
-  Linux distributions already have it (<code>python3 --version</code>). Codex does not need it.</li>
+<li><strong><code>python3</code> (3.7 or newer) on your <code>PATH</code></strong> — Claude Code and Antigravity. The safety gate is a small
+  Python script the host runs before each Exabeam call. On Claude Code, without <code>python3</code> every gated call
+  is refused. On Antigravity the hook falls back to <code>uv</code>, which you need anyway, so the gate still runs —
+  but if neither is present it cannot, and <code>preflight.sh</code> fails rather than reporting a gate. macOS and
+  most Linux distributions already have <code>python3</code> (<code>python3 --version</code>). Codex does not need it.</li>
 <li><strong>An Exabeam New-Scale API key and secret</strong>, created under <strong>Settings → API Keys</strong> in your New-Scale
   console. Keys don't carry a role — you grant them <strong>access entitlements</strong>, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
@@ -394,17 +396,42 @@ through — the gate does not evaporate when the human does.</p>
 <!-- community-only -->
 
 <pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
-agy plugin list      # expect: raffkin
 </code></pre>
 <!-- /community-only -->
 <!-- distribution-only
 
 <pre><code class="language-bash">agy plugin install {{antigravity_install}}
-agy plugin list      # expect this copy's plugin name, as its manifest spells it
 </code></pre>
 
 /distribution-only -->
 
+<p>Read what it prints, because this is the earliest point at which a missing piece is visible:</p>
+<!-- community-only -->
+
+<pre><code>  [ok]    raffkin
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code>  [ok]    {{plugin_name}}
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+</code></pre>
+
+/distribution-only -->
+
+<p><code>mcpServers : 1</code> is the Exabeam connection and <code>hooks : 1</code> is the safety gate. If either says <code>skipped</code>,
+stop: the skills will load and have nothing to call, or they will load with no gate in front of them.
+<code>agy plugin list --json</code> shows the same thing afterwards, and names the gate
+(<code>"hooks": ["&lt;this plugin's name&gt;-gate"]</code>).</p>
 <p><strong>2. Add your credentials</strong> — the same file as the other hosts (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
 <code>chmod 600</code>).</p>
 <p><strong>3. Check the setup.</strong></p>

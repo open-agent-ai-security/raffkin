@@ -29,15 +29,17 @@ red-teamed on a Gemini model. Read
 - **A supported model.** On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See [Security](security-guardrails.md#how-it-is-tested)
   for how the supported models are validated. **The Gemini models Antigravity runs are not in that
-  validation set** — no release has been driven against them, so treat Antigravity as unvalidated on the
-  model axis as well as the gate axis.
+  validation set** — no release has been red-teamed on one, so treat Antigravity as unvalidated on the
+  model axis. The gate itself runs there; it is the model behind it that is untested.
 - **[`uv`](https://docs.astral.sh/uv/) 0.5.23 or newer** on your `PATH`. It runs the bundled Exabeam
   connector and installs the connector's own Python dependencies; there is nothing to `pip install`.
   Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
   honored, which is why the version matters (`uv self update` brings an older uv current).
-- **`python3` (3.7 or newer) on your `PATH`** — Claude Code only. The safety gate is a small Python script
-  the host runs before each Exabeam call; without `python3` every gated call is refused. macOS and most
-  Linux distributions already have it (`python3 --version`). Codex does not need it.
+- **`python3` (3.7 or newer) on your `PATH`** — Claude Code and Antigravity. The safety gate is a small
+  Python script the host runs before each Exabeam call. On Claude Code, without `python3` every gated call
+  is refused. On Antigravity the hook falls back to `uv`, which you need anyway, so the gate still runs —
+  but if neither is present it cannot, and `preflight.sh` fails rather than reporting a gate. macOS and
+  most Linux distributions already have `python3` (`python3 --version`). Codex does not need it.
 - **An Exabeam New-Scale API key and secret**, created under **Settings → API Keys** in your New-Scale
   console. Keys don't carry a role — you grant them **access entitlements**, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
@@ -160,15 +162,41 @@ through — the gate does not evaporate when the human does.
 <!-- community-only -->
 ```bash
 agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
-agy plugin list      # expect: raffkin
 ```
 <!-- /community-only -->
 <!-- distribution-only
 ```bash
 agy plugin install {{antigravity_install}}
-agy plugin list      # expect this copy's plugin name, as its manifest spells it
 ```
 /distribution-only -->
+
+Read what it prints, because this is the earliest point at which a missing piece is visible:
+
+<!-- community-only -->
+```
+  [ok]    raffkin
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+```
+<!-- /community-only -->
+<!-- distribution-only
+```
+  [ok]    {{plugin_name}}
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+```
+/distribution-only -->
+
+`mcpServers : 1` is the Exabeam connection and `hooks : 1` is the safety gate. If either says `skipped`,
+stop: the skills will load and have nothing to call, or they will load with no gate in front of them.
+`agy plugin list --json` shows the same thing afterwards, and names the gate
+(`"hooks": ["<this plugin's name>-gate"]`).
 
 **2. Add your credentials** — the same file as the other hosts (`~/.exabeam-mcp.env`, `https://`,
 `chmod 600`).

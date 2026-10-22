@@ -1069,6 +1069,16 @@ def test_a_rekeyed_distribution_gets_a_correct_antigravity_listing(tmp_path):
     assert "raffkin#305" not in guide and "open-agent-ai-security/raffkin/issues" not in guide, \
         "a distribution does not route users to the upstream issue tracker (#289)"
     assert "Raffkin" not in guide, "the upstream product name survived in the distribution's prose"
+    # Nothing in the INSTALL guide may name the upstream plugin, in any case, because every mention of it
+    # there is an instruction the reader types or a path they open. Twice now a bare `raffkin` has reached
+    # this file where no substitution could follow it -- `agy plugin uninstall raffkin`, then the install
+    # command's example output -- so the assertion is the whole file rather than a list of known shapes.
+    # Other docs legitimately keep the name: the attribution line a vendored copy MUST carry, and the
+    # RAFFKIN_* env vars and ~/.raffkin paths, which the code uses whatever the copy is called.
+    import re as _re
+    leaks = [l.strip() for l in guide.splitlines() if _re.search(r"raffkin", l, _re.I)]
+    assert not leaks, ("the upstream plugin name is still in the distribution's install guide, where every "
+                       f"mention is something the reader types or opens: {leaks[:3]}")
 
     # --check stays clean, and goes RED if the distribution forgets the one field it alone can supply
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
