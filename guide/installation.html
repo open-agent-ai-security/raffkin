@@ -283,6 +283,12 @@ red-teamed on a Gemini model. Read
 <ul>
 <li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code), the <code>codex</code> CLI (Codex) or the <code>agy</code> CLI
   (Google Antigravity), signed in.</li>
+<li><strong>On Antigravity, a Google account that Antigravity accepts.</strong> Sign-in and eligibility are two separate
+  gates: <code>agy</code> will complete the OAuth flow and then refuse the session with <em>"Your current account is not
+  eligible for Antigravity. Try signing in with another personal Google account."</em> We hit this with a
+  Google Workspace account on a managed domain, which is what most analysts will be using. Check this
+  <strong>before</strong> you install anything — the plugin, the gate and <code>preflight.sh</code> all work without a session, so
+  nothing else in this guide will warn you. If <code>agy -p "hi"</code> answers, you are eligible.</li>
 <li><strong>A supported model.</strong> On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See <a href="security-guardrails.html#how-it-is-tested">Security</a>
   for how the supported models are validated. <strong>The Gemini models Antigravity runs are not in that
