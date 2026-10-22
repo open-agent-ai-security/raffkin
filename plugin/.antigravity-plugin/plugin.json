@@ -1,7 +1,7 @@
 {
   "name": "raffkin",
   "version": "1.0.0",
-  "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
+  "description": "Triage Exabeam New-Scale alerts and cases end to end: gather the evidence, map MITRE, reach a verdict, and record it behind an approval step.",
   "author": {
     "name": "Exabeam",
     "url": "https://www.exabeam.com/"
@@ -18,18 +18,17 @@
     "ai-agent-security",
     "mcp",
     "antigravity",
-    "security",
-    "soc"
+    "security"
   ],
   "skills": [
     "./skills"
   ],
   "mcpServers": "./.mcp.antigravity.json",
-  "logo": "assets/logo.svg",
+  "logo": "assets/icon.svg",
   "category": "Security",
   "suggestedPrompts": [
-    "Investigate Exabeam alert <alert id> and give me a verdict",
-    "Triage my open Exabeam case queue and tell me what to look at first",
+    "Triage my open Exabeam cases and tell me what to look at first",
+    "Investigate the highest-risk Exabeam alert from the last 24 hours and give me a verdict",
     "Find the noisiest Exabeam detection rules and propose tuning"
   ]
 }

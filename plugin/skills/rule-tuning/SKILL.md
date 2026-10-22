@@ -11,7 +11,8 @@ description: >-
   high-volume-low-precision rules from high-volume-high-precision ones, and proposes
   tuning mapped to real Exabeam mechanics (context table, exclusion rule, or the
   rule's own filter/scope/maturity settings). Read-only and propose-only: the
-  rule-write tools the MCP exposes are denied on both hosts — detection engineering applies the change. Requires the
+  rule-write tools the MCP exposes are denied by the host gate on Claude Code and Codex, and must never be
+  called on any host — detection engineering applies the change. Requires the
   Exabeam MCP server to be configured.
 ---
 
@@ -29,9 +30,11 @@ The distinction that defines this skill:
 > volume alone. Tuning a loud-but-precise rule is a *miss you caused.*
 
 This skill is **read-only and propose-only.** The MCP does expose rule writes
-(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`); Raffkin denies them on both hosts, and
-that is correct: you diagnose and recommend; detection engineering applies. Never call them, and never
-claim you changed a rule.
+(`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`) on some tenants — whether yours does
+depends on the key's entitlements, so never assume they are absent. On Claude Code and Codex the host gate
+denies them; **on Google Antigravity nothing of this plugin's does**, so the rule is yours to keep. That
+split does not change your job either way: you diagnose and recommend; detection engineering applies.
+Never call them, and never claim you changed a rule.
 
 ## Preflight — is the Exabeam MCP connected?
 
@@ -200,7 +203,8 @@ Then two short lists, no prose:
 - **Leave alone** — the loud-but-precise rules, named, so no one over-tunes them.
 - **Validate first** — the one-line backtest to run before rollout.
 
-Close with: *no rule was changed — this is a proposal* (the rule-write tools exist and are denied on both hosts). Every volume,
+Close with: *no rule was changed — this is a proposal* (the rule-write tools may exist, and you never call
+them on any host). Every volume,
 `closedReason`, or config value cited must come from a query you ran, never the rule name alone.
 
 ## Tool names, calling convention & constraints

@@ -4,12 +4,13 @@
 #
 # Raffkin preflight — read-only diagnostics, on any host agent.
 #
-# Everything Raffkin needs to actually work is the same on Claude Code and on Codex:
+# Everything the plugin needs to actually work is the same on Claude Code, Codex and Antigravity:
 # credentials, a toolchain, and a bridge that can reach the tenant. Only the
-# human-in-the-loop gate is stored differently, so only the gate check branches.
+# human-in-the-loop gate differs — a bundled hook on Claude Code, approval policy on Codex, and
+# nothing of ours on Antigravity — so only the gate check branches.
 #
 # This script NEVER writes. Not to settings.json, not to config.toml, not to the
-# credentials file. On both hosts the gate ships inside the plugin (a PreToolUse hook on Claude
+# credentials file. Where a gate exists it ships inside the plugin (a PreToolUse hook on Claude
 # Code, approval policy on Codex); this stays a mirror, not a hand.
 #
 # Usage:
@@ -38,6 +39,10 @@ else
   PLUGIN_NAME="${PLUGIN_NAME:-plugin}"
   PLUGIN_KEY="<plugin>@<marketplace>  (identity.sh missing — regenerate with python3 $_PF_DIR/gen_identity.py)"
 fi
+# The product's name as prose uses it, for the handful of user-visible strings this script writes itself.
+# Shell text is not rewritten on a re-key — only the docs are — so a literal product name here would ship
+# inside a distribution's copy under the upstream's name (review of #306).
+PRODUCT_NAME="${RAFFKIN_ID_PRODUCT_NAME:-the plugin}"
 
 
 # ---- ui (only if the sourcing script has not already provided these) ----
@@ -74,14 +79,25 @@ fi
 # and fall back to whichever CLI exists.
 detect_platform() {
   if [ -n "${RAFFKIN_PLATFORM:-}" ]; then printf '%s' "$RAFFKIN_PLATFORM"; return; fi
-  local has_claude=0 has_codex=0
+  # Where this copy SITS beats which CLIs exist. Antigravity installs a plugin into
+  # ~/.gemini/config/plugins/<name>/, so a preflight.sh running from there is an Antigravity install by
+  # construction -- no guessing. Without this, a machine that also has Claude Code reported "claude" and
+  # then told an Antigravity operator the gate was OFF and to reinstall with `claude plugin install`
+  # (review of #306). The match is on the host's own directory layout, not on our plugin name, so it
+  # holds for a re-keyed distribution too.
+  case "$_PF_DIR/" in
+    */.gemini/config/plugins/*) printf 'antigravity'; return ;;
+  esac
+  local has_claude=0 has_codex=0 has_agy=0
   command -v claude >/dev/null 2>&1 && has_claude=1
   command -v codex  >/dev/null 2>&1 && has_codex=1
+  command -v agy    >/dev/null 2>&1 && has_agy=1
   if [ "$has_claude" = 1 ] && [ "$has_codex" = 1 ]; then
     # Both installed — let an actual Raffkin install break the tie.
     if codex mcp get exabeam >/dev/null 2>&1; then printf 'codex'; else printf 'claude'; fi
   elif [ "$has_codex" = 1 ]; then printf 'codex'
   elif [ "$has_claude" = 1 ]; then printf 'claude'
+  elif [ "$has_agy" = 1 ]; then printf 'antigravity'
   else printf 'none'; fi
 }
 
@@ -116,9 +132,13 @@ check_toolchain() {
   else
     # A failure only where the gate needs it: on Claude Code the bundled hook is python3. On Codex the gate
     # is approval policy and the bridge runs under uv's own interpreter, so a python3-less Codex host is a
-    # healthy install and "warnings do not fail" holds (review, 2026-09-05).
+    # healthy install and "warnings do not fail" holds (review, 2026-09-05). On Antigravity there is no
+    # bundled gate at all, so python3 is not what is missing — saying "the gate is approval policy here"
+    # would claim a control this host does not give us (review of #306).
     if [ "${PF_PLATFORM:-}" = claude ]; then
       fail "python3 not found — the bundled dismiss/close gate (hooks/gate.py) cannot execute. The hook is wired to fail closed (every gated call is refused until python3 is on PATH), so install python3: https://www.python.org/downloads/"
+    elif [ "${PF_PLATFORM:-}" = antigravity ]; then
+      warn "python3 not found — nothing on this host needs it (no gate ships here, and the bridge runs under uv's own interpreter); on a Claude Code host the bundled hook would need it"
     else
       warn "python3 not found — fine on this host (the gate is approval policy here); on a Claude Code host the bundled hook would need it"
     fi
@@ -375,7 +395,7 @@ check_gate() {
       # matcher and gate.py key on has not been verified against a live `agy`. Reporting a gate we have
       # not driven is how "0 HOOK MISS" came to mean nothing on the red-team's hook leg; so this says
       # what is true today instead.
-      warn "Human-in-the-loop gate NOT active on this host — the bundled hook is wired for Claude Code; on Antigravity, dismiss/close and containment are governed by Antigravity's own tool-approval behaviour. Raffkin's deny tier and session write budget do not apply here (raffkin#305)" ;;
+      warn "Human-in-the-loop gate NOT active on this host — the bundled hook is wired for Claude Code. None of ${PRODUCT_NAME}'s deny tier, ask tier or per-session write budget is in force here, and whether Antigravity prompts you at all before an Exabeam write is its own tool-approval behaviour, which this release has not verified against a live 'agy'. YOU are the approval step: read every write before you allow it" ;;
     codex)
       state="$(gate_state_codex)"
       case "$state" in
@@ -445,7 +465,7 @@ preflight_main() {
     antigravity)
             if command -v agy >/dev/null 2>&1; then ok "Google Antigravity — $(agy --version 2>/dev/null | head -1)"
             else warn "Google Antigravity CLI ('agy') not found on PATH — the checks below still apply to the installed plugin"; fi ;;
-    *)      warn "No host agent CLI found (looked for 'claude' and 'codex')" ;;
+    *)      warn "No host agent CLI found (looked for 'claude', 'codex' and 'agy')" ;;
   esac
 
   head2 "Toolchain";    check_toolchain

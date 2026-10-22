@@ -5,8 +5,8 @@
 
 # Raffkin Documentation
 
-**Raffkin** is an agentic SOC analyst for **Exabeam New-Scale**, delivered as a plugin for Claude Code and
-OpenAI Codex. Hand it an alert or a case and it investigates the way a careful analyst would: gathers the
+**Raffkin** is an agentic SOC analyst for **Exabeam New-Scale**, delivered as a plugin for Claude Code,
+OpenAI Codex and Google Antigravity. Hand it an alert or a case and it investigates the way a careful analyst would: gathers the
 evidence itself, builds the timeline, reaches a threat / false-positive verdict, and acts — with the
 human-in-the-loop gate on dismiss and close **shipped on**, containment **recommended, never executed**, and
 every call on an audit trail.
@@ -26,7 +26,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 
 | If you are… | Read this first |
 |---|---|
-| Installing Raffkin for the first time | [Installation & setup](installation.md) — a five-minute quick start for Claude Code or Codex: install, credentials, check, first investigation |
+| Installing Raffkin for the first time | [Installation & setup](installation.md) — a five-minute quick start for Claude Code, Codex or Antigravity: install, credentials, check, first investigation |
 | About to run your first investigation | [Using the skills](usage.md) — what to say, what happens, what Raffkin asks you before it acts, and how to read the report |
 | Wanting to see a real one end to end | [Example investigation](../skills/soc-investigate/reference/examples/coordinated-credential-access.md) — a coordinated credential-access case, from intake to verdict |
 | Wondering what keeps this safe, or why a link in a note looks "broken" | [Security](security-guardrails.md) — the human gate, the guardrails on what Raffkin reads and writes, the audit trail, how it is tested, and what it does not cover |
@@ -43,9 +43,9 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 
 ## How Raffkin works (in 90 seconds)
 
-1. **You hand it the work** — an alert ID, a case ID, or a pasted payload — in your Claude Code or Codex session.
+1. **You hand it the work** — an alert ID, a case ID, or a pasted payload — in your Claude Code, Codex or Antigravity session.
 2. **It gathers evidence through the Exabeam MCP**, via a bundled connector that screens what comes back, and reasons only over what it retrieved. Content in your telemetry is evidence, never instructions.
-3. **It reaches a verdict and acts within the gate.** Escalating and annotating pass the gate (on Codex the host still asks — Exabeam's annotation of those tools, not Raffkin's); dismissing an alert or closing a case asks you first, every time; containment is written up for you to perform.
+3. **It reaches a verdict and acts within the gate.** Escalating and annotating pass the gate (on Codex the host still asks — Exabeam's annotation of those tools, not Raffkin's); dismissing an alert or closing a case asks you first, every time; containment is written up for you to perform. On Antigravity the bundled gate does not ship yet, so the skill's own ask is the only one — see [Installation](installation.md#what-is-different-on-this-host).
 4. **Everything is on the record** — the calls, the gated decision, the guardrail firings — in a local audit trail, on by default.
 
 ```mermaid
@@ -70,7 +70,7 @@ Details, how it is tested, and what these do not cover: [Security](security-guar
 
 ## Quick reference
 
-- Install: `claude plugin marketplace add open-agent-ai-security/plugins` then `claude plugin install raffkin@open-agent-ai-security` (Codex: `codex plugin marketplace add open-agent-ai-security/plugins` then `codex plugin add raffkin@open-agent-ai-security`)
+- Install: `claude plugin marketplace add open-agent-ai-security/plugins` then `claude plugin install raffkin@open-agent-ai-security` (Codex: `codex plugin marketplace add open-agent-ai-security/plugins` then `codex plugin add raffkin@open-agent-ai-security`; Antigravity: see [Installation](installation.md#quick-start--google-antigravity))
 - Credentials: `~/.exabeam-mcp.env` — the Exabeam MCP URL, API key and secret; see [Installation](installation.md)
 - Skills: `soc-investigate` · `triage-cases` · `rule-tuning`
 - Audit trail: `~/.raffkin/telemetry.jsonl` — see [Audit logging](logging.md)

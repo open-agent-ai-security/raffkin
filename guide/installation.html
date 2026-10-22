@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Installation &amp; setup · Raffkin Docs</title>
-<meta name="description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta name="description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/guide/installation.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Raffkin">
 <meta property="og:title" content="Installation &amp; setup · Raffkin Docs">
-<meta property="og:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta property="og:description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/guide/installation.html">
 <meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Installation &amp; setup · Raffkin Docs">
-<meta name="twitter:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta name="twitter:description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <script type="application/ld+json">
-{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool interface for AI\u2026",
+{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool\u2026",
   "url": "https://open-agent-ai-security.github.io/raffkin/guide/installation.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/raffkin/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
@@ -265,21 +265,27 @@ img { max-width: 100%; display: block; }
   <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#quick-start-google-antigravity">Quick start — Google Antigravity</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="installation-setup">Installation &amp; setup</h1>
-<p>Raffkin is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
-through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the same shape on both hosts: install the plugin, add one credentials
-file, check, and run your first investigation. Five minutes.</p>
-<p>The safety gate is on from the moment the plugin is installed: dismissing an alert or closing a case
-always asks you first, and containment is never executed. Nothing to configure for that. On Claude Code
-the gate is a hook inside the plugin. It runs even when you start Claude Code with permission prompts
-turned off: containment is still refused, and a dismiss or close still needs a yes. Its deny on
-containment and its ask on dismiss and close still fire in those modes, and if nobody is there to give
-one, the call is refused.</p>
+<p>Raffkin is a plugin for <strong>Claude Code</strong>, <strong>OpenAI Codex</strong> and <strong>Google Antigravity</strong> that works your
+<strong>Exabeam New-Scale</strong> tenant through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the
+same shape on all three hosts: install the plugin, add one credentials file, check, and run your first
+investigation. Five minutes.</p>
+<p>On <strong>Claude Code and Codex</strong> the safety gate is on from the moment the plugin is installed: dismissing an
+alert or closing a case always asks you first, and containment is never executed. Nothing to configure for
+that. On Claude Code the gate is a hook inside the plugin. It runs even when you start Claude Code with
+permission prompts turned off: containment is still refused, and a dismiss or close still needs a yes. Its
+deny on containment and its ask on dismiss and close still fire in those modes, and if nobody is there to
+give one, the call is refused.</p>
+<p>On <strong>Antigravity</strong> that gate does not ship yet, and this guide does not pretend otherwise — see
+<a href="#what-is-different-on-this-host">What is different on this host</a> before you install there.</p>
 <h2 id="before-you-start">Before you start</h2>
 <ul>
-<li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code) or the <code>codex</code> CLI (Codex), signed in.</li>
+<li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code), the <code>codex</code> CLI (Codex) or the <code>agy</code> CLI
+  (Google Antigravity), signed in.</li>
 <li><strong>A supported model.</strong> On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See <a href="security-guardrails.html#how-it-is-tested">Security</a>
-  for how the supported models are validated.</li>
+  for how the supported models are validated. <strong>The Gemini models Antigravity runs are not in that
+  validation set</strong> — no release has been driven against them, so treat Antigravity as unvalidated on the
+  model axis as well as the gate axis.</li>
 <li><strong><a href="https://docs.astral.sh/uv/"><code>uv</code></a> 0.5.23 or newer</strong> on your <code>PATH</code>. It runs the bundled Exabeam
   connector and installs the connector's own Python dependencies; there is nothing to <code>pip install</code>.
   Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
@@ -392,7 +398,7 @@ agy plugin list      # expect: raffkin
 <!-- distribution-only
 
 <pre><code class="language-bash">agy plugin install {{antigravity_install}}
-agy plugin list      # expect: the plugin name in this copy's manifest
+agy plugin list      # expect this copy's plugin name, as its manifest spells it
 </code></pre>
 
 /distribution-only -->
@@ -400,17 +406,30 @@ agy plugin list      # expect: the plugin name in this copy's manifest
 <p><strong>2. Add your credentials</strong> — the same file as the other hosts (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
 <code>chmod 600</code>).</p>
 <p><strong>3. Check the setup.</strong></p>
-<pre><code class="language-bash">bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
+<pre><code class="language-bash">bash ~/.gemini/config/plugins/raffkin/preflight.sh
 </code></pre>
+<p>Expect <code>✓</code> on every line <strong>except the gate</strong>, which reports a <code>!</code> naming itself as not active on this host
+— that warning is correct here, not a misconfiguration to fix. The script detects Antigravity from its own
+install path, so <code>--platform antigravity</code> is only needed if you run a copy from somewhere else.</p>
 <p><strong>4. Run your first investigation.</strong> In an Antigravity session:</p>
 <blockquote>
 <p>investigate alert <code>&lt;alert id&gt;</code></p>
 </blockquote>
 <h3 id="where-this-install-comes-from">Where this install comes from</h3>
-<p>Antigravity does not use a plugin marketplace — <code>agy</code> installs the directory the URL points at. The
-community build lives in Raffkin's own repository; the Exabeam-supported build is a vendored copy of
-the same tree, served from the Exabeam Plug-in Catalog under its own terms and support. The command
-above is the one for <em>this</em> copy; the other build has its own.</p>
+<p>Antigravity has a Marketplace, but no catalog you add yourself: there is no <code>agy plugin marketplace add</code>,
+so <code>agy</code> installs the directory the URL points at, and the plugin lands in <code>~/.gemini/config/plugins/</code>
+under its manifest name.</p>
+<!-- community-only -->
+<p>This is the <strong>community build</strong>, from the plugin's own source repository. The Exabeam-supported build is a
+vendored copy of the same tree, served from the <a href="https://plugins.exabeam.com/">Exabeam Plug-in Catalog</a>
+under its own terms and support, and it has its own install command.</p>
+<!-- /community-only -->
+<!-- distribution-only
+This is a **distribution copy** of the plugin, provided under {{terms}} by {{vendor}}, with {{support}}. It
+is a vendored copy of the community source tree, re-keyed to this distribution's own name; the command
+above is the one for *this* copy, and the community build has its own.
+/distribution-only -->
+
 <h3 id="what-is-different-on-this-host">What is different on this host</h3>
 <p>Raffkin's three skills and the Exabeam connection work the same way here. <strong>The bundled
 human-in-the-loop gate does not.</strong></p>
@@ -419,14 +438,28 @@ yes on dismiss/close and mail, and holds even under <code>--dangerously-skip-per
 equivalent comes from its approval policy. On Antigravity <strong>neither applies</strong>: approval behaviour is
 whatever Antigravity itself does for MCP tools, and Raffkin's deny tier, ask tier and per-session
 write budget are not in force.</p>
-<p>What still protects you here, because it lives in the connector rather than the host: containment and
-rule-write tools are refused at the bridge, what the model reads is screened for injected
-instructions, what it writes back is neutralized, and every call is on the audit trail.</p>
-<p>Treat Antigravity as the host where <strong>you</strong> are the approval step. Antigravity supports <code>PreToolUse</code>
-hooks with allow/deny/ask, so porting the gate is tracked in
-<a href="https://github.com/open-agent-ai-security/raffkin/issues/305">raffkin#305</a> — it is not shipped until
-it has been driven against a live <code>agy</code>, because a gate whose matcher never fires reports success and
-protects nothing.</p>
+<p>What still protects you here, because it lives in the connector rather than the host: what the model
+reads is screened for injected instructions, what it writes back is neutralized and masked, a <code>create_case</code>
+carrying a closing disposition is refused, and every call is on the audit trail. Those run on every host.</p>
+<p>What does <strong>not</strong> protect you here is the deny tier. It is a <em>host</em> control on both other hosts — the
+bundled hook on Claude Code, <code>disabled_tools</code> on Codex — and the connector does not re-implement it, so on
+Antigravity a containment or rule-write tool the Exabeam MCP offers is not refused by anything of ours.
+Today the MCP exposes no containment tool at all, so there is nothing to call; treat that as the reason to
+read every write, not as a guarantee, because it changes when the tool surface does.</p>
+<p>Treat Antigravity as the host where <strong>you</strong> are the approval step: read each Exabeam write before you
+allow it, and never leave a session running unattended.</p>
+<!-- community-only -->
+<p>Antigravity supports <code>PreToolUse</code> hooks with allow/deny/ask, so porting the gate is tracked in
+<a href="https://github.com/open-agent-ai-security/raffkin/issues/305">raffkin#305</a>, and moving the deny tier into
+the connector — where it would hold on every host — in
+<a href="https://github.com/open-agent-ai-security/raffkin/issues/308">raffkin#308</a>. Neither ships until it has been
+driven against a live <code>agy</code>: a gate whose matcher never fires reports success and protects nothing.</p>
+<!-- /community-only -->
+<!-- distribution-only
+Antigravity supports `PreToolUse` hooks with allow/deny/ask, so a future release can carry the gate on this
+host too; {{support}} can tell you which release that is.
+/distribution-only -->
+
 <h2 id="updating">Updating</h2>
 <pre><code class="language-bash"># Claude Code
 claude plugin marketplace update open-agent-ai-security
@@ -436,6 +469,19 @@ claude plugin update raffkin@open-agent-ai-security
 codex plugin marketplace upgrade open-agent-ai-security
 codex plugin add raffkin@open-agent-ai-security
 </code></pre>
+<p>On Antigravity there is no catalog to refresh — re-run the install command, which re-reads the source:</p>
+<!-- community-only -->
+
+<pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin install {{antigravity_install}}
+</code></pre>
+
+/distribution-only -->
+
 <p>Both commands matter on Claude Code: the first refreshes the catalog, the second installs from it.
 Restart or <code>/reload-plugins</code> to apply. Auto-update on Claude Code is per marketplace and off by default
 for marketplaces you add yourself; turn it on under <code>/plugin</code> → <strong>Marketplaces</strong> → <code>open-agent-ai-security</code>,
@@ -476,8 +522,11 @@ none of them run when Claude Code talks to the remote MCP directly. Only the dis
 survives, and only if the server is named <code>exabeam</code>. Use this for a connectivity check, not for investigations you rely on.</p>
 <h2 id="key-entitlements">Key entitlements</h2>
 <p>Whoever grants the key's access entitlements can check against this list rather than guessing. These are
-the Exabeam MCP tools Raffkin calls, shown without their <code>exabeam_</code> prefix. Every containment or
-rule-writing tool is refused before it reaches your tenant, and any tool not on this list asks you first.</p>
+the Exabeam MCP tools Raffkin calls, shown without their <code>exabeam_</code> prefix. Any tool not on this list asks
+you first, and on Claude Code and Codex every containment or rule-writing tool is refused by the host gate
+before it reaches your tenant. <strong>On Antigravity that refusal is not in force</strong> — see
+<a href="#what-is-different-on-this-host">What is different on this host</a>. Entitling the key to nothing beyond this
+list is the control that holds on every host, so do that whichever host you use.</p>
 <table>
 <thead>
 <tr>
@@ -513,8 +562,21 @@ claude plugin marketplace remove open-agent-ai-security   # optional; also remov
 codex plugin remove raffkin@open-agent-ai-security
 codex plugin marketplace remove open-agent-ai-security   # optional; same caveat
 </code></pre>
-<p>Removing the plugin removes the gate it shipped. Neither command touches <code>~/.exabeam-mcp.env</code>; delete
-that yourself when you are done with the credentials.</p></article>
+<p>On Antigravity the plugin is named, not keyed to a marketplace:</p>
+<!-- community-only -->
+
+<pre><code class="language-bash">agy plugin uninstall raffkin
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin uninstall {{plugin_name}}
+</code></pre>
+
+/distribution-only -->
+
+<p>On Claude Code and Codex, removing the plugin removes the gate it shipped. None of the three commands
+touches <code>~/.exabeam-mcp.env</code>; delete that yourself when you are done with the credentials.</p></article>
     <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/docs/installation.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>
 </div>

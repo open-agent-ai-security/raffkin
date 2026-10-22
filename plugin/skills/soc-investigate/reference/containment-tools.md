@@ -52,7 +52,8 @@ Not containment, but the same posture — actions Raffkin **must never perform**
 Exabeam MCP grew `exabeam_create_analytics_rule` (2026-09: builds and creates a detection rule
 server-side from one of six canned names) and the proxy defines `exabeam_update_analytics_rule`. The
 `rule-tuning` skill's contract is *proposals for detection engineering to act on*, and `SKILL.md`
-forbids applying or claiming to have applied a rule change, so both are denied on both hosts, under
+forbids applying or claiming to have applied a rule change, so both are denied by the host gate on Claude
+Code and Codex (Antigravity has no gate of this plugin's — the skill rule stands alone there), under
 both spellings, exactly like the containment verbs. A future rule-write tool under a new name lands on
 the hook's unknown-tool rule (ask), which is the safety net until it is classified here.
 

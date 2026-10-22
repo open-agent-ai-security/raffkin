@@ -78,7 +78,8 @@ and each one has to serve all three hosts.
 How each distribution is built from this repo:
 
 - **Community** is a **pointer.** The catalog entry is a `git-subdir` source naming this repo's `plugin/`
-  at a pinned commit; nothing is copied. Moving the pin ships a new version.
+  on `main` — `ref: main`, no commit hash — so nothing is copied and an install resolves `main` at install
+  time. Merging to `main` ships a new version; there is no second step, and no pin to move.
 - **Supported** is a **copy.** `vendor_plugin.py` takes a `git archive` of `plugin/` at a pinned commit,
   applies the declared identity overlay (re-keying `raffkin` → `soc` and relicensing), re-runs the
   payload's own `gen_identity.py`, and commits the result as `soc/`. A build reaches customers only when
@@ -86,8 +87,10 @@ How each distribution is built from this repo:
 
 Two things about Antigravity, because it is the host that behaves differently:
 
-- **It does not use a plugin marketplace.** `agy` installs whatever directory a GitHub subpath URL points
-  at — this repo's `plugin/` for community, the catalog's `soc/` for supported. Same tree, two addresses.
+- **It has a Marketplace, but no catalog you add yourself.** There is no `agy plugin marketplace add`, so
+  neither of our catalogs is involved: `agy` installs whatever directory a GitHub subpath URL points at —
+  this repo's `plugin/` for community, the catalog's `soc/` for supported. Same tree, two addresses. A
+  Marketplace listing is a separate, Google-side submission on top of that URL.
 - **Nothing in the vendoring rewrites a source-repo URL.** The install key and the marketplace repo are
   substituted on re-key; a subpath URL is neither. So the Antigravity command in the guide is
   per-distribution (`{{antigravity_install}}` in the identity overlay) — otherwise the supported build's

@@ -5,23 +5,30 @@
 
 # Installation & setup
 
-Raffkin is a plugin for **Claude Code** and **OpenAI Codex** that works your **Exabeam New-Scale** tenant
-through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the same shape on both hosts: install the plugin, add one credentials
-file, check, and run your first investigation. Five minutes.
+Raffkin is a plugin for **Claude Code**, **OpenAI Codex** and **Google Antigravity** that works your
+**Exabeam New-Scale** tenant through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the
+same shape on all three hosts: install the plugin, add one credentials file, check, and run your first
+investigation. Five minutes.
 
-The safety gate is on from the moment the plugin is installed: dismissing an alert or closing a case
-always asks you first, and containment is never executed. Nothing to configure for that. On Claude Code
-the gate is a hook inside the plugin. It runs even when you start Claude Code with permission prompts
-turned off: containment is still refused, and a dismiss or close still needs a yes. Its deny on
-containment and its ask on dismiss and close still fire in those modes, and if nobody is there to give
-one, the call is refused.
+On **Claude Code and Codex** the safety gate is on from the moment the plugin is installed: dismissing an
+alert or closing a case always asks you first, and containment is never executed. Nothing to configure for
+that. On Claude Code the gate is a hook inside the plugin. It runs even when you start Claude Code with
+permission prompts turned off: containment is still refused, and a dismiss or close still needs a yes. Its
+deny on containment and its ask on dismiss and close still fire in those modes, and if nobody is there to
+give one, the call is refused.
+
+On **Antigravity** that gate does not ship yet, and this guide does not pretend otherwise — see
+[What is different on this host](#what-is-different-on-this-host) before you install there.
 
 ## Before you start
 
-- **A host agent:** the `claude` CLI (Claude Code) or the `codex` CLI (Codex), signed in.
+- **A host agent:** the `claude` CLI (Claude Code), the `codex` CLI (Codex) or the `agy` CLI
+  (Google Antigravity), signed in.
 - **A supported model.** On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See [Security](security-guardrails.md#how-it-is-tested)
-  for how the supported models are validated.
+  for how the supported models are validated. **The Gemini models Antigravity runs are not in that
+  validation set** — no release has been driven against them, so treat Antigravity as unvalidated on the
+  model axis as well as the gate axis.
 - **[`uv`](https://docs.astral.sh/uv/) 0.5.23 or newer** on your `PATH`. It runs the bundled Exabeam
   connector and installs the connector's own Python dependencies; there is nothing to `pip install`.
   Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
@@ -157,7 +164,7 @@ agy plugin list      # expect: raffkin
 <!-- distribution-only
 ```bash
 agy plugin install {{antigravity_install}}
-agy plugin list      # expect: the plugin name in this copy's manifest
+agy plugin list      # expect this copy's plugin name, as its manifest spells it
 ```
 /distribution-only -->
 
@@ -167,8 +174,12 @@ agy plugin list      # expect: the plugin name in this copy's manifest
 **3. Check the setup.**
 
 ```bash
-bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
+bash ~/.gemini/config/plugins/raffkin/preflight.sh
 ```
+
+Expect `✓` on every line **except the gate**, which reports a `!` naming itself as not active on this host
+— that warning is correct here, not a misconfiguration to fix. The script detects Antigravity from its own
+install path, so `--platform antigravity` is only needed if you run a copy from somewhere else.
 
 **4. Run your first investigation.** In an Antigravity session:
 
@@ -176,10 +187,21 @@ bash ~/.gemini/config/plugins/raffkin/preflight.sh --platform antigravity
 
 ### Where this install comes from
 
-Antigravity does not use a plugin marketplace — `agy` installs the directory the URL points at. The
-community build lives in Raffkin's own repository; the Exabeam-supported build is a vendored copy of
-the same tree, served from the Exabeam Plug-in Catalog under its own terms and support. The command
-above is the one for *this* copy; the other build has its own.
+Antigravity has a Marketplace, but no catalog you add yourself: there is no `agy plugin marketplace add`,
+so `agy` installs the directory the URL points at, and the plugin lands in `~/.gemini/config/plugins/`
+under its manifest name.
+
+<!-- community-only -->
+This is the **community build**, from the plugin's own source repository. The Exabeam-supported build is a
+vendored copy of the same tree, served from the [Exabeam Plug-in Catalog](https://plugins.exabeam.com/)
+under its own terms and support, and it has its own install command.
+<!-- /community-only -->
+<!-- distribution-only
+This is a **distribution copy** of the plugin, provided under {{terms}} by {{vendor}}, with {{support}}. It
+is a vendored copy of the community source tree, re-keyed to this distribution's own name; the command
+above is the one for *this* copy, and the community build has its own.
+/distribution-only -->
+
 
 ### What is different on this host
 
@@ -192,15 +214,31 @@ equivalent comes from its approval policy. On Antigravity **neither applies**: a
 whatever Antigravity itself does for MCP tools, and Raffkin's deny tier, ask tier and per-session
 write budget are not in force.
 
-What still protects you here, because it lives in the connector rather than the host: containment and
-rule-write tools are refused at the bridge, what the model reads is screened for injected
-instructions, what it writes back is neutralized, and every call is on the audit trail.
+What still protects you here, because it lives in the connector rather than the host: what the model
+reads is screened for injected instructions, what it writes back is neutralized and masked, a `create_case`
+carrying a closing disposition is refused, and every call is on the audit trail. Those run on every host.
 
-Treat Antigravity as the host where **you** are the approval step. Antigravity supports `PreToolUse`
-hooks with allow/deny/ask, so porting the gate is tracked in
-[raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305) — it is not shipped until
-it has been driven against a live `agy`, because a gate whose matcher never fires reports success and
-protects nothing.
+What does **not** protect you here is the deny tier. It is a *host* control on both other hosts — the
+bundled hook on Claude Code, `disabled_tools` on Codex — and the connector does not re-implement it, so on
+Antigravity a containment or rule-write tool the Exabeam MCP offers is not refused by anything of ours.
+Today the MCP exposes no containment tool at all, so there is nothing to call; treat that as the reason to
+read every write, not as a guarantee, because it changes when the tool surface does.
+
+Treat Antigravity as the host where **you** are the approval step: read each Exabeam write before you
+allow it, and never leave a session running unattended.
+
+<!-- community-only -->
+Antigravity supports `PreToolUse` hooks with allow/deny/ask, so porting the gate is tracked in
+[raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305), and moving the deny tier into
+the connector — where it would hold on every host — in
+[raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308). Neither ships until it has been
+driven against a live `agy`: a gate whose matcher never fires reports success and protects nothing.
+<!-- /community-only -->
+<!-- distribution-only
+Antigravity supports `PreToolUse` hooks with allow/deny/ask, so a future release can carry the gate on this
+host too; {{support}} can tell you which release that is.
+/distribution-only -->
+
 
 ## Updating
 
@@ -213,6 +251,19 @@ claude plugin update raffkin@open-agent-ai-security
 codex plugin marketplace upgrade open-agent-ai-security
 codex plugin add raffkin@open-agent-ai-security
 ```
+
+On Antigravity there is no catalog to refresh — re-run the install command, which re-reads the source:
+
+<!-- community-only -->
+```bash
+agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+```
+<!-- /community-only -->
+<!-- distribution-only
+```bash
+agy plugin install {{antigravity_install}}
+```
+/distribution-only -->
 
 Both commands matter on Claude Code: the first refreshes the catalog, the second installs from it.
 Restart or `/reload-plugins` to apply. Auto-update on Claude Code is per marketplace and off by default
@@ -262,8 +313,11 @@ survives, and only if the server is named `exabeam`. Use this for a connectivity
 ## Key entitlements
 
 Whoever grants the key's access entitlements can check against this list rather than guessing. These are
-the Exabeam MCP tools Raffkin calls, shown without their `exabeam_` prefix. Every containment or
-rule-writing tool is refused before it reaches your tenant, and any tool not on this list asks you first.
+the Exabeam MCP tools Raffkin calls, shown without their `exabeam_` prefix. Any tool not on this list asks
+you first, and on Claude Code and Codex every containment or rule-writing tool is refused by the host gate
+before it reaches your tenant. **On Antigravity that refusal is not in force** — see
+[What is different on this host](#what-is-different-on-this-host). Entitling the key to nothing beyond this
+list is the control that holds on every host, so do that whichever host you use.
 
 | Needed for | Tools |
 |---|---|
@@ -284,5 +338,18 @@ codex plugin remove raffkin@open-agent-ai-security
 codex plugin marketplace remove open-agent-ai-security   # optional; same caveat
 ```
 
-Removing the plugin removes the gate it shipped. Neither command touches `~/.exabeam-mcp.env`; delete
-that yourself when you are done with the credentials.
+On Antigravity the plugin is named, not keyed to a marketplace:
+
+<!-- community-only -->
+```bash
+agy plugin uninstall raffkin
+```
+<!-- /community-only -->
+<!-- distribution-only
+```bash
+agy plugin uninstall {{plugin_name}}
+```
+/distribution-only -->
+
+On Claude Code and Codex, removing the plugin removes the gate it shipped. None of the three commands
+touches `~/.exabeam-mcp.env`; delete that yourself when you are done with the credentials.

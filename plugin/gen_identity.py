@@ -12,7 +12,11 @@
 Generated:
   .claude-plugin/plugin.json                    Claude Code manifest
   .codex-plugin/plugin.json                     Codex manifest (same skills, Codex-only fields)
-  .antigravity-plugin/plugin.json               Google Antigravity manifest (skills + MCP + Marketplace fields)
+  .antigravity-plugin/plugin.json               Google Antigravity manifest (skills + MCP + Marketplace fields:
+                                                displayName, logo, suggestedPrompts, category)
+  .mcp.antigravity.json                         the same launch command as .mcp.json, derived from it with
+                                                ${CLAUDE_PLUGIN_ROOT} swapped for the ${PLUGIN_ROOT} Antigravity
+                                                resolves, and the `type` key dropped (not in Google's schema)
   skills/soc-investigate/settings.snippet.json  the permission gate — every rule spelled out under the
                                                 bundled-MCP prefix mcp__plugin_<name>_<server>__ and/or the
                                                 manual prefix mcp__<server>__, from the bare-name tiers in
@@ -52,7 +56,11 @@ OUT = {
     "snippet": HERE / "skills" / "soc-investigate" / "settings.snippet.json",
     "shell": HERE / "identity.sh",
 }
-MCP_FILES = (".mcp.json", ".mcp.codex.json", ".mcp.antigravity.json")
+# The HAND-MAINTAINED MCP files, which is what `mcpServer` is cross-checked against. Deliberately not
+# .mcp.antigravity.json: that file is GENERATED from .mcp.json below, so reading its key here would make a
+# server-key rename self-blocking — check_server would see the stale generated key, disagree, and exit
+# before the regeneration that would have fixed it (review of #306).
+MCP_FILES = (".mcp.json", ".mcp.codex.json")
 
 
 def load(p):
@@ -214,14 +222,14 @@ def terms_slug(terms):
     return terms.replace("-", "--").replace(" ", "_")
 
 
-def _switch_distribution_prose(text, dist=None):
+def _switch_distribution_prose(text, dist=None, name=""):
     """Drop community-only blocks, unwrap distribution-only blocks, fill that prose's {{vendor}}, {{terms}} and
     {{support}} from the distribution block, point the license badge at the Apache text (LICENSE holds the
     distribution's terms in such a copy), and tidy the blank lines the removals leave. Idempotent: a second
     pass finds nothing."""
     text = _COMMUNITY_BLOCK.sub("", text)
     text = _DISTRIBUTION_WRAP.sub("", text)
-    for token, value in _distribution_tokens(dist or {}).items():
+    for token, value in _distribution_tokens(dist or {}, name).items():
         text = text.replace(token, value)
     terms = terms_name(dist)
     if terms:       # the package's own terms lead: "License: Exabeam Enterprise Agreement", linked to its LICENSE
@@ -317,8 +325,20 @@ def rewrite_docs(prev, identity):
     new_key, new_repo = install_key(identity), identity["marketplace"]["repo"]
     prev_mkt, new_mkt = prev.get("marketplace", ""), identity["marketplace"]["name"]
     prev_path, new_path = f"plugins/cache/{prev_mkt}/{prev.get('name', '')}/", f"plugins/cache/{new_mkt}/{identity['name']}/"
-    subs = [(prev_path, new_path), (prev["key"], new_key), (prev["repo"], new_repo)]
-    subs = [(a, b) for a, b in subs if a and a != b and not a.startswith("plugins/cache//")]
+    # Antigravity installs by MANIFEST NAME, into ~/.gemini/config/plugins/<name>/ — so the re-keyed copy's
+    # preflight lives under its own name, and the Claude cache rewrite above does not reach that path. Left
+    # out, the `soc` docs sent the operator to .../plugins/raffkin/preflight.sh, which does not exist on
+    # their machine (review of #306).
+    # NO trailing slash, deliberately. _replace_bounded refuses a match that continues into a longer
+    # identifier, and _AFTER includes the alphanumerics a NEXT PATH SEGMENT starts with -- so
+    # "config/plugins/raffkin/" never matched ".../config/plugins/raffkin/preflight.sh", the one place the
+    # path appears. Ending the pattern at the name puts a `/` in the lookahead instead, which is not an
+    # identifier character, and `raffkin-dev` is still correctly left alone because `-` is.
+    prev_agy = f"config/plugins/{prev.get('name', '')}"
+    new_agy = f"config/plugins/{identity['name']}"
+    subs = [(prev_path, new_path), (prev_agy, new_agy), (prev["key"], new_key), (prev["repo"], new_repo)]
+    subs = [(a, b) for a, b in subs if a and a != b
+            and not a.startswith("plugins/cache//") and a != "config/plugins/"]
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
     switch = bool(identity.get("distribution"))
     prose = (prev.get("product", ""), product_name(identity))
@@ -333,7 +353,7 @@ def rewrite_docs(prev, identity):
         if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
             new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new, identity.get("distribution") or {})
+            new = _switch_distribution_prose(new, identity.get("distribution") or {}, identity["name"])
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -401,7 +421,41 @@ DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support", "antigravityInstall")  
 _VENDOR_FALLBACK = "the organization that distributes it"
 
 
-def _distribution_tokens(dist):
+LOGO_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
+
+
+def logo_path(identity):
+    """The Marketplace listing's logo, as the manifest spells it: a path relative to the plugin root.
+
+    It lives in identity.json rather than here so a distribution's overlay can point the listing at its own
+    mark the same way it re-keys `name` (review of #306) -- which means it is overlay-supplied input, and is
+    checked like any other. It has to be a bundled file INSIDE the payload: a listing whose logo resolves
+    outside the plugin either 404s on the card or ships whatever the path landed on. An `https://` URL is
+    valid per the guide and passed through; anything else must resolve under the payload root, carry an image
+    suffix, and not be a symlink (a symlink's target is not in the payload the user installed)."""
+    raw = identity.get("logo")
+    if not raw:
+        sys.exit("identity.json needs a `logo`: Google's Marketplace requires one for the Antigravity listing")
+    if raw.startswith("https://"):
+        return raw
+    if raw.startswith("http://"):
+        sys.exit(f"identity.json logo {raw!r} must be https:// — a plain-http logo is blocked on the card")
+    rel = raw[2:] if raw.startswith("./") else raw
+    if not rel or rel.startswith("/") or ".." in Path(rel).parts or "" in Path(rel).parts[:-1]:
+        sys.exit(f"identity.json logo {raw!r} must be a relative path inside the plugin, with no '..' segment")
+    p = HERE / rel
+    if p.is_symlink():
+        sys.exit(f"identity.json logo {raw!r} is a symlink — the listing logo must be a real file in the payload")
+    if not p.is_file():
+        sys.exit(f"identity.json logo {raw!r} is not a file in the payload (looked for {p})")
+    if p.resolve().parent != p.parent.resolve() or not p.resolve().is_relative_to(HERE.resolve()):
+        sys.exit(f"identity.json logo {raw!r} resolves outside the plugin ({p.resolve()})")
+    if p.suffix.lower() not in LOGO_SUFFIXES:
+        sys.exit(f"identity.json logo {raw!r} is not an image ({', '.join(LOGO_SUFFIXES)})")
+    return raw
+
+
+def _distribution_tokens(dist, name=""):
     """The distribution-only prose's placeholders, from the distribution block, with generic fallbacks so a
     distribution that sets none of them still reads correctly."""
     vendor = dist.get("vendor") or _VENDOR_FALLBACK
@@ -412,8 +466,13 @@ def _distribution_tokens(dist):
     # distribution sets its own URL here, or the prose says to ask rather than naming the community
     # build -- which is what an un-rewritten URL would otherwise do.
     agy = dist.get("antigravityInstall") or "<the subpath URL for this distribution — ask its maintainer>"
+    # `agy plugin uninstall <name>` names the plugin BARE -- not as an install key, a repo or a path, so
+    # none of rewrite_docs's substitutions reach it, and the literal upstream name shipped in the
+    # distribution's own uninstall instructions (review of #306). The token lives only inside the
+    # distribution-only block, which stays an HTML comment upstream, so it survives a regeneration the way
+    # {{antigravity_install}} does.
     return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support,
-            "{{antigravity_install}}": agy}
+            "{{antigravity_install}}": agy, "{{plugin_name}}": name or "<this copy's plugin name>"}
 
 
 def manifest_fields(identity):
@@ -455,20 +514,34 @@ def build(identity, perms):
     # auto-discover the MCP config, so the server has to be named here or the skills load with no
     # Exabeam tools at all. displayName, logo and suggestedPrompts are required for a Marketplace
     # listing; category is recommended.
-    antigravity = {**common, "displayName": identity["displayName"],
+    # The listing's own description, NOT the long one: Google recommends 120-160 characters for a
+    # Marketplace card, and the long description ends "dismiss/close gated by the host agent's
+    # tool-approval rules" -- which is exactly the claim this host cannot keep (review of #306). The
+    # logo comes from identity.json so a distribution's overlay can point its listing at its own mark.
+    antigravity = {**common, "description": identity["shortDescription"],
+                   "displayName": identity["displayName"],
                    "keywords": identity["keywords"] + identity["hostKeywords"]["antigravity"],
                    "skills": ["./skills"],
                    "mcpServers": "./.mcp.antigravity.json",
-                   "logo": "assets/logo.svg",
+                   "logo": logo_path(identity),
                    "category": identity["category"],
                    "suggestedPrompts": identity["suggestedPrompts"]}
     # Antigravity resolves ${PLUGIN_ROOT}, not ${CLAUDE_PLUGIN_ROOT}: pointing it at .mcp.json would
     # hand it a command with an unresolved variable and the bridge would never start. So the Antigravity
     # MCP file is generated FROM .mcp.json with the variable swapped -- one source for the launch command,
     # so a change there (the --locked flag, #255) cannot reach one host and miss the other.
+    #
+    # Two things are dropped in the derivation, and only these two. `type` is not a field in Google's MCP
+    # schema -- its documented stdio example carries command/args/env and nothing else -- so a strict reader
+    # would reject the server and the skills would load with no Exabeam tools, which is the failure this
+    # whole file exists to prevent. A lenient reader ignores it. Dropping it is correct either way, and the
+    # transport is still unambiguous: a `command` IS the stdio transport.
     mcp = json.loads((HERE / ".mcp.json").read_text())
     antigravity_mcp = json.loads(
         json.dumps(mcp).replace("${CLAUDE_PLUGIN_ROOT}", "${PLUGIN_ROOT}"))
+    for server in antigravity_mcp.get("mcpServers", {}).values():
+        if isinstance(server, dict):
+            server.pop("type", None)
     return {"claude": claude, "codex": codex, "antigravity": antigravity,
             "antigravity_mcp": antigravity_mcp, "snippet": snippet,
             "shell": shell_include(identity, perms)}
@@ -490,6 +563,16 @@ def main(argv):
         guide = HERE / "docs" / "installation.md"
         if guide.exists() and install_key(identity) not in guide.read_text():
             names.append(str(guide.relative_to(HERE.parent)) + " (does not name this distribution's install key)")
+        # An Antigravity install has no marketplace key to rewrite — it is a GitHub subpath URL, which only
+        # the distribution knows. Unset, the guide shipped "<the subpath URL for this distribution — ask its
+        # maintainer>" to real users (review of #306). Fail loudly instead, and only where it matters: a
+        # distribution copy that actually ships the Antigravity manifest. A distribution that is not listing
+        # on this host drops .antigravity-plugin/ and this never fires.
+        if identity.get("distribution") and OUT["antigravity"].exists() \
+                and not (identity["distribution"].get("antigravityInstall") or "").strip():
+            names.append("plugin/identity.json (ships .antigravity-plugin/plugin.json but its distribution block "
+                         "sets no `antigravityInstall`, so the install guide would tell users to ask its "
+                         "maintainer for the URL — set it, or drop .antigravity-plugin/ to skip this host)")
         lic = identity["license"]
         wrong = sorted({str(f.relative_to(HERE.parent)) for f, i in spdx_headers() if i != lic})
         if wrong:
@@ -523,7 +606,12 @@ def main(argv):
     dist = identity.get("distribution") or {}
     print(f"wrote {', '.join(str(OUT[k].relative_to(HERE.parent)) for k in OUT)} — name={identity['name']!r}, "
           f"version {identity['version']}, {n} permission rules"
-          + (f"; manifests carry the distribution's {', '.join(sorted(dist))}" if dist else "")
+          # Only the MANIFEST keys here. `antigravityInstall` and the other prose keys never reach a
+          # manifest, and naming them on this line said they did.
+          + (f"; manifests carry the distribution's {', '.join(sorted(set(dist) & set(DISTRIBUTION_KEYS)))}"
+             if set(dist) & set(DISTRIBUTION_KEYS) else "")
+          + (f"; distribution prose filled from {', '.join(sorted(set(dist) & set(DISTRIBUTION_PROSE_KEYS)))}"
+             if set(dist) & set(DISTRIBUTION_PROSE_KEYS) else "")
           + (f"; install key {prev['key']} → {install_key(identity)} in {len(changed)} file(s)" if changed else "")
           + (f"; left {len(kept)} longer identifier(s) untouched: {', '.join(kept)}" if kept else "")
           + (f"; license {prev['license']} → {identity['license']} in {len(relicensed)} file(s)" if relicensed else ""))

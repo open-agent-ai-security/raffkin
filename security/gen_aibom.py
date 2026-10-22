@@ -7,12 +7,13 @@
 
 Raffkin is an AI *agent/application*, not a model: a plugin of three skills (prompt + methodology) plus a
 small MCP connector, running on a hosted foundation model the host agent picks (Claude on Claude Code, an
-OpenAI model on Codex) and calling the Exabeam New-Scale
+OpenAI model on Codex, a Gemini model on Google Antigravity) and calling the Exabeam New-Scale
 MCP. Model-card AI-BOM tools (which ingest a Hugging Face model id) can't describe that, so we assemble
 a CycloneDX AI-BOM directly from what Raffkin actually ships:
 
   - the root component (this plugin) from plugin/.claude-plugin/plugin.json,
-  - the foundation models (Claude; OpenAI on Codex) as external machine-learning-model components,
+  - the foundation models (Claude; OpenAI on Codex; Gemini on Antigravity) as external
+    machine-learning-model components — the Gemini entry records that it is NOT red-team validated,
   - the system prompt / methodology (SKILL.md + reference corpus) as a `data` component,
   - the connector's Python dependencies (PEP 723) as `library` components,
   - the Exabeam MCP as a `service` with its inbound/outbound data flows,
@@ -138,7 +139,7 @@ def build_bom(timestamp):
         ],
         "properties": [
             {"name": "ai:systemType", "value": "agent"},
-            {"name": "ai:platform", "value": "plugin for Claude Code and OpenAI Codex (skills + bundled MCP connector)"},
+            {"name": "ai:platform", "value": "plugin for Claude Code, OpenAI Codex and Google Antigravity (skills + bundled MCP connector)"},
             {"name": "ai:skillName", "value": ", ".join(skills)},
         ],
     }
@@ -173,6 +174,25 @@ def build_bom(timestamp):
                 {"name": "ai:hosting", "value": "external-hosted-api"},
                 {"name": "ai:weightsDistributed", "value": "false"},
                 {"name": "ai:pinnedByThisProject", "value": "false"},
+            ],
+        },
+        {
+            "bom-ref": "model:google-gemini",
+            "type": "machine-learning-model",
+            "name": "Gemini model (via Google Antigravity)",
+            "description": ("Foundation model the skills run on when the host is Google Antigravity. Hosted "
+                            "API — weights are not distributed with Raffkin, and the specific member is "
+                            "selected by Antigravity, not pinned by Raffkin. NOT in the validated set: no "
+                            "release has been red-teamed on a Gemini model, and the bundled human-in-the-loop "
+                            "gate does not run on this host, so the skill's own ask is the only approval step "
+                            "(see plugin/docs/installation.md)."),
+            "supplier": {"name": "Google", "url": ["https://ai.google"]},
+            "externalReferences": [{"type": "website", "url": "https://antigravity.google/"}],
+            "properties": [
+                {"name": "ai:hosting", "value": "external-hosted-api"},
+                {"name": "ai:weightsDistributed", "value": "false"},
+                {"name": "ai:pinnedByThisProject", "value": "false"},
+                {"name": "ai:redTeamValidated", "value": "false"},
             ],
         },
         {

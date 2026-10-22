@@ -34,8 +34,9 @@ document describes how to report one privately, what is in scope, and what to ex
   make it record case content, or to make a gated decision or guardrail firing go unrecorded.
 - The eval harness `evals/` and its HARD safety gates; the red-team runner and grader
   (`security/redteam/run.py`).
-- The plugin manifests (`plugin/.claude-plugin/`, `plugin/.codex-plugin/`), the bundled
-  `plugin/.mcp.json` / `.mcp.codex.json`, `plugin/install.sh` and `plugin/preflight.sh`.
+- The plugin manifests (`plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
+  `plugin/.antigravity-plugin/`), the bundled `plugin/.mcp.json` / `.mcp.codex.json` /
+  `.mcp.antigravity.json`, `plugin/install.sh` and `plugin/preflight.sh`.
 - The connector's dependency pinning — the bounded PEP 723 header and the hash-pinned
   `plugin/connector/exabeam-mcp-bridge.py.lock` (supply-chain integrity of what a fresh install
   resolves).
