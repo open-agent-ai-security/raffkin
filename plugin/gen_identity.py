@@ -39,6 +39,7 @@ import re
 import shlex
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
 IDENTITY = HERE / "identity.json"
@@ -317,7 +318,14 @@ def rewrite_docs(prev, identity):
     subs = [(prev_path, new_path), (prev["key"], new_key), (prev["repo"], new_repo)]
     subs = [(a, b) for a, b in subs if a and a != b and not a.startswith("plugins/cache//")]
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
-    switch = bool(identity.get("distribution"))
+    # Only the keys that mean "this copy is redistributed under other terms" switch the prose. The
+    # listing keys do not: an `icon` plus a `supportUrl` describe a DIRECTORY ENTRY, and this repo wants
+    # its own entry without telling its own README that it is somebody else's redistribution. Switching on
+    # the block's mere presence stripped the Project sponsor section and every community-only block from
+    # four docs, and re-pointed the licence badge at a LICENSE-APACHE this repo does not ship -- which made
+    # the fields unusable for the community listing they were added for (review of #302).
+    dist_block = identity.get("distribution") or {}
+    switch = any(k in dist_block for k in DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS)
     prose = (prev.get("product", ""), product_name(identity))
     prefix = (f"mcp__plugin_{prev['name']}_", f"mcp__plugin_{identity['name']}_") if prev.get("name") and prev["name"] != identity["name"] else None
     changed, kept = [], []
@@ -330,7 +338,7 @@ def rewrite_docs(prev, identity):
         if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
             new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new, identity.get("distribution") or {})
+            new = _switch_distribution_prose(new, dist_block)
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -426,26 +434,69 @@ def manifest_fields(identity):
     return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
 
 
+IMAGE_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
+
+
+def payload_image(raw, label):
+    """A path to an image that SHIPS IN THE PAYLOAD, checked rather than copied through.
+
+    This is overlay-supplied input: a distribution points its listing at its own mark by patching
+    identity.json, and the generator runs inside the vendoring pipeline. A path that leaves the payload
+    either 404s on the listing or ships whatever the path landed on, and neither is visible in a diff of
+    identity.json. Every branch below was a path that passed the first version of this check (review of
+    #302): `.//etc/hosts`, because pathlib treats the remainder as absolute and drops HERE; a symlink out
+    of the tree, whose target is not in the payload the user installed; and `./README.md`, which is not an
+    image at all. Returns the path as the manifest should spell it.
+
+    REQUIREMENT ON A VENDORING CATALOG. The file has to be there when this runs. Exabeam-Labs/plugins
+    currently regenerates the payload BEFORE applying its `overlay_files`, in both vendor_plugin.py and
+    verify_upstream -- so an icon delivered as a file overlay (Exabeam-Labs/plugins#47) is not yet on disk
+    and vendoring aborts here with "not a file in the payload". The fix belongs there, applying file
+    overlays before regenerating; the check stays here, because the alternative is a listing whose icon
+    404s and nothing to tell anyone it will."""
+    if not isinstance(raw, str) or not raw.strip():
+        sys.exit(f"identity.json {label} must be a non-empty string, got {raw!r}")
+    raw = raw.strip()
+    if "://" in raw:
+        sys.exit(f"identity.json {label} must be a path to an image inside the payload, not a URL: {raw!r}")
+    rel = raw[2:] if raw.startswith("./") else raw
+    parts = Path(rel).parts
+    if not rel or rel.startswith("/") or ".." in parts or "" in parts:
+        sys.exit(f"identity.json {label} must be a relative path inside the plugin, with no '..' segment, got {raw!r}")
+    p = HERE / rel
+    if p.is_symlink():
+        sys.exit(f"identity.json {label} is a symlink ({raw!r}) — the image must be a real file in the payload")
+    if not p.is_file():
+        sys.exit(f"identity.json {label} names {raw!r}, which is not a file in the payload (looked for {p})")
+    if not p.resolve().is_relative_to(HERE.resolve()):
+        sys.exit(f"identity.json {label} resolves outside the plugin: {p.resolve()}")
+    if p.suffix.lower() not in IMAGE_SUFFIXES:
+        sys.exit(f"identity.json {label} is not an image ({', '.join(IMAGE_SUFFIXES)}), got {raw!r}")
+    return raw
+
+
+def https_url(raw, label):
+    """An https:// URL with a host. A prefix test passes bare `https://`, which renders as a dead link in
+    the directory rather than failing anything (review of #302)."""
+    if not isinstance(raw, str) or not raw.strip():
+        sys.exit(f"identity.json {label} must be a non-empty string, got {raw!r}")
+    parts = urlsplit(raw.strip())
+    if parts.scheme != "https" or not parts.netloc:
+        sys.exit(f"identity.json {label} must be an https:// URL with a host, got {raw!r}")
+    return raw.strip()
+
+
 def listing_fields(identity):
-    """The directory-listing fields, for the Claude manifest only, omitted when unset. `icon` must be a
-    plugin-relative path (the image ships in the payload); the four URL fields must be https://."""
+    """The directory-listing fields, for the Claude manifest only, omitted when unset."""
     dist = identity.get("distribution") or {}
     out = {}
     for k in DISTRIBUTION_LISTING_KEYS:
-        v = dist.get(k)
-        if v is None:
+        if dist.get(k) is None:
             continue
-        if not isinstance(v, str) or not v.strip():
-            sys.exit(f"identity.json distribution.{k} must be a non-empty string, got {v!r}")
-        if k == "icon":
-            if not v.startswith("./") or ".." in v.split("/"):
-                sys.exit(f"identity.json distribution.icon must be a plugin-relative path starting './', got {v!r}")
-            if not (HERE / v[2:]).is_file():
-                sys.exit(f"identity.json distribution.icon names {v!r}, which is not a file in the payload")
-        elif not v.startswith("https://"):
-            sys.exit(f"identity.json distribution.{k} must be an https:// URL, got {v!r}")
-        out[k] = v
+        out[k] = (payload_image(dist[k], f"distribution.{k}") if k == "icon"
+                  else https_url(dist[k], f"distribution.{k}"))
     return out
+
 
 def build(identity, perms):
     common = {k: identity[k] for k in ("name", "version", "description", "author")} | manifest_fields(identity)

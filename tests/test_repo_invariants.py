@@ -840,6 +840,122 @@ def test_gen_identity_rekey_relicenses_every_file_of_the_copy(tmp_path):
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
 
 
+def _listing_fixture(tmp_path):
+    """A temp copy of the payload plus the generator argv, for the listing-field tests below."""
+    import shutil, sys
+    work = tmp_path / "plugin"
+    shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
+    # The payload ships no listing image: the catalog delivers it as a file overlay (Exabeam-Labs#47),
+    # which is exactly why the generator checks that the path is a real file in the payload. Plant one so
+    # these tests exercise the accept path as well as the rejections.
+    (work / "assets").mkdir(exist_ok=True)
+    (work / "assets" / "logo.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>\n')
+    return work, [sys.executable, str(work / "gen_identity.py")]
+
+
+def _set_dist(work, **keys):
+    import json
+    ident = json.loads((work / "identity.json").read_text())
+    ident["distribution"] = {k: v for k, v in keys.items() if v is not None}
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    return ident
+
+
+def test_a_listing_only_block_does_not_make_this_copy_a_redistribution(tmp_path):
+    """#302 review: the listing keys describe a DIRECTORY ENTRY, not a change of terms.
+
+    `switch = bool(identity.get("distribution"))` treated any non-empty block as "somebody else is
+    shipping this", so setting `icon` + `supportUrl` to list the community build stripped the Project
+    sponsor section and every community-only block out of four docs and re-pointed the licence badge at a
+    LICENSE-APACHE this repo does not ship. The fields were unusable for the listing they were added for.
+    """
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    before = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
+    _set_dist(work, icon="./assets/logo.svg", supportUrl="https://example.invalid/support")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+
+    after = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
+    changed = sorted(str(k) for k in before if before[k] != after.get(k))
+    assert not changed, f"a listing-only block rewrote prose in {changed}"
+    readme = (work / "README.md").read_text()
+    assert "Project sponsor" in readme, "the sponsor section was stripped by a listing-only block"
+    assert "badge/license-Apache_2.0-" in readme, "the licence badge moved off the software's own licence"
+    # the distribution-only prose must still be INERT: unwrapping it is what re-points the badge at a
+    # LICENSE-APACHE this repo does not ship
+    assert "<!-- distribution-only" in readme, "the distribution-only block was unwrapped by a listing-only block"
+
+    # and the fields still reach the Claude listing, which is the point of the exercise
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["icon"] == "./assets/logo.svg" and claude["supportUrl"] == "https://example.invalid/support"
+
+
+def test_the_listing_fields_reach_the_claude_manifest_alone(tmp_path):
+    """Unset, the manifests are byte-identical to the committed ones; set, the fields land in the Claude
+    manifest only. The directory reads them from there, and `claude plugin validate` rejects them in a
+    marketplace entry, so there is nowhere else for them to go -- and Codex and Antigravity do not read
+    them at all, so emitting them there is noise in a file a host parses."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    manifests = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    for m in manifests:
+        assert (work / m).read_text() == (ROOT / "plugin" / m).read_text(), (
+            f"{m} drifted with no distribution block set: the listing fields must be emitted ONLY when set, "
+            "so an unset block cannot move a byte in a manifest a host parses")
+
+    fields = {"icon": "./assets/logo.svg", "documentationUrl": "https://example.invalid/docs",
+              "supportUrl": "https://example.invalid/support",
+              "privacyPolicyUrl": "https://example.invalid/privacy",
+              "termsOfServiceUrl": "https://example.invalid/terms"}
+    _set_dist(work, **fields)
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    codex = json.loads((work / ".codex-plugin" / "plugin.json").read_text())
+    for k, v in fields.items():
+        assert claude.get(k) == v, f"{k} did not reach the Claude manifest"
+        assert k not in codex, f"{k} leaked into the Codex manifest, which does not read it"
+
+
+def test_gen_identity_refuses_a_listing_field_that_cannot_be_trusted(tmp_path):
+    """These are OVERLAY-supplied values: a distribution patches identity.json and the generator runs
+    inside the vendoring pipeline, so a bad value is not visible in review of the payload. Each case below
+    passed the first version of the check (review of #302), and each fails in a way nothing downstream
+    would notice -- a 404 on the listing, a dead link, or a file from outside the payload."""
+    import subprocess
+    work, gen = _listing_fixture(tmp_path)
+    (work / "assets" / "escape.svg").symlink_to("/etc/hosts")
+
+    for keys, why in [
+        ({"icon": "./nope.png"}, "not in the payload"),
+        ({"icon": ".//etc/hosts"}, "absolute after the './' is stripped"),
+        ({"icon": "../../etc/hosts"}, "parent escape"),
+        ({"icon": "./README.md"}, "not an image"),
+        ({"icon": "./assets/escape.svg"}, "symlink out of the payload"),
+        ({"icon": "https://cdn.example.invalid/i.png"}, "a URL, not a payload path"),
+        ({"icon": ""}, "empty"),
+        ({"supportUrl": "http://example.invalid/s"}, "plain http"),
+        ({"supportUrl": "https://"}, "https with no host"),
+        ({"supportUrl": "not a url"}, "not a URL at all"),
+        ({"supportUrl": ""}, "empty"),
+    ]:
+        _set_dist(work, **keys)
+        r = subprocess.run(gen, capture_output=True, text=True)
+        assert r.returncode != 0, f"{keys} ({why}) was accepted"
+        assert "distribution." in r.stderr, r.stderr
+
+    # an unknown key is refused rather than silently written into a manifest
+    _set_dist(work, iconUrl="https://example.invalid/i.png")
+    r = subprocess.run(gen, capture_output=True, text=True)
+    assert r.returncode != 0 and "distribution block accepts only" in r.stderr, r.stderr
+
+    # and the shipped mark is accepted, with or without the './'
+    for good in ("./assets/logo.svg", "assets/logo.svg"):
+        _set_dist(work, icon=good)
+        subprocess.run(gen, check=True, capture_output=True, text=True)
+
+
 def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp_path):
     """A catalog that distributes the payload under its own terms (Exabeam-Labs/plugins) sets `distribution`
     in identity.json — license, homepage, repository. The manifests describe the plugin AS DISTRIBUTED,
