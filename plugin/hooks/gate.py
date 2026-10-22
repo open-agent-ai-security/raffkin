@@ -143,7 +143,7 @@ def plugin_name(plugin_root: Path):
     return manifest or ident
 
 
-def is_bundled(tool_name: str, name) -> bool:
+def is_bundled(tool_name: str, name, host: str = "claude") -> bool:
     """Exactly the bundled bridge, under either host's namespacing: Claude Code prefixes a plugin's MCP
     server `plugin_<name>_<server>`, Antigravity `<plugin>_<server>`. No substring, no case games.
 
@@ -155,8 +155,18 @@ def is_bundled(tool_name: str, name) -> bool:
     A bare `exabeam` is deliberately NOT bundled on either host: that is what a hand-wired server is
     called, on Antigravity as much as on Claude Code, so it gets the operator's own rules and not our
     allow."""
-    return bool(name) and server_of(tool_name) in (f"plugin_{name}_{SERVER}", f"{name}_{SERVER}",
-                                                   f"plugin-{name}-{SERVER}", f"{name}-{SERVER}")
+    if not name:
+        return False
+    server = server_of(tool_name)
+    if host == "antigravity":
+        # This host's own namespacing, with both separators (#305: the live payload uses the underscore,
+        # the guide documents the hyphen).
+        return server in (f"{name}_{SERVER}", f"{name}-{SERVER}")
+    # Claude Code prefixes `plugin_`. Accepting this host's forms here too was a REGRESSION: review
+    # measured all 21 allow-tier tools changing from no-decision to allow on Claude Code for a server an
+    # operator had hand-wired as `<plugin>_exabeam`. A hand-wired server gets the operator's own rules,
+    # and which spellings count as bundled is a property of the host, not of the string.
+    return server == f"plugin_{name}_{SERVER}"
 
 
 def load_tiers(plugin_root: Path):
@@ -335,7 +345,9 @@ def _post_call(event, tool: str, target: dict, ctx=None) -> int:
     not a verdict, and a record that overstates what it knows is worse than a shorter one."""
     try:
         root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
-        decision, _reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root)))
+        host_for_bundling = (ctx or {}).get("host") or "claude"
+        decision, _reason = decide(tool, load_tiers(root),
+                                   bundled=is_bundled(tool, plugin_name(root), host_for_bundling))
     except Exception:  # noqa: BLE001 — unclassifiable: record that it ran, as the ask it would have been
         decision = "ask"
     ctx = _context(event) if ctx is None else ctx
@@ -586,7 +598,7 @@ def main(argv=None) -> int:
                 print(json.dumps({}))      # its PostToolUse contract is an empty object, not silence
             return 0
         root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
-        decision, reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root)))
+        decision, reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root), host))
         if decision == "allow" and bare(tool) in ESCALATION_WRITES:
             ok, why = spend_write_budget(event, bare(tool))
             if not ok:

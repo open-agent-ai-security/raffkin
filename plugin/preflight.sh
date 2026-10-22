@@ -423,7 +423,11 @@ import json, re, sys
 h = json.load(open(sys.argv[1]))
 keys = [k for k in h if k.endswith("-gate")] or list(h)
 g = h[keys[0]]["PreToolUse"][0]
-print("MATCH" if re.search(g["matcher"], "mcp_tool") else "NOMATCH")
+# call_mcp_tool is the step name a REAL dispatched MCP call arrives under (captured 2026-10-22);
+# mcp_tool is the one the host docs imply. A matcher catching only the documented name would never
+# fire on a live call, so the live name is the one that must match. (No apostrophes in here: this
+# program is a single-quoted shell word and one would end it.)
+print("MATCH" if re.search(g["matcher"], "call_mcp_tool") else "NOMATCH")
 print(g["hooks"][0]["command"])
 ' "$hookfile" 2>/dev/null)" || true
         matcher="$(printf '%s' "$spec" | sed -n 1p)"
@@ -433,15 +437,25 @@ print(g["hooks"][0]["command"])
           return 0
         fi
         if [ "$matcher" != "MATCH" ]; then
-          fail "Gate is OFF — the PreToolUse matcher in ${hookfile} does not match 'mcp_tool'. Every MCP call reaches a hook under that step type on this host, so a matcher that misses it is never fired and the gate is never asked; reinstall the plugin"
+          fail "Gate is OFF — the PreToolUse matcher in ${hookfile} does not match 'call_mcp_tool', the step type a dispatched MCP call actually arrives under on this host. A matcher that misses it is never fired, so the gate is never asked; reinstall the plugin"
           return 0
         fi
         # RAFFKIN_GATE_LOG=off: a probe must not forge a decision in the analyst's audit trail. cwd is the
         # directory holding hooks.json, which is what this host sets for a hook command.
-        verdict="$(printf '%s' '{"conversationId":"preflight","stepIdx":0,"toolCall":{"name":"mcp_tool","args":{"serverName":"'"${RAFFKIN_ID_MCP_SERVER:-exabeam}"'","toolCall":{"toolName":"exabeam_isolate_host","argumentsJson":"{}"}}}}' \
+        # The probe is in the shape the host really sends -- PascalCase keys beside the server, the
+        # dispatcher as the step name -- not the documented camelCase one. Probing with the documented
+        # shape is how a gate that cannot read live calls still passed its own diagnostic.
+        verdict="$(printf '%s' '{"conversationId":"preflight","stepIdx":0,"toolCall":{"name":"call_mcp_tool","args":{"ServerName":"'"${RAFFKIN_ID_NAME:-raffkin}"'_'"${RAFFKIN_ID_MCP_SERVER:-exabeam}"'","ToolName":"exabeam_isolate_host","Arguments":{"arg0":{}}}}}' \
           | ( cd "$root" && RAFFKIN_GATE_LOG=off sh -c "$cmd" ) 2>/dev/null | tr -d ' \n')" || true
+        # Spaces are stripped so one pattern matches whatever spacing the JSON came with, which is why
+        # the reason fragments below are run together.
         case "$verdict" in
-          *'"decision":"deny"'*)
+          *'"decision":"deny"'*couldnotrun*)
+            # The shell fallback refuses everything on our server, reads included: no ask tier, no write
+            # budget. It is the right failure direction and it is NOT the gate, so reporting it as one
+            # would be the false pass review found after the fallback was added.
+            fail "Gate CANNOT RUN — ${hookfile} is wired correctly, but neither python3 nor uv could execute hooks/gate.py, so the hook answered with its last-resort refusal. Every Exabeam call is refused, reads included: there is no ask tier and no write budget. Check that hooks/gate.py exists in this install and that python3 or uv is on the PATH the host launches hooks with" ;;
+          *'"decision":"deny"'*containmentaction*)
             # The command refuses containment. One thing is still unproven from in here: whether the HOST
             # has this copy registered at all. agy can answer that without a session.
             if command -v agy >/dev/null 2>&1; then
@@ -490,6 +504,8 @@ else:
             fi ;;
           "")
             fail "Gate is OFF — the hook produced no decision when handed a containment call (ran: ${runner}). No decision is read as no objection here; run '$runner \"$root/hooks/gate.py\" --antigravity' by hand to see the error" ;;
+          *'"decision":"deny"'*)
+            fail "Gate refused the containment call, but not with the gate's own reason — the hook answered ${verdict}. ${PRODUCT_NAME} cannot confirm that its permission tiers are what refused this, rather than a fallback refusing everything; treat the ask tier and the write budget as unverified on this install" ;;
           *)
             fail "Gate is NOT refusing containment — handed an isolate-host call, the hook answered ${verdict}. ${PRODUCT_NAME} never executes containment, so this is a broken gate, not a configuration choice" ;;
         esac

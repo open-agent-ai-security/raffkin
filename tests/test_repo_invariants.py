@@ -775,6 +775,13 @@ def test_the_antigravity_hook_file_arms_the_same_gate():
     assert spec, f"the hook must be keyed on the plugin name ({name}-gate), so two installed copies do not collide"
     for event in ("PreToolUse", "PostToolUse"):
         group = spec[event][0]
+        # BOTH names, and `call_mcp_tool` is the one that matters: it is what a dispatched MCP call
+        # really arrives as (captured from a live session), while `mcp_tool` is what the host's docs
+        # imply. A matcher asserted against the documented name alone passes while missing every live
+        # call, which is what review found in this very assertion.
+        assert re.search(group["matcher"], "call_mcp_tool"), (
+            f"{event} matcher {group['matcher']!r} does not match `call_mcp_tool`, the step type a "
+            "dispatched MCP call arrives under on this host; the hook would never fire on a real call")
         assert re.search(group["matcher"], "mcp_tool"), (
             f"{event} matcher {group['matcher']!r} does not match `mcp_tool`, which is how EVERY MCP call "
             "reaches a hook on this host; a tool-name matcher never fires here")

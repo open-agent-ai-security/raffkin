@@ -533,10 +533,12 @@ HOOK_TIMEOUT = 20
 # just goes unheard. That is the #212 shape ("0 HOOK MISS") on a new host, so the refusal has to be written
 # by the shell rather than left to an exit code nothing reads.
 #
-# Safe to chain onto the interpreters: every path through gate.py returns 0, including the broad `except`,
-# so a non-zero exit means the interpreter never ran the gate and printed nothing. The `||` cannot therefore
-# append a second object to a decision already on stdout. What it does NOT cover is the host killing the
-# command at `timeout` -- the shell dies with it, so no fallback runs (recorded as a residual in
+# Chaining is safe because every path through gate.py returns 0, including the broad `except`, so a
+# non-zero exit means the interpreter never ran the gate TO COMPLETION and printed no decision -- the `||`
+# cannot append a second object to a decision already on stdout. It does NOT mean the gate read nothing:
+# a python3 that consumes the payload and then dies leaves the next stage with an empty stdin, which is
+# why the chain buffers the payload in `_in` rather than re-reading it. What nothing here covers is the
+# host killing the command at `timeout`, since the shell dies with it (a residual in
 # security/design/human-in-the-loop-gate.md).
 AGY_NO_GATE = ("Raffkin gate could not run, so this call cannot be checked against the permission tiers: "
                "no python3 and no uv on PATH, or the gate script itself could not be executed. The gate "
@@ -560,11 +562,18 @@ def antigravity_hooks(identity, server):
     # which is not the same as reading that it is somebody else's. Those refuse. Written this way round
     # because the first cut keyed on success/failure and failed open exactly when the machine was most
     # broken: no interpreter AND no grep answered {} on a containment call.
-    refuse_if_ours = (f"grep -qi {server}; _rc=$?; "
-                      f"if [ $_rc -eq 1 ]; then printf '%s' '{{}}'; else printf '%s' '{deny}'; fi")
+    # No input is NOT "somebody else's call". The chain reads the payload ONCE into `_in` and feeds every
+    # stage from it, because a later stage cannot re-read a stdin an earlier one consumed: review built a
+    # python3 that reads the payload and exits 1, and the fallback then handed `grep` nothing, which
+    # exited 1 ("not ours") and answered {} to a containment call. That is the shape of every crash in
+    # gate.py AFTER it has read stdin. An empty `_in` now refuses.
+    refuse_if_ours = (f'if [ -z "$_in" ]; then printf \'%s\' \'{deny}\'; '
+                      f'else printf \'%s\' "$_in" | grep -qi {server}; _rc=$?; '
+                      f"if [ $_rc -eq 1 ]; then printf '%s' '{{}}'; else printf '%s' '{deny}'; fi; fi")
     def run(*flags, fallback):
         args = " ".join(("", *flags)).rstrip()
-        return (f"python3 {gate}{args} || uv run --quiet --no-project {gate}{args}"
+        return (f'_in=$(cat); printf \'%s\' "$_in" | python3 {gate}{args}'
+                f' || printf \'%s\' "$_in" | uv run --quiet --no-project {gate}{args}'
                 # a brace group needs the terminating semicolon; `{ cmd }` is a syntax error in sh
                 f" || {{ {fallback}; }}")
     group = lambda *flags, fallback: [{"matcher": "mcp_tool|call_mcp_tool",

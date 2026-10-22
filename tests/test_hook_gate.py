@@ -487,6 +487,9 @@ def test_the_antigravity_hook_file_invokes_this_gate_on_every_mcp_call():
     spec = AGY_HOOKS[json.loads((PLUGIN / "identity.json").read_text())["name"] + "-gate"]
     for event in ("PreToolUse", "PostToolUse"):
         group = spec[event][0]
+        assert re.search(group["matcher"], "call_mcp_tool"), (
+            f"{event} matcher misses `call_mcp_tool`, which is what a real dispatched MCP call arrives "
+            "as; a matcher checked only against the documented `mcp_tool` passes and never fires")
         assert re.search(group["matcher"], "mcp_tool")
         assert "--antigravity" in group["hooks"][0]["command"]
 
@@ -656,15 +659,19 @@ def test_the_shell_fallback_refuses_our_calls_and_only_ours(tmp_path):
     A missing grep (127) cannot read the step at all, so it refuses."""
     name = json.loads((PLUGIN / "identity.json").read_text())["name"]
     cmd = AGY_HOOKS[f"{name}-gate"]["PreToolUse"][0]["hooks"][0]["command"]
+    # `cat` as well as `grep`: the chain buffers the payload with `_in=$(cat)` so a later stage can
+    # still read a stdin an earlier one consumed. A probe PATH without `cat` leaves `_in` empty, and the
+    # empty case refuses by design -- which looks like the wrong answer and is really a broken harness.
     grep_only = tmp_path / "grep-only"
     grep_only.mkdir()
-    for candidate in ("/usr/bin/grep", "/bin/grep"):
-        if os.path.exists(candidate):
-            (grep_only / "grep").symlink_to(candidate)
-            break
-    else:
-        import pytest
-        pytest.skip("no grep on this machine to build the probe PATH with")
+    for tool in ("grep", "cat"):
+        for candidate in (f"/usr/bin/{tool}", f"/bin/{tool}"):
+            if os.path.exists(candidate):
+                (grep_only / tool).symlink_to(candidate)
+                break
+        else:
+            import pytest
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
 
     def run(step, path):
         r = subprocess.run(["/bin/sh", "-c", cmd], input=json.dumps(step), capture_output=True,
@@ -684,6 +691,27 @@ def test_the_shell_fallback_refuses_our_calls_and_only_ours(tmp_path):
     assert run(ours, "/nonexistent")["decision"] == "deny"
     assert run(theirs, "/nonexistent")["decision"] == "deny", (
         "with no way to read the step, standing aside is a guess in the ungated direction")
+
+    # Review's case: an interpreter that CONSUMES the payload and then dies. A later stage cannot
+    # re-read a stdin an earlier one drank, so the fallback saw empty input, grep exited 1 ("not ours")
+    # and a containment call got `{}`. That is the shape of any crash in gate.py after it reads stdin.
+    eater = tmp_path / "stdin-eater"
+    eater.mkdir()
+    for tool in ("grep", "cat"):
+        if (grep_only / tool).exists():
+            (eater / tool).symlink_to((grep_only / tool).resolve())
+    (eater / "python3").write_text("#!/bin/sh\ncat > /dev/null\nexit 1\n")
+    (eater / "python3").chmod(0o755)
+    assert run(ours, str(eater))["decision"] == "deny", (
+        "an interpreter that read the payload and then failed left the fallback with nothing to read, "
+        "and a containment call was not refused")
+    assert run(theirs, str(eater)) == {}, "another server's call must still pass quietly"
+
+    # No payload at all is not a quiet 'not ours' either.
+    r = subprocess.run(["/bin/sh", "-c", cmd], input="", capture_output=True, text=True,
+                       cwd=str(PLUGIN), env={"PATH": str(grep_only)})
+    assert json.loads(r.stdout).get("decision") == "deny", (
+        f"an empty step must refuse rather than be read as somebody else's: {r.stdout!r}")
 
 
 # A REAL Antigravity PreToolUse payload, captured from a live `agy` 1.4.5 session on 2026-10-22 by
