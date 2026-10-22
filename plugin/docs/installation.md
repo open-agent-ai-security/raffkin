@@ -298,24 +298,37 @@ there is no reason to entitle the key for detection-content *writes*. See
 [Key entitlements](#key-entitlements).
 
 <!-- community-only -->
-Three things about the gate on this host have not been exercised against a live `agy` session, because
-doing so needs the desktop app and a Google sign-in. We have not confirmed that a `deny` holds when a
-session runs with `--dangerously-skip-permissions` (it does on Claude Code), nor watched the host prompt
-on an `ask`. The third is the one worth understanding: the shape of the payload the host hands a hook is
-read from its documented contract, not from a live call, so the gate could in principle be handed a step
-it cannot read. It is built to ask in that case rather than stand aside — an MCP call it cannot identify
-at all gets a prompt, which is the wrong-way-round failure that costs you a question rather than a silent
-ungated close. All three are tracked in
+**The gate has now been driven in a live `agy` session** (1.4.5, 2026-10-22), which is what settled the
+question that mattered most: the host does call the hook, and the gate reads the step it is handed. The
+payload was captured and is now a test fixture, because it did **not** match the host's documented
+contract — the tool call's keys are PascalCase (`ServerName`, `ToolName`, `Arguments`) where the hook
+documentation says camelCase, the tool name sits beside the server rather than nested, and arguments
+arrive positionally wrapped. Read the documented way, the server went unseen: allow-tier reads got no
+decision and a containment tool named in its bare form (`isolate_host`) got none either. That is fixed
+and pinned by tests against the captured payload.
+
+One behaviour to know, because it is not a defect and will look like one: **on this host the gate's
+`allow` is not a permission grant.** It restricts; it does not entitle. Antigravity's own permission
+system still applies on top, and a headless `agy -p` session cannot prompt for the `mcp` permission, so
+it auto-denies the call even when the gate has allowed it. Interactively you are asked. On Claude Code
+the plugin ships a permission snippet that grants the allow tier; there is no equivalent to ship here
+yet.
+
+Two things remain unexercised: whether a `deny` holds when a session runs with
+`--dangerously-skip-permissions` (it does on Claude Code), and what the host's own prompt looks like on
+an `ask`. Both are tracked in
 [raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305). Moving the deny tier into the
 connector as well, so it holds without depending on any host, is
 [raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308).
 <!-- /community-only -->
 <!-- distribution-only
-Three things about the gate on this host have not been exercised against a live Antigravity session:
-whether a `deny` holds under `--dangerously-skip-permissions`, what the host's own prompt looks like on an
-`ask`, and whether the payload the host hands a hook matches the documented shape the gate reads. On that
-last one the gate is built to ask rather than stand aside if it is handed a call it cannot identify.
-{{support}} can tell you where that verification stands for your release.
+The gate has been driven in a live Antigravity session: the host calls the hook and the gate reads the
+step it is handed, verified against a captured payload that is now a test fixture. Two things remain
+unexercised — whether a `deny` holds under `--dangerously-skip-permissions`, and what the host's own
+prompt looks like on an `ask`. One behaviour is worth knowing in advance: on this host the gate's `allow`
+restricts rather than entitles, so Antigravity's own permission system still applies on top and a
+headless session auto-denies MCP calls the gate has allowed. {{support}} can tell you where that
+verification stands for your release.
 /distribution-only -->
 
 

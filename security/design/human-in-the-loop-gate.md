@@ -93,12 +93,38 @@ bridge. Where nothing at all can be read, it also asks, with a different reason,
 genuinely different failures and an operator reading the log should not be told the server was unnamed
 when it was not.
 
-**Both namespace separators are accepted.** The host's guide spells a plugin's server
-`<plugin>-<server>`; the payload this adapter was modelled on used `<plugin>_<server>`. No live call has
-settled which one it sends (#305), and the cost of guessing wrong is not symmetric: with the hyphen
-unrecognised, review measured the deny tier still holding while the bundled allow tier, the ask tier and
-the #247 write budget were all silently lost. The gate would have looked healthy on the loudest tier
-while having stopped governing the rest.
+**Both namespace separators are accepted, and the live one is now known to be the underscore.** The
+host's guide spells a plugin's server `<plugin>-<server>`; a payload captured from a live `agy` 1.4.5
+session sends `ServerName: "raffkin_exabeam"`. Both stay accepted because the cost of guessing wrong is
+not symmetric: review measured the deny tier still holding while the bundled allow tier, the ask tier and
+the #247 write budget were all silently lost — healthy on the loudest tier, not governing the rest.
+
+**The documented payload shape was wrong, and that is how this adapter's assumptions were caught.** The
+hook documentation states that "All JSON keys in the hook payloads use camelCase (protojson encoding)",
+which holds for the common fields (`conversationId`, `stepIdx`) and not for the tool call beside them. A
+real `call_mcp_tool` step carries:
+
+```json
+{"toolCall": {"name": "call_mcp_tool",
+              "args": {"ServerName": "raffkin_exabeam", "ToolName": "exabeam_get_case_details",
+                       "Arguments": {"arg0": {"caseId": "ABC-123"}}}}}
+```
+
+Three differences, each of which disabled part of the gate when the payload was read the documented way:
+the keys are PascalCase, so the server was never seen — the bundled allow tier went inert and a bare
+deny-tier name got **no decision at all**; the tool name sits beside the server rather than nested under
+`toolCall`, while the step's own `name` is the dispatcher and not the tool; and arguments arrive
+positionally wrapped (`Arguments.arg0`), so a record kept its decision and lost its target. Key lookup is
+therefore case-insensitive and positional wrappers are unwrapped, with the captured payload pinned as a
+fixture in `tests/test_hook_gate.py`. The lesson is the one the release bar already encodes: a contract
+read from documentation is a hypothesis, and this one was wrong in three places at once.
+
+**On this host the gate's `allow` restricts rather than entitles.** Antigravity's own permission system
+applies on top of the hook's decision: a headless `agy -p` session cannot prompt for the `mcp` permission
+and auto-denies the call even after the gate has allowed it (observed). On Claude Code the plugin ships a
+permission snippet that grants the allow tier; there is no equivalent here yet. The host's `PreToolUse`
+contract carries a `permissionOverrides` field that may be the mechanism — a design question, not a
+defect in the tiers.
 
 ## 3. Which servers the hook governs
 

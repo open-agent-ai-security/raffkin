@@ -354,15 +354,27 @@ def _post_call(event, tool: str, target: dict, ctx=None) -> int:
 # what lets ONE decide() serve both hosts; a second copy of the tier logic is how two hosts start
 # disagreeing about what is denied.
 _AGY_TOOL = re.compile(rf"^{SERVER}_[A-Za-z0-9_]+$")
+# Key spellings are matched CASE-INSENSITIVELY, and that is not defensive programming -- it is what a
+# captured payload forced. The host's own hook docs say "All JSON keys in the hook payloads use camelCase
+# (protojson encoding)", which holds for the common fields (`conversationId`, `stepIdx`) and NOT for the
+# tool call, where a real `call_mcp_tool` step carries `ServerName`, `ToolName` and `Arguments`. Reading
+# those as camelCase meant the server was never seen: the bundled allow tier went inert and a bare
+# deny-tier name got no decision at all, which is the exact hole this adapter exists to close.
 _NAME_KEYS = ("toolName", "tool_name", "name")
 _SERVER_KEYS = ("serverName", "server_name")
 _JSON_ARG_KEYS = ("argumentsJson", "arguments_json")
 _DICT_ARG_KEYS = ("arguments", "args", "toolArgs", "tool_args")
 
 
+def _ci(d):
+    """{lowercased key: value} so a spelling difference cannot hide a tool name or a server from us."""
+    return {str(k).lower(): v for k, v in d.items()} if isinstance(d, dict) else {}
+
+
 def _first_str(d, keys) -> str:
+    low = _ci(d)
     for k in keys:
-        v = d.get(k) if isinstance(d, dict) else None
+        v = low.get(k.lower())
         if isinstance(v, str) and v.strip():
             return v.strip()
     return ""
@@ -399,8 +411,26 @@ def _agy_tool_name(raw: str) -> str:
     return tool if re.fullmatch(r"[A-Za-z0-9_.-]+", tool or "") else ""
 
 
+def _unwrap_positional(d):
+    """`{"arg0": {...}}` -> `{...}`.
+
+    A captured `call_mcp_tool` step nests the real arguments one level down under positional names:
+    `Arguments: {arg0: {caseId: "ABC-123"}}`. Without unwrapping, the audit record keeps the decision but
+    loses its `target` -- WHICH case was closed -- and a log that cannot say what was touched is most of
+    the way to no log at all."""
+    if not isinstance(d, dict) or not d:
+        return d
+    if all(re.fullmatch(r"arg\d+", str(k)) for k in d):
+        merged = {}
+        for _, v in sorted(d.items(), key=lambda kv: str(kv[0])):
+            if isinstance(v, dict):
+                merged.update(v)
+        return merged or d
+    return d
+
+
 def _agy_args(inner: dict, args: dict) -> dict:
-    """The call's arguments, from the JSON string this host prefers or a plain object if it sent one."""
+    """The call's arguments, from the JSON string this host documents or the object it actually sends."""
     raw = _first_str(inner, _JSON_ARG_KEYS)
     if raw:
         try:
@@ -408,12 +438,13 @@ def _agy_args(inner: dict, args: dict) -> dict:
         except Exception:  # noqa: BLE001 — unparseable arguments cost the record its target, never the decision
             payload = {}
         if isinstance(payload, dict) and payload:
-            return payload
+            return _unwrap_positional(payload)
     for src in (inner, args):
+        low = _ci(src)
         for k in _DICT_ARG_KEYS:
-            v = src.get(k)
+            v = low.get(k.lower())
             if isinstance(v, dict):
-                return v
+                return _unwrap_positional(v)
     return {}
 
 
@@ -444,14 +475,20 @@ def agy_call(event) -> tuple[str, dict, str]:
     args = call.get("args") if isinstance(call, dict) else None
     if not isinstance(args, dict):
         return "", {}, UNKNOWN
-    inner = args.get("toolCall") or args.get("tool_call")
+    low_args = _ci(args)
+    inner = low_args.get("toolcall") or low_args.get("tool_call")
     inner = inner if isinstance(inner, dict) else {}
     named_server = _first_str(args, _SERVER_KEYS) or _first_str(inner, _SERVER_KEYS)
     # Deliberately NOT the loose _find_named(args) here: `serverName` is a name-ish key, so a step whose
     # tool sits under a key we do not read would come back with the SERVER as its tool and be reported as
     # an unclassified tool rather than an unreadable step. The loose search stays below, where all it does
     # is tell "somebody else's call" apart from "a shape we cannot read".
-    tool = _agy_tool_name(_first_str(inner, _NAME_KEYS) or _find_named(args, _AGY_TOOL))
+    # The tool may be nested under `toolCall` (the documented shape) or sit directly beside the server
+    # (what a real `call_mcp_tool` step sends). `name` is read only from the nested object: on the step
+    # itself it holds the dispatcher's own name, `call_mcp_tool`, not the tool being dispatched.
+    tool = _agy_tool_name(_first_str(inner, _NAME_KEYS)
+                          or _first_str(args, ("toolName", "tool_name"))
+                          or _find_named(args, _AGY_TOOL))
 
     if SERVER in named_server.lower():
         # OUR server, so the step is ours whatever the tool is called. Deciding this from the tool name

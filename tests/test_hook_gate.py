@@ -6,6 +6,7 @@ posture, that it reads the SAME tiers the permission snippet ships, and that the
 declares it (a hook that isn't declared is a file, not a gate)."""
 import json
 import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -683,3 +684,81 @@ def test_the_shell_fallback_refuses_our_calls_and_only_ours(tmp_path):
     assert run(ours, "/nonexistent")["decision"] == "deny"
     assert run(theirs, "/nonexistent")["decision"] == "deny", (
         "with no way to read the step, standing aside is a guess in the ungated direction")
+
+
+# A REAL Antigravity PreToolUse payload, captured from a live `agy` 1.4.5 session on 2026-10-22 by
+# teeing the host's stdin (local paths replaced). Every earlier Antigravity fixture in this file was
+# written from the host's documented contract and its proto descriptor; this one is what the host
+# actually sends, and it disagreed with the documentation in three ways that each disabled part of the
+# gate:
+#   * the tool call's keys are PascalCase (`ServerName`, `ToolName`, `Arguments`) even though the hook
+#     docs say "All JSON keys in the hook payloads use camelCase (protojson encoding)" -- which is true
+#     of the common fields beside them. Read as camelCase, the SERVER was never seen: the bundled allow
+#     tier went inert and a bare deny-tier name (`isolate_host`) got no decision at all;
+#   * the tool name sits BESIDE the server, not nested under `toolCall`, and the step's own `name` is
+#     the dispatcher (`call_mcp_tool`), not the tool being dispatched;
+#   * arguments arrive positionally wrapped (`Arguments: {arg0: {...}}`), so an audit record would keep
+#     its decision and lose its target -- which case was closed.
+REAL_STEP = {
+    "artifactDirectoryPath": "/home/u/.gemini/antigravity-cli/brain/2da04291",
+    "conversationId": "2da04291-d330-480e-a753-5ec381532585",
+    "modelName": "gemini-3.8-flash-high",
+    "stepIdx": 4,
+    "toolCall": {"name": "call_mcp_tool",
+                 "args": {"Arguments": {"arg0": {"caseId": "ABC-123"}},
+                          "ServerName": "raffkin_exabeam",
+                          "ToolName": "exabeam_get_case_details"}},
+    "transcriptPath": "/home/u/.gemini/antigravity-cli/brain/2da04291/transcript_full.jsonl",
+    "workspacePaths": ["/tmp/ws"],
+}
+
+
+def _real(tool):
+    step = json.loads(json.dumps(REAL_STEP))
+    step["toolCall"]["args"]["ToolName"] = tool
+    return step
+
+
+def test_the_captured_payload_is_judged_on_every_tier():
+    """The shape the host really sends, across the tiers. Before the key spellings were handled, this
+    exact payload produced: allow-tier -> no decision, bare deny-tier -> no decision."""
+    tiers = json.loads((PLUGIN / "skills" / "soc-investigate" / "permissions.json").read_text())["tiers"]
+    assert run_agy(_real(tiers["allow"]["tools"][0])).get("decision") == "allow"
+    assert run_agy(_real(tiers["ask"]["tools"][0])).get("decision") == "ask"
+    for name in tiers["deny"]["tools"][:12]:
+        out = run_agy(_real(name))
+        assert out.get("decision") == "deny", f"{name} on the real payload shape answered {out}"
+
+
+def test_the_captured_payload_is_recognised_as_the_bundled_bridge():
+    """`ServerName: raffkin_exabeam` -- underscore, settling #305: the host's guide documents
+    `<plugin>-<server>`. Reading it is what makes the allow tier the PLUGIN's grant rather than a call
+    the gate has no opinion on, so a miss here is silent and total."""
+    assert run_agy(_real("exabeam_get_case_details")).get("decision") == "allow"
+
+
+def test_the_captured_payload_keeps_what_was_attempted():
+    """`Arguments: {arg0: {...}}`. A decision the log cannot attach to an object is close to no log."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        log = pathlib.Path(d) / "gate.jsonl"
+        e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": str(log),
+             "RAFFKIN_GATE_STATE_DIR": d}
+        subprocess.run([sys.executable, str(HOOK), "--antigravity"],
+                       input=json.dumps(_real("exabeam_update_case")), capture_output=True, text=True, env=e)
+        rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    assert rows, "the decision was never recorded"
+    assert rows[-1].get("target") == {"caseId": "ABC-123"}, (
+        f"the record lost which case was attempted: {rows[-1].get('target')!r}")
+
+
+def test_a_key_spelling_cannot_hide_the_server_or_the_tool():
+    """The generalisation of the defect, rather than the one spelling that caused it: a host that renames
+    these keys by case must not be able to turn the gate off by doing so."""
+    for server_key in ("ServerName", "serverName", "SERVERNAME", "server_name"):
+        for tool_key in ("ToolName", "toolName", "TOOLNAME", "tool_name"):
+            step = {"conversationId": "c", "stepIdx": 1,
+                    "toolCall": {"name": "call_mcp_tool",
+                                 "args": {server_key: "raffkin_exabeam", tool_key: "isolate_host"}}}
+            out = run_agy(step)
+            assert out.get("decision") == "deny", f"{server_key}/{tool_key} answered {out}"
