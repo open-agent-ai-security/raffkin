@@ -130,15 +130,17 @@ check_toolchain() {
       fail "python3 is older than 3.7 — the bundled dismiss/close gate (hooks/gate.py) cannot run on it, and the hook fails closed (every gated call refused). Install a current python3."
     fi
   else
-    # A failure only where the gate needs it: on Claude Code the bundled hook is python3. On Codex the gate
-    # is approval policy and the bridge runs under uv's own interpreter, so a python3-less Codex host is a
-    # healthy install and "warnings do not fail" holds (review, 2026-09-05). On Antigravity there is no
-    # bundled gate at all, so python3 is not what is missing — saying "the gate is approval policy here"
-    # would claim a control this host does not give us (review of #306).
+    # A failure only where the gate needs it. On Claude Code the bundled hook is python3 and nothing else,
+    # so this is fatal. On Codex the gate is approval policy and the bridge runs under uv's own interpreter,
+    # so a python3-less Codex host is a healthy install and "warnings do not fail" holds (review,
+    # 2026-09-05). On Antigravity the hook is the same python3 script, but its command falls back to uv --
+    # so python3 alone is not the question, and this branch must not answer it. The gate check below runs
+    # the hook for real and is the authority; saying anything stronger here would be guessing at a control
+    # (review of #306).
     if [ "${PF_PLATFORM:-}" = claude ]; then
       fail "python3 not found — the bundled dismiss/close gate (hooks/gate.py) cannot execute. The hook is wired to fail closed (every gated call is refused until python3 is on PATH), so install python3: https://www.python.org/downloads/"
     elif [ "${PF_PLATFORM:-}" = antigravity ]; then
-      warn "python3 not found — nothing on this host needs it (no gate ships here, and the bridge runs under uv's own interpreter); on a Claude Code host the bundled hook would need it"
+      warn "python3 not found — this host runs the same bundled gate (hooks/gate.py), falling back to uv when python3 is absent. The gate line below ran the hook and is the authority on whether it is active; installing python3 removes the dependency on uv for it"
     else
       warn "python3 not found — fine on this host (the gate is approval policy here); on a Claude Code host the bundled hook would need it"
     fi
