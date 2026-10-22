@@ -182,10 +182,12 @@ def build_bom(timestamp):
             "name": "Gemini model (via Google Antigravity)",
             "description": ("Foundation model the skills run on when the host is Google Antigravity. Hosted "
                             "API — weights are not distributed with Raffkin, and the specific member is "
-                            "selected by Antigravity, not pinned by Raffkin. NOT in the validated set: no "
-                            "release has been red-teamed on a Gemini model, and the bundled human-in-the-loop "
-                            "gate does not run on this host, so the skill's own ask is the only approval step "
-                            "(see plugin/docs/installation.md)."),
+                            "selected by Antigravity, not pinned by Raffkin. The bundled human-in-the-loop "
+                            "gate DOES run on this host (hooks.json at the plugin root). NOT in the validated "
+                            "set: no release has been red-teamed on a Gemini model, so prompt-injection "
+                            "resistance and refusal discipline are untested here, and the host's honouring of "
+                            "a hook `deny` under --dangerously-skip-permissions has not been confirmed "
+                            "against a live session (see plugin/docs/installation.md)."),
             "supplier": {"name": "Google", "url": ["https://ai.google"]},
             "externalReferences": [{"type": "website", "url": "https://antigravity.google/"}],
             "properties": [

@@ -12,11 +12,17 @@
 Generated:
   .claude-plugin/plugin.json                    Claude Code manifest
   .codex-plugin/plugin.json                     Codex manifest (same skills, Codex-only fields)
-  .antigravity-plugin/plugin.json               Google Antigravity manifest (skills + MCP + Marketplace fields:
-                                                displayName, logo, suggestedPrompts, category)
-  .mcp.antigravity.json                         the same launch command as .mcp.json, derived from it with
+  .antigravity-plugin/plugin.json               Google Antigravity manifest. ONLY the fields its loader
+                                                reads: name, displayName, version, description, logo,
+                                                suggestedPrompts (see build())
+  mcp_config.json                               the same launch command as .mcp.json, derived from it with
                                                 ${CLAUDE_PLUGIN_ROOT} swapped for the ${PLUGIN_ROOT} Antigravity
-                                                resolves, and the `type` key dropped (not in Google's schema)
+                                                resolves, and the `type` key dropped (not in its schema). At
+                                                the plugin ROOT: that is the only place Antigravity reads it
+  hooks.json                                    the same gate as hooks/hooks.json, in Antigravity's own hook
+                                                format, at the plugin ROOT. Antigravity stages hooks/hooks.json
+                                                only for an IMPORTED Claude Code extension, never for a native
+                                                plugin like this one, so the root file is the one it reads
   skills/soc-investigate/settings.snippet.json  the permission gate — every rule spelled out under the
                                                 bundled-MCP prefix mcp__plugin_<name>_<server>__ and/or the
                                                 manual prefix mcp__<server>__, from the bare-name tiers in
@@ -52,12 +58,13 @@ OUT = {
     "claude": HERE / ".claude-plugin" / "plugin.json",
     "codex": HERE / ".codex-plugin" / "plugin.json",
     "antigravity": HERE / ".antigravity-plugin" / "plugin.json",
-    "antigravity_mcp": HERE / ".mcp.antigravity.json",
+    "antigravity_mcp": HERE / "mcp_config.json",
+    "antigravity_hooks": HERE / "hooks.json",
     "snippet": HERE / "skills" / "soc-investigate" / "settings.snippet.json",
     "shell": HERE / "identity.sh",
 }
 # The HAND-MAINTAINED MCP files, which is what `mcpServer` is cross-checked against. Deliberately not
-# .mcp.antigravity.json: that file is GENERATED from .mcp.json below, so reading its key here would make a
+# mcp_config.json: that file is GENERATED from .mcp.json below, so reading its key here would make a
 # server-key rename self-blocking — check_server would see the stale generated key, disagree, and exit
 # before the regeneration that would have fixed it (review of #306).
 MCP_FILES = (".mcp.json", ".mcp.codex.json")
@@ -429,17 +436,20 @@ def logo_path(identity):
 
     It lives in identity.json rather than here so a distribution's overlay can point the listing at its own
     mark the same way it re-keys `name` (review of #306) -- which means it is overlay-supplied input, and is
-    checked like any other. It has to be a bundled file INSIDE the payload: a listing whose logo resolves
-    outside the plugin either 404s on the card or ships whatever the path landed on. An `https://` URL is
-    valid per the guide and passed through; anything else must resolve under the payload root, carry an image
-    suffix, and not be a symlink (a symlink's target is not in the payload the user installed)."""
+    checked like any other. It has to be a bundled file INSIDE the payload, carrying an image suffix and not
+    a symlink (a symlink's target is not in the payload the user installed).
+
+    A URL is NOT accepted, though the published guide reads as though one would be. The loader's own
+    documentation, which ships inside the `agy` binary, is explicit: "URLs and absolute paths are rejected
+    silently -- a bad value renders no logo rather than erroring." Silently is the operative word. A URL here
+    would pass every check we could write, ship, and show an empty card that nothing in CI could see
+    (#306, verified against agy 1.4.4)."""
     raw = identity.get("logo")
     if not raw:
-        sys.exit("identity.json needs a `logo`: Google's Marketplace requires one for the Antigravity listing")
-    if raw.startswith("https://"):
-        return raw
-    if raw.startswith("http://"):
-        sys.exit(f"identity.json logo {raw!r} must be https:// — a plain-http logo is blocked on the card")
+        sys.exit("identity.json needs a `logo`: the Marketplace listing needs one, and a missing logo is not an error on the card, just an empty one")
+    if "://" in raw:
+        sys.exit(f"identity.json logo {raw!r} is a URL. Antigravity rejects URLs and absolute paths SILENTLY "
+                 "(renders no logo, raises nothing), so the logo must be a file bundled in the payload")
     rel = raw[2:] if raw.startswith("./") else raw
     if not rel or rel.startswith("/") or ".." in Path(rel).parts or "" in Path(rel).parts[:-1]:
         sys.exit(f"identity.json logo {raw!r} must be a relative path inside the plugin, with no '..' segment")
@@ -451,7 +461,8 @@ def logo_path(identity):
     if p.resolve().parent != p.parent.resolve() or not p.resolve().is_relative_to(HERE.resolve()):
         sys.exit(f"identity.json logo {raw!r} resolves outside the plugin ({p.resolve()})")
     if p.suffix.lower() not in LOGO_SUFFIXES:
-        sys.exit(f"identity.json logo {raw!r} is not an image ({', '.join(LOGO_SUFFIXES)})")
+        sys.exit(f"identity.json logo {raw!r} is not an image ({', '.join(LOGO_SUFFIXES)}) — "
+                 "an unsupported suffix is another value that renders nothing rather than erroring")
     return raw
 
 
@@ -488,6 +499,45 @@ def manifest_fields(identity):
     return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
 
 
+# Antigravity's PreToolUse hook is the SAME gate as Claude Code's, in a different envelope: the host
+# calls the hook with the pending call on stdin and honours `{"decision": "deny"}` as a hard block, plus
+# "ask" and "force_ask" for a prompt. So the deny tier, the ask tier and the per-session write budget are
+# all in force here -- which is why none of the documentation may say otherwise.
+#
+# Three details of this file are not interchangeable with hooks/hooks.json:
+#
+#   WHERE. The plugin ROOT, not hooks/. Antigravity stages hooks/hooks.json into the root only when it
+#   IMPORTS a Claude Code or Gemini CLI extension; a native plugin -- any directory carrying plugin.json or
+#   .antigravity-plugin/plugin.json, which is us -- gets no staging and "must place hooks.json directly at
+#   the plugin root". A gate in the wrong directory is a gate that silently does not run: #212 again.
+#
+#   THE MATCHER. Antigravity matches on the STEP TYPE, not the tool name: every MCP call, whichever server
+#   it belongs to, arrives as `mcp_tool` (CORTEX_STEP_TYPE_MCP_TOOL, lowercased with the prefix stripped),
+#   with the real tool name inside the payload. So the matcher cannot select the Exabeam server the way
+#   Claude Code's regex does -- it has to catch every MCP call and let the gate decide, which is the
+#   posture the gate was written for anyway ("the hook, not the matcher, decides whether a call is ours").
+#
+#   THE INTERPRETER. `python3` is not bundled with Antigravity, and a hook command that cannot start
+#   produces no JSON, which the host reads as "no opinion" -- a fail-OPEN that no test of ours would see.
+#   `uv` is what the bridge already needs, and it brings its own Python, so it is the fallback: if python3
+#   is missing the same gate runs under uv. The one case left is neither being present, and there the
+#   bridge cannot start either, so there is no Exabeam tool to gate.
+HOOK_TIMEOUT = 20
+
+
+def antigravity_hooks(identity):
+    gate = "./hooks/gate.py"           # cwd for a hook command is the directory holding hooks.json
+    def run(*flags):
+        args = " ".join(("", *flags)).rstrip()
+        return (f"python3 {gate}{args} || uv run --quiet --no-project {gate}{args}")
+    group = lambda *flags: [{"matcher": "mcp_tool|call_mcp_tool",
+                             "hooks": [{"type": "command", "command": run(*flags), "timeout": HOOK_TIMEOUT}]}]
+    # Keyed on the plugin's own name: hook files from several plugins are merged into one map, so a fixed
+    # key would collide with another copy of this payload (the vendored one installs alongside, #306).
+    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity"),
+                                         "PostToolUse": group("--antigravity", "--post")}}
+
+
 def build(identity, perms):
     common = {k: identity[k] for k in ("name", "version", "description", "author")} | manifest_fields(identity)
     claude = {**common, "keywords": identity["keywords"] + identity["hostKeywords"]["claude"], "skills": "./skills/"}
@@ -510,32 +560,52 @@ def build(identity, perms):
     snippet = {"permissions": tiers}
     # Antigravity resolves components from the plugin ROOT, and takes the manifest from
     # .antigravity-plugin/plugin.json when a repo already keeps provider manifests in dot-folders --
-    # which is what its own guide recommends for a layout like ours. Unlike Claude Code it does NOT
-    # auto-discover the MCP config, so the server has to be named here or the skills load with no
-    # Exabeam tools at all. displayName, logo and suggestedPrompts are required for a Marketplace
-    # listing; category is recommended.
-    # The listing's own description, NOT the long one: Google recommends 120-160 characters for a
-    # Marketplace card, and the long description ends "dismiss/close gated by the host agent's
-    # tool-approval rules" -- which is exactly the claim this host cannot keep (review of #306). The
-    # logo comes from identity.json so a distribution's overlay can point its listing at its own mark.
-    antigravity = {**common, "description": identity["shortDescription"],
+    # which is what its own guide recommends for a layout like ours.
+    #
+    # EVERY FIELD HERE IS LOAD-BEARING, AND NOTHING ELSE MAY BE ADDED. The loader's own documentation
+    # (shipped inside the `agy` binary; the published PDF is behind it) lists exactly seven accepted
+    # top-level fields -- name, description, logo, suggestedPrompts, displayName, version, disabled -- and
+    # then says: "Do not add any other top-level field. `author` and `homepage` are silently discarded by
+    # the loader -- they neither take effect nor error out."
+    #
+    # So this manifest is built field by field instead of spreading `common`, which carries author,
+    # homepage, repository and license. Three earlier keys are gone for the same reason, and each one was
+    # doing nothing:
+    #   mcpServers  -- NOT a manifest field. Antigravity reads the servers from mcp_config.json at the
+    #                  plugin root, and ignored this pointer silently: `agy plugin validate` reported
+    #                  "unknown field mcpServers is ignored" and "mcpServers 0", i.e. the whole Exabeam
+    #                  tool surface absent on this host. This is the bug that made #306 ship a plugin with
+    #                  no tools (verified against agy 1.4.4).
+    #   skills      -- unnecessary. skills/<name>/SKILL.md is discovered from the tree; the validator
+    #                  counted all three with the key removed.
+    #   category,   -- not in the accepted set, so both are dropped on load. `keywords` earned its place on
+    #   keywords       the other two hosts and stays in identity.json for them; Marketplace search matches
+    #                  on `description` here, which is why the short one is used.
+    #
+    # The listing's own description, NOT the long one: 120-160 characters for a Marketplace card, and the
+    # long description ends "dismiss/close gated by the host agent's tool-approval rules", which reads as a
+    # promise about a prompt we do not control. The gate's own guarantee is carried by hooks.json below.
+    # The logo comes from identity.json so a distribution's overlay can point its listing at its own mark.
+    antigravity = {"name": identity["name"],
                    "displayName": identity["displayName"],
-                   "keywords": identity["keywords"] + identity["hostKeywords"]["antigravity"],
-                   "skills": ["./skills"],
-                   "mcpServers": "./.mcp.antigravity.json",
+                   "version": identity["version"],
+                   "description": identity["shortDescription"],
                    "logo": logo_path(identity),
-                   "category": identity["category"],
                    "suggestedPrompts": identity["suggestedPrompts"]}
     # Antigravity resolves ${PLUGIN_ROOT}, not ${CLAUDE_PLUGIN_ROOT}: pointing it at .mcp.json would
     # hand it a command with an unresolved variable and the bridge would never start. So the Antigravity
     # MCP file is generated FROM .mcp.json with the variable swapped -- one source for the launch command,
     # so a change there (the --locked flag, #255) cannot reach one host and miss the other.
     #
-    # Two things are dropped in the derivation, and only these two. `type` is not a field in Google's MCP
-    # schema -- its documented stdio example carries command/args/env and nothing else -- so a strict reader
-    # would reject the server and the skills would load with no Exabeam tools, which is the failure this
-    # whole file exists to prevent. A lenient reader ignores it. Dropping it is correct either way, and the
-    # transport is still unambiguous: a `command` IS the stdio transport.
+    # One thing is dropped in the derivation, and only this one. `type` is not a field in Antigravity's MCP
+    # schema: the loader's documented stdio transport is `command` + optional `args`/`env`, and the only
+    # other transport is `url`. A strict reader would reject the server and the skills would load with no
+    # Exabeam tools, which is the failure this whole file exists to prevent; a lenient reader ignores it.
+    # Dropping it is correct either way, and the transport is still unambiguous: a `command` IS stdio.
+    #
+    # The server key matters beyond this file: Antigravity namespaces a plugin's servers as
+    # `<plugin>_<server>`, so the bundled bridge arrives as `<name>_exabeam` here where Claude Code calls it
+    # `plugin_<name>_exabeam`. The gate knows both (is_bundled).
     mcp = json.loads((HERE / ".mcp.json").read_text())
     antigravity_mcp = json.loads(
         json.dumps(mcp).replace("${CLAUDE_PLUGIN_ROOT}", "${PLUGIN_ROOT}"))
@@ -543,8 +613,8 @@ def build(identity, perms):
         if isinstance(server, dict):
             server.pop("type", None)
     return {"claude": claude, "codex": codex, "antigravity": antigravity,
-            "antigravity_mcp": antigravity_mcp, "snippet": snippet,
-            "shell": shell_include(identity, perms)}
+            "antigravity_mcp": antigravity_mcp, "antigravity_hooks": antigravity_hooks(identity),
+            "snippet": snippet, "shell": shell_include(identity, perms)}
 
 
 def render(obj):

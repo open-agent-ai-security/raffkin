@@ -85,7 +85,7 @@ How each distribution is built from this repo:
   payload's own `gen_identity.py`, and commits the result as `soc/`. A build reaches customers only when
   it is re-vendored and blessed, so the two distributions can sit on different versions on purpose.
 
-Two things about Antigravity, because it is the host that behaves differently:
+Three things about Antigravity, because it is the host that behaves differently:
 
 - **It has a Marketplace, but no catalog you add yourself.** There is no `agy plugin marketplace add`, so
   neither of our catalogs is involved: `agy` installs whatever directory a GitHub subpath URL points at —
@@ -95,6 +95,13 @@ Two things about Antigravity, because it is the host that behaves differently:
   substituted on re-key; a subpath URL is neither. So the Antigravity command in the guide is
   per-distribution (`{{antigravity_install}}` in the identity overlay) — otherwise the supported build's
   own documentation would tell customers to install the community one.
+- **Its manifest is an allowlist, and its components live at the plugin root.** Antigravity reads seven
+  top-level manifest fields and silently discards the rest, takes a plugin's MCP servers from
+  `mcp_config.json` and its hooks from `hooks.json` — both at the plugin root, neither named in the
+  manifest. Every one of those failure modes is silent, so `gen_identity.py` generates all three files
+  together and `tests/test_repo_invariants.py` asserts the manifest carries *nothing* outside the
+  accepted set. The authoritative spec is the documentation inside the `agy` binary, which is ahead of
+  the published guide.
 
 ## Working on Raffkin
 

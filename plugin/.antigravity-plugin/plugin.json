@@ -1,31 +1,9 @@
 {
   "name": "raffkin",
+  "displayName": "Raffkin — Agentic SOC Analyst",
   "version": "1.0.0",
   "description": "Triage Exabeam New-Scale alerts and cases end to end: gather the evidence, map MITRE, reach a verdict, and record it behind an approval step.",
-  "author": {
-    "name": "Exabeam",
-    "url": "https://www.exabeam.com/"
-  },
-  "homepage": "https://github.com/open-agent-ai-security/raffkin",
-  "repository": "https://github.com/open-agent-ai-security/raffkin",
-  "license": "Apache-2.0",
-  "displayName": "Raffkin — Agentic SOC Analyst",
-  "keywords": [
-    "soc",
-    "soc-analyst",
-    "alert-triage",
-    "exabeam",
-    "ai-agent-security",
-    "mcp",
-    "antigravity",
-    "security"
-  ],
-  "skills": [
-    "./skills"
-  ],
-  "mcpServers": "./.mcp.antigravity.json",
   "logo": "assets/icon.svg",
-  "category": "Security",
   "suggestedPrompts": [
     "Triage my open Exabeam cases and tell me what to look at first",
     "Investigate the highest-risk Exabeam alert from the last 24 hours and give me a verdict",

@@ -10,14 +10,16 @@ Raffkin is a plugin for **Claude Code**, **OpenAI Codex** and **Google Antigravi
 same shape on all three hosts: install the plugin, add one credentials file, check, and run your first
 investigation. Five minutes.
 
-On **Claude Code and Codex** the safety gate is on from the moment the plugin is installed: dismissing an
+On **all three hosts** the safety gate is on from the moment the plugin is installed: dismissing an
 alert or closing a case always asks you first, and containment is never executed. Nothing to configure for
-that. On Claude Code the gate is a hook inside the plugin. It runs even when you start Claude Code with
-permission prompts turned off: containment is still refused, and a dismiss or close still needs a yes. Its
-deny on containment and its ask on dismiss and close still fire in those modes, and if nobody is there to
-give one, the call is refused.
+that. On Claude Code and Antigravity the gate is a hook inside the plugin; on Codex it comes from the
+approval policy the package sets. On Claude Code it runs even when you start with permission prompts turned
+off: containment is still refused, and a dismiss or close still needs a yes. Its deny on containment and
+its ask on dismiss and close still fire in those modes, and if nobody is there to give one, the call is
+refused.
 
-On **Antigravity** that gate does not ship yet, and this guide does not pretend otherwise — see
+**Antigravity differs in what has been *tested*, not in what is enforced** — no release has been
+red-teamed on a Gemini model. Read
 [What is different on this host](#what-is-different-on-this-host) before you install there.
 
 ## Before you start
@@ -177,9 +179,10 @@ agy plugin list      # expect this copy's plugin name, as its manifest spells it
 bash ~/.gemini/config/plugins/raffkin/preflight.sh
 ```
 
-Expect `✓` on every line **except the gate**, which reports a `!` naming itself as not active on this host
-— that warning is correct here, not a misconfiguration to fix. The script detects Antigravity from its own
-install path, so `--platform antigravity` is only needed if you run a copy from somewhere else.
+Expect `✓` on every line, the gate included. The script detects Antigravity from its own install path, so
+`--platform antigravity` is only needed if you run a copy from somewhere else. If the gate line reports a
+`!`, read it: the likeliest cause is that neither `python3` nor `uv` is on the PATH the host launches hooks
+with, and the gate cannot run without one of them.
 
 **4. Run your first investigation.** In an Antigravity session:
 
@@ -205,47 +208,55 @@ above is the one for *this* copy, and the community build has its own.
 
 ### What is different on this host
 
-Raffkin's three skills and the Exabeam connection work the same way here. **The bundled
-human-in-the-loop gate does not.**
+Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate
+is the same file as on Claude Code — the deny tier, the ask tier and the per-session write budget are
+in force, and every decision lands on the same audit trail. Antigravity reads it from `hooks.json` at
+the plugin root and honours a `deny` as a hard block.
 
-On Claude Code the gate is a `PreToolUse` hook that denies containment outright, forces an explicit
-yes on dismiss/close and mail, and holds even under `--dangerously-skip-permissions`. On Codex the
-equivalent comes from its approval policy. On Antigravity **neither applies**: approval behaviour is
-whatever Antigravity itself does for MCP tools, and Raffkin's deny tier, ask tier and per-session
-write budget are not in force.
+Two differences are worth knowing before you run an investigation on this host.
 
-What still protects you here, because it lives in the connector rather than the host: what the model
-reads is screened for injected instructions, what it writes back is neutralized and masked, a `create_case`
-carrying a closing disposition is refused, and every call is on the audit trail. Those run on every host.
+**No release has been red-teamed on a Gemini model.** Every Raffkin release is adversarially tested on the
+weakest supported model of each host before it ships, and that work has been done on Claude and GPT models
+only. The gate is a control on the *tool call*, so it does not depend on the model's good behaviour — but
+prompt-injection resistance, refusal discipline and how the skills hold up under pressure are all model
+properties, and on this host they are untested. That is a gap in our evidence, not a known weakness.
 
-What does **not** protect you here is the deny tier. It is a *host* control on both other hosts — the
-bundled hook on Claude Code, `disabled_tools` on Codex — and the connector does not re-implement it, so on
-Antigravity a containment or rule-write tool the Exabeam MCP offers is not refused by anything of ours.
+**The gate needs an interpreter, and this host bundles neither.** The hook runs under `python3`, falling
+back to `uv`, which the Exabeam connector already requires. If both are missing, the connector cannot
+start either, so there are no Exabeam tools to gate — but `preflight.sh` checks for them and says so,
+and it is worth running once after you install.
 
-**This is not hypothetical.** A tenant entitled for detection content exposes
-`exabeam_create_analytics_rule` and `exabeam_update_analytics_rule`, and on this host nothing of ours
-stands between the model and a rule write — only the skills' own instruction never to call them.
-Containment tools are a different case: the Exabeam MCP exposes none today, so there is nothing to call
-even unguarded, and that holds only until the tool surface changes.
+One smaller difference shows up in the log rather than in what is enforced: Antigravity does not tell a
+hook which permission mode the session is running in. On Claude Code that lets the audit trail
+distinguish an ask a human answered from one that completed in an unattended mode; here a completed
+ask-tier call is recorded as `approved` without that distinction. Records written on this host carry
+`"host": "antigravity"` so the log never has to be guessed at.
 
-**The control you have is the key.** Entitlements are enforced by Exabeam, not by the host, so they are
-the one limit that holds on every host equally. If you run on Antigravity, do not entitle the key for
-detection-content *writes* — `rule-tuning` only ever needs reads. See
+What runs identically on every host, because it lives in the connector rather than the host: what the
+model reads is screened for injected instructions, what it writes back is neutralized and masked, a
+`create_case` carrying a closing disposition is refused, and every call is on the audit trail.
+
+**Your key is still the limit worth setting.** Entitlements are enforced by Exabeam, not by the host, so
+they hold even if a host control is misconfigured — the gate denies a rule write, and an unentitled key
+means there is no rule-write tool to deny in the first place. `rule-tuning` only ever needs reads, so
+there is no reason to entitle the key for detection-content *writes*. See
 [Key entitlements](#key-entitlements).
 
-Treat Antigravity as the host where **you** are the approval step: read each Exabeam write before you
-allow it, and never leave a session running unattended.
-
 <!-- community-only -->
-Antigravity supports `PreToolUse` hooks with allow/deny/ask, so porting the gate is tracked in
-[raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305), and moving the deny tier into
-the connector — where it would hold on every host — in
-[raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308). Neither ships until it has been
-driven against a live `agy`: a gate whose matcher never fires reports success and protects nothing.
+Two things about the gate on this host have not been exercised against a live `agy` session, because
+doing so needs the desktop app and a Google sign-in. The decision contract is documented and the gate is
+tested against it, including the payload shape, but we have not yet confirmed that a `deny` holds when a
+session runs with `--dangerously-skip-permissions` (it does on Claude Code), nor watched the host prompt on
+an `ask`. Both are tracked in
+[raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305). Moving the deny tier into the
+connector as well, so it holds without depending on any host, is
+[raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308).
 <!-- /community-only -->
 <!-- distribution-only
-Antigravity supports `PreToolUse` hooks with allow/deny/ask, so a future release can carry the gate on this
-host too; {{support}} can tell you which release that is.
+Two things about the gate on this host have not been exercised against a live Antigravity session: whether
+a `deny` holds under `--dangerously-skip-permissions`, and what the host's own prompt looks like on an
+`ask`. The decision contract is documented and the gate is tested against it. {{support}} can tell you
+where that verification stands for your release.
 /distribution-only -->
 
 
@@ -323,10 +334,9 @@ survives, and only if the server is named `exabeam`. Use this for a connectivity
 
 Whoever grants the key's access entitlements can check against this list rather than guessing. These are
 the Exabeam MCP tools Raffkin calls, shown without their `exabeam_` prefix. Any tool not on this list asks
-you first, and on Claude Code and Codex every containment or rule-writing tool is refused by the host gate
-before it reaches your tenant. **On Antigravity that refusal is not in force** — see
-[What is different on this host](#what-is-different-on-this-host). Entitling the key to nothing beyond this
-list is the control that holds on every host, so do that whichever host you use.
+you first, and on every host each containment or rule-writing tool is refused by the gate before it
+reaches your tenant. Entitling the key to nothing beyond this list is the control that holds even if a host
+control is misconfigured, so do it whichever host you use.
 
 | Needed for | Tools |
 |---|---|
@@ -360,5 +370,5 @@ agy plugin uninstall {{plugin_name}}
 ```
 /distribution-only -->
 
-On Claude Code and Codex, removing the plugin removes the gate it shipped. None of the three commands
+Removing the plugin removes the gate it shipped, on every host. None of the three commands
 touches `~/.exabeam-mcp.env`; delete that yourself when you are done with the credentials.

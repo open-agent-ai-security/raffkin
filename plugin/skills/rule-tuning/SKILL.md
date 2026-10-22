@@ -11,8 +11,8 @@ description: >-
   high-volume-low-precision rules from high-volume-high-precision ones, and proposes
   tuning mapped to real Exabeam mechanics (context table, exclusion rule, or the
   rule's own filter/scope/maturity settings). Read-only and propose-only: the
-  rule-write tools the MCP exposes are denied by the host gate on Claude Code and Codex, and must never be
-  called on any host — detection engineering applies the change. Requires the
+  rule-write tools the MCP exposes are denied by the host gate on every host, and must never be
+  called regardless — detection engineering applies the change. Requires the
   Exabeam MCP server to be configured.
 ---
 
@@ -31,10 +31,10 @@ The distinction that defines this skill:
 
 This skill is **read-only and propose-only.** The MCP does expose rule writes
 (`exabeam_create_analytics_rule`, `exabeam_update_analytics_rule`) — confirmed present on a tenant
-entitled for detection content, so never assume they are absent. On Claude Code and Codex the host gate
-denies them. **On Google Antigravity nothing of this plugin's does: your refusal to call them is the only
-control there.** That split does not change your job either way: you diagnose and recommend; detection
-engineering applies. Never call them, and never claim you changed a rule.
+entitled for detection content, so never assume they are absent. The host gate denies them on all three
+hosts. **That denial is not what makes this skill propose-only — your refusal to call them is.** A gate
+can be misconfigured and a tool surface can grow a name nobody classified; neither changes your job. You
+diagnose and recommend; detection engineering applies. Never call them, and never claim you changed a rule.
 
 ## Preflight — is the Exabeam MCP connected?
 

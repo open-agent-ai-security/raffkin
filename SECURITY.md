@@ -36,7 +36,8 @@ document describes how to report one privately, what is in scope, and what to ex
   (`security/redteam/run.py`).
 - The plugin manifests (`plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
   `plugin/.antigravity-plugin/`), the bundled `plugin/.mcp.json` / `.mcp.codex.json` /
-  `.mcp.antigravity.json`, `plugin/install.sh` and `plugin/preflight.sh`.
+  `mcp_config.json`, the gate's two hook files (`plugin/hooks/hooks.json` for Claude Code,
+  `plugin/hooks.json` for Antigravity), `plugin/install.sh` and `plugin/preflight.sh`.
 - The connector's dependency pinning — the bounded PEP 723 header and the hash-pinned
   `plugin/connector/exabeam-mcp-bridge.py.lock` (supply-chain integrity of what a fresh install
   resolves).

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Raffkin's human-in-the-loop gate for Claude Code, shipped INSIDE the plugin as a PreToolUse hook.
+"""Raffkin's human-in-the-loop gate, shipped INSIDE the plugin as a PreToolUse hook on two hosts.
 
 Why this exists. Claude Code lets a plugin ship code that takes part in permission decisions, but not
 permission rules: rules are the operator's to set. A PreToolUse hook is active the moment the plugin is enabled, its
@@ -64,6 +64,20 @@ state file under ~/.raffkin/gate-sessions/, never in the decision log, which can
 is nothing for an injected instruction to talk it out of. No session id, or a state file that cannot be
 read or written, means ask: the budget never fails open.
 
+GOOGLE ANTIGRAVITY runs this same file, invoked with `--antigravity` from the plugin's root hooks.json.
+Same tiers, same budget, same log; three differences, all in the envelope rather than the decision:
+
+  * The host matches hooks on the STEP TYPE, so every MCP call on the machine arrives here as `mcp_tool`
+    whichever server it belongs to, with the real tool name inside the payload (`serverName` plus a nested
+    `toolCall`). A call we cannot identify as an Exabeam one gets no decision, exactly as on Claude Code --
+    the difference is that here the matcher cannot do any of that filtering, so the parsing below is the
+    only thing standing between another server's calls and our verdicts.
+  * The decision is `{"decision": "deny"|"ask"|"force_ask"|"allow", "reason": ...}` rather than Claude
+    Code's `hookSpecificOutput`, and `deny` is a hard block.
+  * The host does not report its permission mode, so a completed ask-tier call is logged as `approved`
+    without being able to prove a human answered -- the one thing the Claude Code record can distinguish
+    and this one cannot. Records carry `"host"` so the log never has to be guessed at.
+
 Stdlib only. Exit 0 always; the decision is the JSON on stdout.
 """
 from __future__ import annotations   # `tuple[str, str]` must not be evaluated on an old system python3
@@ -124,8 +138,13 @@ def plugin_name(plugin_root: Path):
 
 
 def is_bundled(tool_name: str, name) -> bool:
-    """Exactly the bundled bridge: `plugin_<name>_exabeam`, no substring, no case games."""
-    return bool(name) and server_of(tool_name) == f"plugin_{name}_{SERVER}"
+    """Exactly the bundled bridge, under either host's namespacing: Claude Code prefixes a plugin's MCP
+    server `plugin_<name>_<server>`, Antigravity `<plugin>_<server>`. No substring, no case games.
+
+    A bare `exabeam` is deliberately NOT bundled on either host: that is what a hand-wired server is
+    called, on Antigravity as much as on Claude Code, so it gets the operator's own rules and not our
+    allow."""
+    return bool(name) and server_of(tool_name) in (f"plugin_{name}_{SERVER}", f"{name}_{SERVER}")
 
 
 def load_tiers(plugin_root: Path):
@@ -293,7 +312,7 @@ def _context(event) -> dict:
     return out
 
 
-def _post_call(event, tool: str, target: dict) -> int:
+def _post_call(event, tool: str, target: dict, ctx=None) -> int:
     """PostToolUse (#5): the call completed. For an ask-tier tool that is recorded as `approved` — the gate
     asked before it, and an ask completes only when a human answered yes — unless the session ran in a
     mode where nobody could answer (bypassPermissions, dontAsk), which is recorded as `ran_unasked`: the
@@ -304,7 +323,7 @@ def _post_call(event, tool: str, target: dict) -> int:
         decision, _reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root)))
     except Exception:  # noqa: BLE001 — unclassifiable: record that it ran, as the ask it would have been
         decision = "ask"
-    ctx = _context(event)
+    ctx = _context(event) if ctx is None else ctx
     if decision == "ask":
         if ctx.get("permission_mode", "").lower() in _UNATTENDED_MODES:
             outcome, reason = "ran_unasked", f"an ask-tier call completed under {ctx['permission_mode']}, where no human could answer: the gate's ask did not hold for this call"
@@ -322,20 +341,123 @@ def _post_call(event, tool: str, target: dict) -> int:
     return 0
 
 
+# ---- the Antigravity envelope (#306) ----
+# Antigravity hands a hook the step, not the tool: `{"toolCall": {"name": "mcp_tool", "args": {...}}}`,
+# where args is the MCP step -- a `serverName` and a nested `toolCall` carrying the real tool name and its
+# arguments as a JSON string. Normalizing that onto Claude Code's `mcp__<server>__<tool>` spelling here is
+# what lets ONE decide() serve both hosts; a second copy of the tier logic is how two hosts start
+# disagreeing about what is denied.
+_AGY_TOOL = re.compile(rf"^{SERVER}_[A-Za-z0-9_]+$")
+_NAME_KEYS = ("toolName", "tool_name", "name")
+_SERVER_KEYS = ("serverName", "server_name")
+_JSON_ARG_KEYS = ("argumentsJson", "arguments_json")
+_DICT_ARG_KEYS = ("arguments", "args", "toolArgs", "tool_args")
+
+
+def _first_str(d, keys) -> str:
+    for k in keys:
+        v = d.get(k) if isinstance(d, dict) else None
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return ""
+
+
+def _find_tool(obj, depth=0) -> str:
+    """An Exabeam tool name under a key that NAMES something, anywhere in the step. The restriction to
+    name-ish keys is deliberate: a free-text argument that happens to quote a tool name must not be read as
+    the call being made, which is how a gate starts denying case notes."""
+    if not isinstance(obj, dict) or depth > 4:
+        return ""
+    for k, v in obj.items():
+        lk = str(k).lower()
+        if isinstance(v, str) and ("name" in lk or "tool" in lk) and _AGY_TOOL.match(v.strip()):
+            return v.strip()
+        if isinstance(v, dict):
+            found = _find_tool(v, depth + 1)
+            if found:
+                return found
+    return ""
+
+
+def agy_call(event) -> tuple[str, dict]:
+    """(tool name in Claude Code's spelling, the call's arguments) for an Antigravity MCP step.
+
+    ("", {}) when this is not an Exabeam MCP call -- which on this host is the common case, because the
+    matcher catches every MCP call on the machine and only this function can tell them apart."""
+    call = event.get("toolCall")
+    args = call.get("args") if isinstance(call, dict) else None
+    if not isinstance(args, dict):
+        return "", {}
+    inner = args.get("toolCall") or args.get("tool_call")
+    inner = inner if isinstance(inner, dict) else {}
+    tool = _first_str(inner, _NAME_KEYS) or _find_tool(args)
+    if not _AGY_TOOL.match(tool):
+        return "", {}
+    # No serverName in the payload still means the tool named itself an Exabeam tool, so it is ours and is
+    # judged; what it is not is the BUNDLED bridge, so an allow-tier read falls through rather than
+    # being waved past on a guess.
+    server = _first_str(args, _SERVER_KEYS) or SERVER
+    payload = {}
+    raw = _first_str(inner, _JSON_ARG_KEYS)
+    if raw:
+        try:
+            payload = json.loads(raw)
+        except Exception:  # noqa: BLE001 — unparseable arguments cost the record its target, never the decision
+            payload = {}
+    if not isinstance(payload, dict) or not payload:
+        for src in (inner, args):
+            for k in _DICT_ARG_KEYS:
+                v = src.get(k)
+                if isinstance(v, dict):
+                    return f"mcp__{server}__{tool}", v
+        payload = {}
+    return f"mcp__{server}__{tool}", payload
+
+
+def emit(host: str, decision: str, reason: str) -> None:
+    """The decision, in the envelope the host reads. No decision is silence on Claude Code and an empty
+    object on Antigravity, whose contract says a hook writes a JSON object on stdout."""
+    if host == "antigravity":
+        print(json.dumps({} if decision == NO_DECISION else {"decision": decision, "reason": reason}))
+    elif decision != NO_DECISION:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
+                                                 "permissionDecisionReason": reason}}))
+
+
 def main(argv=None) -> int:
     # --post: this invocation is the PostToolUse record (hooks.json passes it). Decided by the command
     # line, not by stdin, so an unparseable event can never turn a record into a permission decision.
-    post = "--post" in (sys.argv[1:] if argv is None else argv)
+    argv = sys.argv[1:] if argv is None else argv
+    post = "--post" in argv
+    # The host, like --post, is decided by the command line and not by stdin: an unparseable or hostile
+    # event can change neither which envelope we answer in nor whether this call is a record or a verdict.
+    host = "antigravity" if "--antigravity" in argv else "claude"
     tool, target, ctx = "", {}, {}
     try:
         event = json.load(sys.stdin)
-        tool = str(event.get("tool_name", ""))
+        if host == "antigravity":
+            tool, args = agy_call(event)
+            if not tool:
+                emit(host, NO_DECISION, "")
+                return 0                   # not an Exabeam MCP call: this host's matcher sees them all
+            event = dict(event)
+            event["session_id"] = str(event.get("conversationId") or "")
+            target = target_fields(args)
+            ctx = {"host": host}
+            step = event.get("stepIdx")
+            if isinstance(step, int):
+                ctx["tool_use_id"] = f"step-{step}"   # ties a post line to the ask that preceded it
+        else:
+            tool = str(event.get("tool_name", ""))
+            target = target_fields(event.get("tool_input"))
+            ctx = _context(event)
         if tool and not is_ours(tool):
             return 0                       # another server's tool: no decision, no record (not our business)
-        target = target_fields(event.get("tool_input"))
         if post or str(event.get("hook_event_name", "")) == "PostToolUse":
-            return _post_call(event, tool, target)
-        ctx = _context(event)
+            _post_call(event, tool, target, ctx)
+            if host == "antigravity":
+                print(json.dumps({}))      # its PostToolUse contract is an empty object, not silence
+            return 0
         root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
         decision, reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root)))
         if decision == "allow" and bare(tool) in ESCALATION_WRITES:
@@ -344,6 +466,8 @@ def main(argv=None) -> int:
                 decision, reason = "ask", why
     except Exception as e:  # noqa: BLE001 — cannot classify → the human decides; headless → refused
         if post:
+            if host == "antigravity":
+                print(json.dumps({}))
             return 0                       # a record we cannot write is not a decision to make
         decision, reason = "ask", f"Raffkin gate could not evaluate this call ({type(e).__name__}); asking rather than allowing."
     record = {"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
@@ -351,10 +475,7 @@ def main(argv=None) -> int:
     if target:
         record["target"] = target          # what was attempted, on which object — never the free text
     log_decision(record)
-    if decision == NO_DECISION:
-        return 0                           # no JSON on stdout = no decision: the normal permission flow runs
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
-                                             "permissionDecisionReason": reason}}))
+    emit(host, decision, reason)
     return 0
 
 

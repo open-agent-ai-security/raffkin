@@ -1,0 +1,28 @@
+{
+  "raffkin-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp_tool|call_mcp_tool",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hooks/gate.py --antigravity || uv run --quiet --no-project ./hooks/gate.py --antigravity",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp_tool|call_mcp_tool",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hooks/gate.py --antigravity --post || uv run --quiet --no-project ./hooks/gate.py --antigravity --post",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

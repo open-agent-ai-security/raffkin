@@ -390,12 +390,38 @@ check_gate() {
   local platform="$1" state
   case "$platform" in
     antigravity)
-      # Antigravity supports PreToolUse hooks with allow/deny/ask, so the bundled gate is portable in
-      # principle -- but it namespaces MCP servers as <plugin>-<server>, and the tool-name format the
-      # matcher and gate.py key on has not been verified against a live `agy`. Reporting a gate we have
-      # not driven is how "0 HOOK MISS" came to mean nothing on the red-team's hook leg; so this says
-      # what is true today instead.
-      warn "Human-in-the-loop gate NOT active on this host — the bundled hook is wired for Claude Code. None of ${PRODUCT_NAME}'s deny tier, ask tier or per-session write budget is in force here, and whether Antigravity prompts you at all before an Exabeam write is its own tool-approval behaviour, which this release has not verified against a live 'agy'. YOU are the approval step: read every write before you allow it" ;;
+      # Antigravity reads a plugin's hooks from hooks.json at the plugin ROOT and honours {"decision":
+      # "deny"} as a hard block, so the bundled gate runs here. What this branch must NOT do is report it
+      # from the file's existence: "0 HOOK MISS" meant nothing on the red team's hook leg precisely
+      # because nobody had made the control answer. So the gate is EXERCISED -- fed a containment call on
+      # stdin exactly as the host would, and believed only if it denies it.
+      local root hookfile runner verdict
+      root="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+      hookfile="$root/hooks.json"
+      runner=""
+      command -v python3 >/dev/null 2>&1 && runner="python3"
+      # uv brings its own Python and the connector already needs it, so it is the fallback the hook itself
+      # falls back to; neither present means the bridge cannot start either.
+      [ -z "$runner" ] && command -v uv >/dev/null 2>&1 && runner="uv run --quiet --no-project"
+      if [ ! -f "$hookfile" ]; then
+        fail "Gate is OFF — no hooks.json at the plugin root (${root}). Antigravity reads a plugin's hooks from there and nowhere else, so ${PRODUCT_NAME}'s deny tier, ask tier and write budget are not in force; reinstall the plugin"
+      elif ! grep -q '"PreToolUse"' "$hookfile" 2>/dev/null; then
+        fail "Gate is OFF — ${hookfile} declares no PreToolUse handler, so nothing is consulted before an Exabeam write; reinstall the plugin"
+      elif [ -z "$runner" ]; then
+        fail "Gate is OFF — neither 'python3' nor 'uv' is on PATH, so the hook cannot start. A hook that cannot start returns no decision, which this host reads as no objection: ${PRODUCT_NAME}'s deny tier would NOT be in force. Install uv (https://docs.astral.sh/uv/) — the Exabeam connector needs it too"
+      else
+        # RAFFKIN_GATE_LOG=off: a probe must not forge a decision in the analyst's audit trail.
+        verdict="$(printf '%s' '{"conversationId":"preflight","stepIdx":0,"toolCall":{"name":"mcp_tool","args":{"serverName":"'"${RAFFKIN_ID_MCP_SERVER:-exabeam}"'","toolCall":{"toolName":"exabeam_isolate_host","argumentsJson":"{}"}}}}' \
+          | RAFFKIN_GATE_LOG=off $runner "$root/hooks/gate.py" --antigravity 2>/dev/null | tr -d ' \n')" || true
+        case "$verdict" in
+          *'"decision":"deny"'*)
+            ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — asked to isolate a host just now and refused it. Denies containment, asks on dismiss/close. Not yet confirmed against a live session: whether this host's deny holds when you start it with --dangerously-skip-permissions" ;;
+          "")
+            fail "Gate is OFF — the hook produced no decision when handed a containment call (ran: ${runner}). No decision is read as no objection here; run '$runner \"$root/hooks/gate.py\" --antigravity' by hand to see the error" ;;
+          *)
+            fail "Gate is NOT refusing containment — handed an isolate-host call, the hook answered ${verdict}. ${PRODUCT_NAME} never executes containment, so this is a broken gate, not a configuration choice" ;;
+        esac
+      fi ;;
     codex)
       state="$(gate_state_codex)"
       case "$state" in

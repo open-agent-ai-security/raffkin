@@ -45,7 +45,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 
 1. **You hand it the work** — an alert ID, a case ID, or a pasted payload — in your Claude Code, Codex or Antigravity session.
 2. **It gathers evidence through the Exabeam MCP**, via a bundled connector that screens what comes back, and reasons only over what it retrieved. Content in your telemetry is evidence, never instructions.
-3. **It reaches a verdict and acts within the gate.** Escalating and annotating pass the gate (on Codex the host still asks — Exabeam's annotation of those tools, not Raffkin's); dismissing an alert or closing a case asks you first, every time; containment is written up for you to perform. On Antigravity the bundled gate does not ship yet, so the skill's own ask is the only one — see [Installation](installation.md#what-is-different-on-this-host).
+3. **It reaches a verdict and acts within the gate.** Escalating and annotating pass the gate (on Codex the host still asks — Exabeam's annotation of those tools, not Raffkin's); dismissing an alert or closing a case asks you first, every time; containment is written up for you to perform. The gate ships on all three hosts; what has not been tested on Antigravity is the model behind it — see [Installation](installation.md#what-is-different-on-this-host).
 4. **Everything is on the record** — the calls, the gated decision, the guardrail firings — in a local audit trail, on by default.
 
 ```mermaid

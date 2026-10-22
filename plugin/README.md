@@ -19,10 +19,10 @@
 Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
 skills work the tenant through the Exabeam MCP — one case, the whole queue, or the rules behind it —
 each named for the person whose job it does. No server, no database, no approval queue: the analyst at
-the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks on
-Claude Code and Codex** — a gate the plugin ships and your host enforces, and the skill asking you first.
-On Google Antigravity only the second lock ships today; see
-[What is different on this host](docs/installation.md#what-is-different-on-this-host).
+the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks** —
+a gate the plugin ships and your host enforces, and the skill asking you first. Both ship on all three
+hosts; what differs on Antigravity is that no release has been red-teamed on a Gemini model, so see
+[What is different on this host](docs/installation.md#what-is-different-on-this-host) before you run there.
 
 ## The three skills
 
@@ -30,7 +30,7 @@ On Google Antigravity only the second lock ships today; see
 |---|---|---|
 | **`soc-investigate`** | the analyst | One alert or case, first look to written verdict: gathers the evidence itself, pivots on the entities, weighs a benign explanation against a malicious one, and acts — opens or updates a case, writes notes, escalates. Asks you before any dismiss or close. |
 | **`triage-cases`** | the shift lead | The open queue rather than one case: clusters by attack shape, ranks by corroborated signal, hands back a short "start here" list. Read-only across the sweep. |
-| **`rule-tuning`** | the detection engineer | Finds rules that are *noisy*, not merely loud, and proposes the specific change mapped to real Exabeam mechanics. Propose-only: the skill never calls a rule-write tool, and the host gate refuses them on Claude Code and Codex. |
+| **`rule-tuning`** | the detection engineer | Finds rules that are *noisy*, not merely loud, and proposes the specific change mapped to real Exabeam mechanics. Propose-only: the skill never calls a rule-write tool, and the host gate refuses them on every host. |
 
 Each hands off to the others: a single case to `soc-investigate`, a noise cluster to `rule-tuning`.
 
@@ -44,9 +44,8 @@ Each hands off to the others: a single case to `soc-investigate`, a noise cluste
 - 🔧 **Tunes the source of the noise** so the fix lands on the detection instead of on the analyst.
 - ✍️ **Acts** — opens or updates a case, writes notes, dismisses true false positives (gated), and
   **recommends** containment for you to perform in EDR or IAM. It never executes containment.
-- 🔒 **Stops where it should** — on Claude Code and Codex, dismiss and close sit behind a host-enforced
-  gate that ships on. No settings to edit. Antigravity has no gate of ours yet: there, the skill's own ask
-  is the only one.
+- 🔒 **Stops where it should** — dismiss and close sit behind a host-enforced gate that ships on, on all
+  three hosts. No settings to edit.
 - 🛡️ **Treats telemetry as hostile** — hidden-character smuggling is stripped from what it reads;
   formulas and links are disarmed and secrets and structured identifiers masked in what it writes.
 - 🧾 **Logs what it did** — a structured, local, privacy-preserving audit record, on by default.

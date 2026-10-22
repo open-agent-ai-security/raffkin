@@ -131,27 +131,27 @@ verdict suppressing a real threat.** Three tiers:
    for a clear yes. Do not call the tool until they answer.** The host gates these too — on Claude Code
    the plugin's bundled hook, which holds even under `--dangerously-skip-permissions`; on Codex the
    host's own approval — but a host can be misconfigured and your explicit ask cannot, so always do
-   both. Never assume approval. **On Google Antigravity no gate of this plugin's ships at all**, so your
-   own ask is the only thing standing between a wrong verdict and a suppressed threat: ask, and wait.
+   both. Never assume approval. The gate runs on all three hosts — a `PreToolUse` hook on Claude Code and
+   on Antigravity, the approval policy on Codex — and on none of them does it replace your own ask.
 
 3. **Containment (not in this MCP — recommend only):** host isolation, account disable, blocking,
    process kill, etc. (`reference/containment-tools.md`). The analyst performs these in EDR/IAM, not
-   here. They're denied at the host permission layer as defense-in-depth even though absent — on Claude Code
-   and Codex. That denial is a host control, so on Antigravity it is not in force; the rule for you is
-   the same on every host, and it is absolute: **never call a containment tool.** Surface them
+   here. They're denied at the host permission layer as defense-in-depth even though absent, on every
+   host. That denial is a host control and a host can be misconfigured, so the rule for you does not
+   lean on it, and it is absolute: **never call a containment tool.** Surface them
    as **Recommended containment** in the report; never claim you executed one.
 
-On Claude Code and Codex, two layers enforce this: your host agent's approval prompt **and** your own
-explicit ask before any close. On Claude Code the prompt comes from the plugin's bundled PreToolUse hook
-(`hooks/gate.py`), active the moment the plugin is enabled; on Codex it is Codex itself, which requires
-approval for the destructive-annotated write tools and refuses them when no human is present.
+Two layers enforce this on every host: your host agent's approval prompt **and** your own explicit ask
+before any close. On Claude Code and on Antigravity the prompt comes from the plugin's bundled PreToolUse
+hook (`hooks/gate.py`), active the moment the plugin is enabled — Claude Code loads it from
+`hooks/hooks.json`, Antigravity from `hooks.json` at the plugin root. On Codex it is Codex itself, which
+requires approval for the destructive-annotated write tools and refuses them when no human is present.
 The host prompt can be misconfigured by whoever sets up the host; your ask cannot — so always do both,
 and never dismiss or close on your own initiative.
 
-**On Google Antigravity there is one layer: yours.** This plugin ships no gate for that host, so nothing
-will stop a dismiss, a close or a containment call if you make one. Do not treat the absence of a prompt
-as permission. Ask the analyst in the conversation, in words, and wait for a clear yes — exactly as you
-would if the gate were there and had asked for you.
+**Never read the absence of a prompt as permission.** A gate you cannot see is not a gate you can assume:
+if no prompt appeared, that is a reason to ask the analyst in words and wait for a clear yes, not a
+reason to proceed. Ask exactly as you would if the gate were there and had asked for you.
 
 **If the analyst says no, or does not answer, the action is over.** Record in the report that the
 dismiss/close was proposed and declined (or not confirmed), and stop there. Do not retry the call, do

@@ -383,7 +383,7 @@ def test_shipped_docs_never_link_outside_the_plugin():
 
 CODEX_PLUGIN = _load("plugin/.codex-plugin/plugin.json")
 CODEX_MCP = _load("plugin/.mcp.codex.json")
-AGY_MCP = _load("plugin/.mcp.antigravity.json")
+AGY_MCP = _load("plugin/mcp_config.json")
 CODEX_SERVER = CODEX_MCP["exabeam"]
 
 
@@ -408,7 +408,7 @@ def test_the_bridge_is_launched_with_the_lock_enforced_on_every_host():
     """
     for label, args in (("plugin/.mcp.json", MCP["mcpServers"]["exabeam"]["args"]),
                         ("plugin/.mcp.codex.json", CODEX_SERVER["args"]),
-                        ("plugin/.mcp.antigravity.json", AGY_MCP["mcpServers"]["exabeam"]["args"])):
+                        ("plugin/mcp_config.json", AGY_MCP["mcpServers"]["exabeam"]["args"])):
         assert args[:3] == ["run", "--quiet", "--locked"], f"{label} launches the bridge without --locked: {args}"
     assert (ROOT / "plugin" / "connector" / "exabeam-mcp-bridge.py.lock").is_file(), "the script lock must ship beside the bridge"
     assert 'uv run --quiet --locked "$bridge" --check' in PREFLIGHT_SH, "preflight's connectivity check must launch the bridge as the hosts do"
@@ -659,27 +659,55 @@ def test_docs_describe_the_gate_that_ships():
     assert re.match(matcher, "mcp__exabeam__exabeam_update_alert"), "installation.md says the hook covers a manual `exabeam` server"
 
 
-def test_the_antigravity_manifest_declares_the_mcp_server():
-    """#304: Antigravity does not auto-discover the MCP config the way Claude Code does — the manifest
-    has to name it. Without `mcpServers` the plugin still installs and still loads its three skills, and
-    every one of them has no Exabeam tool to call: a plugin that looks installed and does nothing.
+# The complete set of top-level fields Antigravity's plugin loader reads. Its own documentation, shipped
+# inside the `agy` binary, follows the list with "Do not add any other top-level field. `author` and
+# `homepage` are silently discarded by the loader — they neither take effect nor error out."
+AGY_MANIFEST_FIELDS = {"name", "description", "logo", "suggestedPrompts", "displayName", "version", "disabled"}
 
-    It also pins the Marketplace-required fields, and that the file it points at is the Antigravity one:
-    .mcp.json carries ${CLAUDE_PLUGIN_ROOT}, which Antigravity does not resolve, so pointing there would
-    hand it an unrunnable command.
+
+def test_the_antigravity_manifest_carries_only_fields_the_loader_reads():
+    """#304/#306: this manifest is an allowlist, because everything outside it fails SILENTLY.
+
+    The first cut of this PR declared the MCP server as `"mcpServers": "./.mcp.antigravity.json"`, reading
+    the published guide. That is not a field. `agy plugin validate` answers "unknown field mcpServers is
+    ignored" and then "mcpServers 0" — the three skills install, load, and have no Exabeam tool between
+    them. A plugin that looks installed and does nothing, which is the exact failure the generator exists
+    to prevent, shipped as the fix for it.
+
+    So the rule is inverted here: an unknown key is the bug, not a missing one. Anything the loader does
+    not read either does nothing (`category`, `keywords`) or hides a real component somewhere it will
+    never be found (`mcpServers`, `skills`), and no test downstream of a silent drop can see it.
     """
     m = json.loads((ROOT / "plugin" / ".antigravity-plugin" / "plugin.json").read_text())
-    assert m.get("mcpServers") == "./.mcp.antigravity.json", (
-        f"the Antigravity manifest must name the Antigravity MCP file, got {m.get('mcpServers')!r}")
-    mcp = ROOT / "plugin" / ".mcp.antigravity.json"
-    assert mcp.is_file(), "the payload must ship .mcp.antigravity.json"
-    text = mcp.read_text()
-    assert "${PLUGIN_ROOT}" in text and "${CLAUDE_PLUGIN_ROOT}" not in text, (
-        "the Antigravity MCP file must use ${PLUGIN_ROOT}; Antigravity does not resolve ${CLAUDE_PLUGIN_ROOT}")
-    for field in ("displayName", "logo", "suggestedPrompts"):
-        assert m.get(field), f"{field} is required for an Antigravity Marketplace listing"
+    extra = sorted(set(m) - AGY_MANIFEST_FIELDS)
+    assert not extra, (
+        f"the Antigravity manifest carries {extra}, which its loader silently discards. If one of these is "
+        "meant to do something, it is not doing it — the components live in mcp_config.json and hooks.json "
+        "at the plugin root, and nothing else may be declared here")
+    for field in ("displayName", "logo", "suggestedPrompts", "description"):
+        assert m.get(field), f"{field} is required for the Antigravity listing"
     assert (ROOT / "plugin" / m["logo"]).is_file(), f"the logo must ship in the payload: {m['logo']}"
     assert 1 <= len(m["suggestedPrompts"]) <= 3, "Antigravity shows at most 3 suggested prompts"
+    assert "://" not in m["logo"], (
+        "a URL logo is rejected SILENTLY by the loader (no logo, no error), so it must be a bundled file")
+
+
+def test_the_antigravity_components_sit_where_the_host_reads_them():
+    """Antigravity resolves a plugin's MCP servers and hooks from fixed paths at the plugin ROOT, and not
+    from the manifest. Both files are generated, so this pins the two things a derivation can get wrong:
+    the location, and the variable the launch command is written in.
+
+    .mcp.json carries ${CLAUDE_PLUGIN_ROOT}, which Antigravity does not resolve — shipping that spelling
+    would hand the host a command with an unexpanded variable and the bridge would never start."""
+    mcp = ROOT / "plugin" / "mcp_config.json"
+    assert mcp.is_file(), "Antigravity reads the MCP servers from mcp_config.json at the plugin root"
+    assert not (ROOT / "plugin" / ".mcp.antigravity.json").exists(), (
+        "a manifest pointer to a privately-named MCP file is how this host ended up with no tools; the "
+        "servers belong in mcp_config.json")
+    text = mcp.read_text()
+    assert "${PLUGIN_ROOT}" in text and "${CLAUDE_PLUGIN_ROOT}" not in text, (
+        "mcp_config.json must use ${PLUGIN_ROOT}; Antigravity does not resolve ${CLAUDE_PLUGIN_ROOT}")
+    assert "exabeam" in json.loads(text)["mcpServers"], "the bundled bridge must be declared for this host"
 
 
 def test_the_gate_ships_but_no_manifest_names_it():
@@ -697,14 +725,50 @@ def test_the_gate_ships_but_no_manifest_names_it():
         assert "hooks" not in d, (
             f"{manifest} declares the hook; the host loads hooks/hooks.json itself, so naming it "
             "duplicates the file and fails the entire plugin load (#197)")
-    # Antigravity reads hooks from a ROOT hooks.json, in its own format. Ours is Claude Code's, under
-    # hooks/ — so a root copy would be a Claude-format hook handed to a host that reads it differently,
-    # and the result is the #212 failure mode: a matcher that never fires, reporting a gate that is not
-    # there. Until the port is driven against a live `agy`, the payload must ship no root hooks.json
-    # (review of #306).
-    assert not (ROOT / "plugin" / "hooks.json").exists(), (
-        "plugin/hooks.json would be read by Antigravity as its root hook config, in a format this file "
-        "is not written in; the gate's own file lives at plugin/hooks/hooks.json")
+    # Antigravity reads hooks from a ROOT hooks.json, in its own format, and stages hooks/hooks.json into
+    # that place only for an IMPORTED Claude Code extension — never for a native plugin, which is what a
+    # directory carrying .antigravity-plugin/plugin.json is. So BOTH files ship, in their own formats, and
+    # the next test pins that they stay distinguishable: one file in the wrong format at the wrong path is
+    # the #212 failure mode, a matcher that never fires while the docs report a gate.
+    assert (ROOT / "plugin" / "hooks.json").is_file(), (
+        "the payload must carry plugin/hooks.json — Antigravity reads the gate from the plugin root and "
+        "nowhere else, so without it the deny tier is not enforced on that host at all")
+
+
+def test_the_antigravity_hook_file_arms_the_same_gate():
+    """The gate is a control, so the thing to pin is that it is ARMED on this host, not that a file exists.
+
+    Four ways this one silently does nothing, each asserted below:
+      - Antigravity's hook format is a map of hook NAME to events; Claude Code's is {"hooks": {...}}. A
+        file in the wrong shape loads as a plugin with no hooks and reports nothing.
+      - its matcher runs against the STEP type, so every MCP call arrives as `mcp_tool` whatever server it
+        came from. A matcher written against `mcp__…__exabeam_*`, as Claude Code's is, never fires.
+      - the gate must be invoked with --antigravity, or it answers in Claude Code's envelope and the
+        decision is discarded.
+      - `python3` is not bundled with this host, and a hook command that cannot start produces no JSON,
+        which reads as "no opinion" — a fail-open. `uv` is already required by the bridge, so it is the
+        fallback.
+    """
+    agy = json.loads((ROOT / "plugin" / "hooks.json").read_text())
+    assert "hooks" not in agy, (
+        "plugin/hooks.json is in Claude Code's shape ({'hooks': ...}); Antigravity expects a map of hook "
+        "name to events, and would load this as a plugin with no hooks at all")
+    name = json.loads((ROOT / "plugin" / "identity.json").read_text())["name"]
+    spec = agy.get(f"{name}-gate")
+    assert spec, f"the hook must be keyed on the plugin name ({name}-gate), so two installed copies do not collide"
+    for event in ("PreToolUse", "PostToolUse"):
+        group = spec[event][0]
+        assert re.search(group["matcher"], "mcp_tool"), (
+            f"{event} matcher {group['matcher']!r} does not match `mcp_tool`, which is how EVERY MCP call "
+            "reaches a hook on this host; a tool-name matcher never fires here")
+        cmd = group["hooks"][0]["command"]
+        assert "--antigravity" in cmd, f"{event} must invoke the gate with --antigravity or its answer is discarded"
+        assert "hooks/gate.py" in cmd, f"{event} must run the one gate, not a second copy of the tier logic"
+        assert "uv run" in cmd, (
+            f"{event} has no uv fallback: with no python3 on PATH the hook produces no JSON and the host "
+            "reads that as no opinion, which is the deny tier failing open")
+    assert "--post" in spec["PostToolUse"][0]["hooks"][0]["command"], "the post-call record must pass --post"
+    assert "--post" not in spec["PreToolUse"][0]["hooks"][0]["command"], "the decision must not be made as a record"
 
 
 def test_skill_says_what_to_stop_doing():
@@ -732,15 +796,16 @@ def test_rule_write_tools_are_denied_and_documented():
         for ns in (PLUGIN_PREFIX, f"mcp__{next(iter(MCP['mcpServers']))}__"):
             assert f"{ns}{name}" in DENY, f"{ns}{name} not denied"
     assert "exabeam_create_analytics_rule" in TOOL_MAP_MD
-    assert "Never (denied by the host gate on Claude Code and Codex; never called on any host)" in TOOL_MAP_MD
-    # The deny tier is a HOST control (the bundled hook / disabled_tools), and the connector does not
-    # re-implement it -- so on Antigravity nothing of ours refuses these names. The docs and the skills
-    # must say that rather than promising a refusal that is not there (review of #306, raffkin#308).
-    assert "On Antigravity neither denial is in force" in TOOL_MAP_MD, \
-        "tool-map must not imply the deny tier holds on every host"
+    assert "Never (denied by the host gate on every host; never called regardless)" in TOOL_MAP_MD
+    # The deny tier is a HOST control on all three hosts -- the bundled hook on Claude Code and on
+    # Antigravity, disabled_tools on Codex. A host control can be misconfigured, so neither the tool map
+    # nor the skill may rest the refusal on it: the instruction not to call these names has to stand on
+    # its own, and say so (review of #306, raffkin#308).
+    assert "stands on its own" in TOOL_MAP_MD, \
+        "tool-map must not rest the refusal on a host control it cannot verify"
     rt = (ROOT / "plugin" / "skills" / "rule-tuning" / "SKILL.md").read_text()
-    assert "On Google Antigravity nothing of this plugin's does" in rt, \
-        "rule-tuning must name the host where the denial is absent"
+    assert "your refusal to call them is" in rt, \
+        "rule-tuning must put the control in the skill's own refusal, not only in the gate"
     # These two names are not hypothetical: they are on the live tenant surface (verified 2026-10-21,
     # 27 tools, two of them deny-tier). The skill must not soften that to "may expose".
     assert "confirmed present on a tenant" in rt, "rule-tuning must not hedge an exposure we observed"
@@ -910,10 +975,19 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 1, "the manifests are stale until regenerated"
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert "manifests carry the distribution's homepage, license, repository" in out, out
-    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
+    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         d = json.loads((work / m).read_text())
         assert d["license"] == "LicenseRef-Exabeam-Enterprise-Agreement" and d["homepage"] == d["repository"] == "https://github.com/Exabeam-Labs/plugins", m
         assert d["name"] == ident["name"] and d["version"] == ident["version"]
+    # Antigravity's manifest is the exception, and not by our choice: its loader reads seven fields and
+    # silently discards the rest, license and homepage among them. Writing the distribution's terms there
+    # would look like they were stated and state nothing, so they are left out and the identity fields that
+    # host DOES read still re-key.
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert not ({"license", "homepage", "repository"} & set(agy)), (
+        "the distribution's terms were written into a manifest that drops them; the copy states its terms "
+        "in the docs, which is where a reader of this host's listing can actually see them")
+    assert agy["name"] == ident["name"] and agy["version"] == ident["version"]
     # the README changes only in its marked community-only / distribution-only blocks (#256): with those
     # switched on the "before" text the same way, the rest is byte-identical — badge, License line, headers
     import importlib.util
@@ -936,9 +1010,10 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     r = subprocess.run(gen, capture_output=True, text=True)
     assert r.returncode != 0 and "distribution block accepts only" in r.stderr
-    # the shipped tree has no block: the manifests equal the identity's own fields
+    # the shipped tree has no block: the manifests equal the identity's own fields (bar Antigravity's,
+    # which carries none of the three — see above)
     live = json.loads((ROOT / "plugin" / "identity.json").read_text())
-    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
+    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         d = json.loads((ROOT / "plugin" / m).read_text())
         assert (d["license"], d["homepage"], d["repository"]) == (live["license"], live["homepage"], live["repository"])
 
@@ -977,8 +1052,11 @@ def test_a_rekeyed_distribution_gets_a_correct_antigravity_listing(tmp_path):
 
     m = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
     assert m["name"] == "soc", f"the Antigravity manifest kept the upstream name: {m['name']!r}"
-    assert m["mcpServers"] == "./.mcp.antigravity.json"
     assert (work / m["logo"]).is_file(), f"the re-keyed copy's logo must ship: {m['logo']}"
+    # the gate's hook key is namespaced on the plugin name, or the vendored copy and the community one
+    # collide in the host's merged hook map and one of the two gates is dropped
+    assert "soc-gate" in json.loads((work / "hooks.json").read_text()), \
+        "the re-keyed copy's hook kept the upstream key, which collides when both copies are installed"
 
     guide = (work / "docs" / "installation.md").read_text()
     assert ident["distribution"]["antigravityInstall"] in guide, "the distribution's own install URL is missing"
@@ -1055,6 +1133,7 @@ def test_gen_identity_refuses_a_logo_that_escapes_the_payload(tmp_path):
         ("../../etc/hosts", "parent escape"),
         ("./README.md", "not an image"),
         ("http://example.com/logo.png", "plain http"),
+        ("https://cdn.example.com/icon.png", "a URL: rejected silently by the loader, renders no logo"),
         ("./assets/elsewhere.svg", "symlink out of the payload"),
         ("", "unset"),
     ]:
@@ -1064,8 +1143,10 @@ def test_gen_identity_refuses_a_logo_that_escapes_the_payload(tmp_path):
         assert r.returncode != 0, f"{bad!r} ({why}) was accepted as a listing logo"
         assert "logo" in r.stderr, r.stderr
 
-    # an https:// URL is valid per the guide, and the shipped relative path still works
-    for good in ("https://cdn.example.com/icon.png", "assets/icon.svg"):
+    # a bundled relative path is the only accepted form. A URL reads as valid in the published guide, but
+    # the loader's own docs say URLs and absolute paths "are rejected silently — a bad value renders no
+    # logo rather than erroring", so accepting one here would ship an empty card nothing could detect.
+    for good in ("assets/icon.svg", "./assets/icon.svg"):
         ident["logo"] = good
         (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
         subprocess.run(gen, check=True, capture_output=True, text=True)
