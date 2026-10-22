@@ -445,3 +445,96 @@ def test_parallel_escalation_writes_cannot_all_slip_under_the_budget(tmp_path):
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
         out = list(ex.map(lambda _: _esc("create_case_notes", "par", d)["permissionDecision"], range(6)))
     assert out.count("allow") == 2 and out.count("ask") == 4, out
+
+
+# ---- the Antigravity envelope (#306) ----
+AGY_HOOKS = json.loads((PLUGIN / "hooks.json").read_text())
+
+
+def agy_step(tool=None, server=None, args_json="{}", step=1, extra=None):
+    """An Antigravity PreToolUse payload: the STEP, as that host hands it to a hook. Every MCP call on the
+    machine arrives as `mcp_tool` whatever server it came from, with the real name nested inside."""
+    inner = {}
+    if tool is not None:
+        inner["toolName"] = tool
+    if args_json is not None:
+        inner["argumentsJson"] = args_json
+    args = {} if extra is None else dict(extra)
+    if server is not None:
+        args["serverName"] = server
+    if inner:
+        args["toolCall"] = inner
+    return {"conversationId": "test-conv", "stepIdx": step, "toolCall": {"name": "mcp_tool", "args": args}}
+
+
+def run_agy(payload, post=False, env=None):
+    """The hook as Antigravity runs it: --antigravity, the step on stdin, a JSON object back. `{}` is the
+    no-decision answer this host's contract wants, returned as NO_DECISION."""
+    e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": "off",
+         "RAFFKIN_GATE_STATE_DIR": os.environ.get("RAFFKIN_TEST_GATE_STATE_DIR", "/nonexistent-raffkin-state"),
+         **(env or {})}
+    argv = [sys.executable, str(HOOK), "--antigravity"] + (["--post"] if post else [])
+    r = subprocess.run(argv, input=json.dumps(payload), capture_output=True, text=True, env=e)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout) if r.stdout.strip() else {}
+    return out or {"decision": None}
+
+
+def test_the_antigravity_hook_file_invokes_this_gate_on_every_mcp_call():
+    """Its matcher keys on the STEP type, so it cannot select the Exabeam server the way Claude Code's
+    regex does -- it has to catch every MCP call and let the gate decide."""
+    spec = AGY_HOOKS[json.loads((PLUGIN / "identity.json").read_text())["name"] + "-gate"]
+    for event in ("PreToolUse", "PostToolUse"):
+        group = spec[event][0]
+        assert re.search(group["matcher"], "mcp_tool")
+        assert "--antigravity" in group["hooks"][0]["command"]
+
+
+def test_antigravity_decisions_match_the_shipped_tiers():
+    assert run_agy(agy_step("exabeam_isolate_host", "raffkin_exabeam"))["decision"] == "deny"
+    assert run_agy(agy_step("exabeam_update_alert", "raffkin_exabeam"))["decision"] == "ask"
+    assert run_agy(agy_step("exabeam_get_case_details", "raffkin_exabeam"))["decision"] == "allow"
+    # the bundled bridge is `<plugin>_<server>` on this host; a hand-wired `exabeam` is not bundled, so an
+    # allow-tier read falls through to the operator's own rules rather than being waved past
+    assert run_agy(agy_step("exabeam_get_case_details", "exabeam"))["decision"] is None
+    out = run_agy(agy_step("exabeam_brand_new_thing", "raffkin_exabeam"))
+    assert out["decision"] == "ask" and "not classified" in out["reason"]
+
+
+def test_another_servers_call_gets_no_decision_on_antigravity():
+    """The matcher sees every MCP call on the machine. Someone else's tools must not collect our verdicts
+    -- a gate that prompts on `create_pull_request` gets switched off by the person it annoys."""
+    assert run_agy(agy_step("create_pull_request", "github"))["decision"] is None
+    assert run_agy(agy_step("list_issues", server=None))["decision"] is None
+
+
+def test_an_unidentifiable_mcp_step_asks_rather_than_standing_aside():
+    """THE fail-open hole on this host, closed deliberately.
+
+    The payload shape is read from the host's documented contract and its proto descriptor, not from a
+    live call. If it differs, every Exabeam call becomes a step the gate cannot read -- and treating that
+    like another server's call would mean no decision on exactly the tools we promise to gate, on the host
+    whose docs say the gate holds. So a step that names NOTHING we can recognise asks. The cost of being
+    wrong is a prompt on somebody else's call; the cost the other way is a silent ungated close.
+    """
+    for payload, why in [
+        ({"conversationId": "c", "stepIdx": 1, "toolCall": {"name": "mcp_tool", "args": {}}}, "no args"),
+        ({"conversationId": "c", "stepIdx": 1}, "no toolCall at all"),
+        ({"conversationId": "c", "toolCall": {"name": "mcp_tool", "args": {"payload": {"invocation": {"identifier": "exabeam_update_alert"}}}}},
+         "the shape changed: the tool is in there, under keys we do not read"),
+    ]:
+        out = run_agy(payload)
+        assert out["decision"] == "ask", f"an unreadable step ({why}) got {out!r} instead of asking"
+        assert "could not identify" in out["reason"]
+
+    # ...but the POST record is never a verdict: it answers {} and writes nothing
+    assert run_agy({"conversationId": "c", "toolCall": {"name": "mcp_tool", "args": {}}}, post=True) == {"decision": None}
+
+
+def test_the_write_budget_counts_on_antigravity_too(tmp_path):
+    """Keyed on conversationId there, since this host has no session_id. Without a counter the budget
+    fails open on the one host where nobody has watched the gate work."""
+    env = {"RAFFKIN_GATE_STATE_DIR": str(tmp_path)}
+    decisions = [run_agy(agy_step("exabeam_create_case_notes", "raffkin_exabeam", step=i), env=env)["decision"]
+                 for i in range(3)]
+    assert decisions == ["allow", "allow", "ask"], decisions

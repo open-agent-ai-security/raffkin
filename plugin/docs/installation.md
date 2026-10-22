@@ -239,7 +239,9 @@ above is the one for *this* copy, and the community build has its own.
 Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate
 is the same file as on Claude Code — the deny tier, the ask tier and the per-session write budget are
 in force, and every decision lands on the same audit trail. Antigravity reads it from `hooks.json` at
-the plugin root and honours a `deny` as a hard block.
+the plugin root, and its documented hook contract makes a `deny` a hard block. A fresh install reports
+the gate (`hooks : 1`), and `preflight.sh` proves the gate's own answer by making it refuse a containment
+call — what no release has yet watched is this host calling the hook in a live session.
 
 Two differences are worth knowing before you run an investigation on this host.
 
@@ -271,20 +273,24 @@ there is no reason to entitle the key for detection-content *writes*. See
 [Key entitlements](#key-entitlements).
 
 <!-- community-only -->
-Two things about the gate on this host have not been exercised against a live `agy` session, because
-doing so needs the desktop app and a Google sign-in. The decision contract is documented and the gate is
-tested against it, including the payload shape, but we have not yet confirmed that a `deny` holds when a
-session runs with `--dangerously-skip-permissions` (it does on Claude Code), nor watched the host prompt on
-an `ask`. Both are tracked in
+Three things about the gate on this host have not been exercised against a live `agy` session, because
+doing so needs the desktop app and a Google sign-in. We have not confirmed that a `deny` holds when a
+session runs with `--dangerously-skip-permissions` (it does on Claude Code), nor watched the host prompt
+on an `ask`. The third is the one worth understanding: the shape of the payload the host hands a hook is
+read from its documented contract, not from a live call, so the gate could in principle be handed a step
+it cannot read. It is built to ask in that case rather than stand aside — an MCP call it cannot identify
+at all gets a prompt, which is the wrong-way-round failure that costs you a question rather than a silent
+ungated close. All three are tracked in
 [raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305). Moving the deny tier into the
 connector as well, so it holds without depending on any host, is
 [raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308).
 <!-- /community-only -->
 <!-- distribution-only
-Two things about the gate on this host have not been exercised against a live Antigravity session: whether
-a `deny` holds under `--dangerously-skip-permissions`, and what the host's own prompt looks like on an
-`ask`. The decision contract is documented and the gate is tested against it. {{support}} can tell you
-where that verification stands for your release.
+Three things about the gate on this host have not been exercised against a live Antigravity session:
+whether a `deny` holds under `--dangerously-skip-permissions`, what the host's own prompt looks like on an
+`ask`, and whether the payload the host hands a hook matches the documented shape the gate reads. On that
+last one the gate is built to ask rather than stand aside if it is handed a call it cannot identify.
+{{support}} can tell you where that verification stands for your release.
 /distribution-only -->
 
 

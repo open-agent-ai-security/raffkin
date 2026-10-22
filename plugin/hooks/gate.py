@@ -362,37 +362,57 @@ def _first_str(d, keys) -> str:
     return ""
 
 
-def _find_tool(obj, depth=0) -> str:
-    """An Exabeam tool name under a key that NAMES something, anywhere in the step. The restriction to
-    name-ish keys is deliberate: a free-text argument that happens to quote a tool name must not be read as
-    the call being made, which is how a gate starts denying case notes."""
+def _find_named(obj, pattern=None, depth=0) -> str:
+    """The first string under a key that NAMES something, anywhere in the step; with `pattern`, the first
+    one matching it. The restriction to name-ish keys is deliberate: a free-text argument that happens to
+    quote a tool name must not be read as the call being made, which is how a gate starts denying case
+    notes."""
     if not isinstance(obj, dict) or depth > 4:
         return ""
     for k, v in obj.items():
         lk = str(k).lower()
-        if isinstance(v, str) and ("name" in lk or "tool" in lk) and _AGY_TOOL.match(v.strip()):
+        if isinstance(v, str) and v.strip() and ("name" in lk or "tool" in lk) \
+                and (pattern is None or pattern.match(v.strip())):
             return v.strip()
         if isinstance(v, dict):
-            found = _find_tool(v, depth + 1)
+            found = _find_named(v, pattern, depth + 1)
             if found:
                 return found
     return ""
 
 
-def agy_call(event) -> tuple[str, dict]:
-    """(tool name in Claude Code's spelling, the call's arguments) for an Antigravity MCP step.
+# What agy_call() concluded about a step, which is NOT the same question as what to decide:
+OURS, OTHER, UNKNOWN = "ours", "other", "unknown"
 
-    ("", {}) when this is not an Exabeam MCP call -- which on this host is the common case, because the
-    matcher catches every MCP call on the machine and only this function can tell them apart."""
+
+def agy_call(event) -> tuple[str, dict, str]:
+    """(tool name in Claude Code's spelling, the call's arguments, what this step is).
+
+    The third value is the one that matters, because on this host the matcher catches every MCP call on the
+    machine and only this function can tell them apart:
+
+      OURS     an Exabeam tool: judge it.
+      OTHER    the step named a tool or a server, and it is not ours: no decision, quietly. Another
+               server's calls must not collect our verdicts.
+      UNKNOWN  the step named NOTHING we could recognise. This is the fail-open hole: the payload shape
+               here is read from the host's documented contract and its proto descriptor, not from a live
+               call, and if it differs then every Exabeam call lands in this branch. Returning OTHER for it
+               would mean no decision on a tool we are supposed to be gating, on the host whose docs now
+               promise the gate holds -- so it asks instead. The cost of being wrong is a prompt on
+               somebody else's MCP call; the cost the other way is a silent ungated close.
+    """
     call = event.get("toolCall")
     args = call.get("args") if isinstance(call, dict) else None
     if not isinstance(args, dict):
-        return "", {}
+        return "", {}, UNKNOWN
     inner = args.get("toolCall") or args.get("tool_call")
     inner = inner if isinstance(inner, dict) else {}
-    tool = _first_str(inner, _NAME_KEYS) or _find_tool(args)
+    tool = _first_str(inner, _NAME_KEYS) or _find_named(args, _AGY_TOOL)
     if not _AGY_TOOL.match(tool):
-        return "", {}
+        # Did it name anything at all? A server or tool we can read and that is not ours is a step we
+        # understand and should leave alone; naming nothing is a shape we do not understand.
+        named = _first_str(args, _SERVER_KEYS) or tool or _find_named(args)
+        return "", {}, (OTHER if named else UNKNOWN)
     # No serverName in the payload still means the tool named itself an Exabeam tool, so it is ours and is
     # judged; what it is not is the BUNDLED bridge, so an allow-tier read falls through rather than
     # being waved past on a guess.
@@ -409,9 +429,9 @@ def agy_call(event) -> tuple[str, dict]:
             for k in _DICT_ARG_KEYS:
                 v = src.get(k)
                 if isinstance(v, dict):
-                    return f"mcp__{server}__{tool}", v
+                    return f"mcp__{server}__{tool}", v, OURS
         payload = {}
-    return f"mcp__{server}__{tool}", payload
+    return f"mcp__{server}__{tool}", payload, OURS
 
 
 def emit(host: str, decision: str, reason: str) -> None:
@@ -436,10 +456,21 @@ def main(argv=None) -> int:
     try:
         event = json.load(sys.stdin)
         if host == "antigravity":
-            tool, args = agy_call(event)
-            if not tool:
+            tool, args, what = agy_call(event)
+            if what == OTHER:
                 emit(host, NO_DECISION, "")
                 return 0                   # not an Exabeam MCP call: this host's matcher sees them all
+            if what == UNKNOWN:
+                if post:
+                    print(json.dumps({}))
+                    return 0               # a record we cannot write is not a decision to make
+                reason = ("Raffkin gate: this host handed the hook an MCP call it could not identify — no "
+                          "tool name and no server name in the step. The gate cannot tell whether this is an "
+                          "Exabeam call, so it asks rather than standing aside.")
+                log_decision({"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                              "tool": "", "decision": "ask", "reason": reason, "host": host})
+                emit(host, "ask", reason)
+                return 0
             event = dict(event)
             event["session_id"] = str(event.get("conversationId") or "")
             target = target_fields(args)
