@@ -493,10 +493,13 @@ case closure one second after the gate asked, with nobody prompted. The host's o
 describes <code>deny</code> as a hard block and <code>ask</code> as "prompt the user", and the flag auto-answers the prompt.
 So on this host:</p>
 <ul>
-<li>the <strong>deny tier</strong> is documented as a hard block. Whether it survives that flag is <strong>untested</strong> — we
-  say so rather than assume it, because assuming the documented contract is what produced the three
-  defects above;</li>
-<li>the <strong>ask tier</strong> is enforced in a normal session and is <strong>not</strong> enforced under that flag;</li>
+<li>the <strong>deny tier</strong> holds. Probed directly — a stub hook returning <code>deny</code> under that flag blocked the
+  call — so the one guarantee this plugin rests on, that containment is never executed, survives an
+  operator turning permissions off;</li>
+<li>the <strong>ask tier</strong> is enforced in a normal session and is <strong>not</strong> enforced under that flag. Neither is
+  <code>force_ask</code>, the decision the host documents as "always prompt the user, ignoring cached permissions".
+  Both were probed and both were overridden, so there is <strong>no hook-level way to force a prompt</strong> on this
+  host once that flag is set;</li>
 <li>a completed ask-tier call is therefore recorded as <code>ran_consent_unconfirmed</code> rather than <code>approved</code>,
   because the gate cannot see whether a human answered. An <code>approved</code> line is evidence of consent; that
   line is not.</li>

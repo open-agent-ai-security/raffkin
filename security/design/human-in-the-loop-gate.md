@@ -119,6 +119,23 @@ therefore case-insensitive and positional wrappers are unwrapped, with the captu
 fixture in `tests/test_hook_gate.py`. The lesson is the one the release bar already encodes: a contract
 read from documentation is a hypothesis, and this one was wrong in three places at once.
 
+**What each decision is worth under `--dangerously-skip-permissions`, measured rather than read.** A
+stub hook was wired in place of the gate so the probe tested the HOST's contract and not this adapter,
+once per decision, with a fake case id so nothing could change either way (agy 1.4.5, 2026-10-22):
+
+| decision | result |
+|---|---|
+| `deny` | **honoured** — the call was blocked |
+| `force_ask` | overridden — the tool ran |
+| `ask` | overridden — the tool ran |
+
+So the deny tier, which carries the containment guarantee, survives an operator turning permissions off.
+The ask tier does not, and neither does `force_ask` — which matters because `force_ask` is documented as
+"always prompt the user, ignoring cached permissions" and was the obvious candidate fix. There is no
+hook-level way to force a prompt on this host once that flag is set. The control that still holds is the
+API key's entitlements, which no host can override, and that is what the install guide now points an
+unattended operator at.
+
 **On this host the gate's `allow` restricts rather than entitles.** Antigravity's own permission system
 applies on top of the hook's decision: a headless `agy -p` session cannot prompt for the `mcp` permission
 and auto-denies the call even after the gate has allowed it (observed). On Claude Code the plugin ships a
