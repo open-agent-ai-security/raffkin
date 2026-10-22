@@ -481,13 +481,30 @@ above is the one for *this* copy, and the community build has its own.
 /distribution-only -->
 
 <h3 id="what-is-different-on-this-host">What is different on this host</h3>
-<p>Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate
-is the same file as on Claude Code — the deny tier, the ask tier and the per-session write budget are
-in force, and every decision lands on the same audit trail. Antigravity reads it from <code>hooks.json</code> at
-the plugin root, and its documented hook contract makes a <code>deny</code> a hard block. A fresh install reports
-the gate (<code>hooks : 1</code>), and <code>preflight.sh</code> proves the gate's own answer by making it refuse a containment
-call — what no release has yet watched is this host calling the hook in a live session.</p>
-<p>Two differences are worth knowing before you run an investigation on this host.</p>
+<p>Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate is
+the same file as on Claude Code, it reads the same tier file, and every decision lands on the same audit
+trail. Antigravity loads it from <code>hooks.json</code> at the plugin root; a fresh install reports it
+(<code>hooks : 1</code>), <code>preflight.sh</code> makes it refuse a containment call, and it has now been <strong>observed being
+called in a live session</strong>.</p>
+<p><strong>One difference is not a gap in testing but a difference in what is enforced, and you need it before
+you choose how to run this host.</strong> On Antigravity the gate's <code>ask</code> does <strong>not</strong> survive
+<code>--dangerously-skip-permissions</code>. We measured it: a session started with that flag completed an ask-tier
+case closure one second after the gate asked, with nobody prompted. The host's own documentation
+describes <code>deny</code> as a hard block and <code>ask</code> as "prompt the user", and the flag auto-answers the prompt.
+So on this host:</p>
+<ul>
+<li>the <strong>deny tier</strong> is documented as a hard block. Whether it survives that flag is <strong>untested</strong> — we
+  say so rather than assume it, because assuming the documented contract is what produced the three
+  defects above;</li>
+<li>the <strong>ask tier</strong> is enforced in a normal session and is <strong>not</strong> enforced under that flag;</li>
+<li>a completed ask-tier call is therefore recorded as <code>ran_consent_unconfirmed</code> rather than <code>approved</code>,
+  because the gate cannot see whether a human answered. An <code>approved</code> line is evidence of consent; that
+  line is not.</li>
+</ul>
+<p><strong>If you run this host unattended, do not rely on the ask tier to hold.</strong> Use a key whose entitlements
+cannot perform what you are unwilling to have happen without a human — that control does not depend on
+any host. See <a href="#key-entitlements">Key entitlements</a>.</p>
+<p>Two further differences are worth knowing before you run an investigation on this host.</p>
 <p><strong>No release has been red-teamed on a Gemini model.</strong> Every Raffkin release is adversarially tested on the
 weakest supported model of each host before it ships, and that work has been done on Claude and GPT models
 only. The gate is a control on the <em>tool call</em>, so it does not depend on the model's good behaviour — but

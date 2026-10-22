@@ -209,9 +209,13 @@ best-effort to `~/.raffkin/gate.jsonl` with the call's **safe target fields** on
 dispositions (`alertId`, `caseId`, `alertStatus`, `stage`, …), never free text, values capped. So a
 refused attempt reads as "tried to dismiss alert X as false positive", which is the record that matters
 in a SOC (#87). The same hook runs again after the call (`PostToolUse`, invoked with `--post`) and
-appends `approved` for an ask-tier call that completed — inferred from completion, an ask completes only
-on a yes — or `ran_unasked` when the session's permission mode meant nobody could answer, and
-`ran_despite_deny` for a deny-tier tool that ran; never a decision, never stdout (#5).
+appends what the gate can vouch for: `approved` for an ask-tier call that completed under an attended
+permission mode, `ran_unasked` where the mode meant nobody could answer, `ran_consent_unconfirmed` where
+the host reports no mode at all (Antigravity), and `ran_despite_deny` for a deny-tier tool that ran;
+never a decision, never stdout (#5). The third of those was added after a session with
+`--dangerously-skip-permissions` was observed completing an ask-tier write a second after the gate asked
+it: an `approved` line there would have been a consent in the record that no human gave, and a log that
+overstates what it saw is worse than one that says less.
 `RAFFKIN_GATE_LOG=off` disables it; the bridge's audit trail records the calls that do
 reach it ([logging guide](../../plugin/docs/logging.md)).
 

@@ -49,9 +49,11 @@ another path overrides) — a first-party record of what was attempted and what 
 attempts that never reached the bridge (#87).
 
 The same hook runs as PostToolUse, invoked with `--post` (#5). An ask-tier call that COMPLETED is
-appended as `"decision": "approved"` with the same safe target fields, beside the `ask` line — inferred
-from completion: an ask completes only when a human answered yes, unless the session ran in a mode where
-nobody could answer (bypassPermissions, dontAsk), recorded as `"ran_unasked"`. A deny-tier tool that ran
+appended beside the `ask` line with the same safe target fields, as whatever the gate can actually vouch
+for: `"approved"` only where the host reported an attended permission mode, so completion does imply a
+human answered yes; `"ran_unasked"` where it reported an unattended one (bypassPermissions, dontAsk);
+and `"ran_consent_unconfirmed"` where it reported none at all, which is Antigravity — an ask there was
+observed completing with nobody prompted, so `approved` would record a consent that never happened. A deny-tier tool that ran
 anyway is `"ran_despite_deny"`. Allow-tier tools leave no post-call line: the gate log is a log of
 decisions, and the bridge's telemetry already records every call. Both lines carry the host's
 `permission_mode` and `tool_use_id` when present, so a post line ties to its ask. No output on stdout.
@@ -73,8 +75,12 @@ Same tiers, same budget, same log; three differences, all in the envelope rather
     the difference is that here the matcher cannot do any of that filtering, so the parsing below is the
     only thing standing between another server's calls and our verdicts.
   * The decision is `{"decision": "deny"|"ask"|"force_ask"|"allow", "reason": ...}` rather than Claude
-    Code's `hookSpecificOutput`, and `deny` is a hard block.
-  * The host does not report its permission mode, so a completed ask-tier call is logged as `approved`
+    Code's `hookSpecificOutput`. The host documents `deny` as a hard block; what has been OBSERVED is
+    that `ask` is NOT one — a session run with `--dangerously-skip-permissions` completed an ask-tier
+    write a second after the gate asked, nobody prompted (agy 1.4.5, 2026-10-22). Whether `deny` holds
+    under that flag is untested (#305).
+  * The host does not report its permission mode, so a completed ask-tier call is logged as
+    `ran_consent_unconfirmed` rather than `approved`
     without being able to prove a human answered -- the one thing the Claude Code record can distinguish
     and this one cannot. Records carry `"host"` so the log never has to be guessed at.
 
@@ -319,11 +325,14 @@ def _context(event) -> dict:
 
 
 def _post_call(event, tool: str, target: dict, ctx=None) -> int:
-    """PostToolUse (#5): the call completed. For an ask-tier tool that is recorded as `approved` — the gate
-    asked before it, and an ask completes only when a human answered yes — unless the session ran in a
-    mode where nobody could answer (bypassPermissions, dontAsk), which is recorded as `ran_unasked`: the
-    ask did not hold for that call. A deny-tier tool that ran is `ran_despite_deny`. Allow-tier tools
-    leave no line. Never a decision, never stdout: this is a record, not a verdict."""
+    """PostToolUse (#5): the call completed, recorded as what the gate can actually VOUCH for.
+
+    `approved` is only written where completion really does imply a human said yes: the host reported an
+    attended permission mode. Where it reported an unattended one (bypassPermissions, dontAsk) the line is
+    `ran_unasked`. Where it reported NOTHING -- Antigravity -- the line is `ran_consent_unconfirmed`,
+    because an ask there was observed completing with nobody prompted. A deny-tier tool that ran is
+    `ran_despite_deny`. Allow-tier tools leave no line. Never a decision, never stdout: this is a record,
+    not a verdict, and a record that overstates what it knows is worse than a shorter one."""
     try:
         root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
         decision, _reason = decide(tool, load_tiers(root), bundled=is_bundled(tool, plugin_name(root)))
@@ -333,6 +342,15 @@ def _post_call(event, tool: str, target: dict, ctx=None) -> int:
     if decision == "ask":
         if ctx.get("permission_mode", "").lower() in _UNATTENDED_MODES:
             outcome, reason = "ran_unasked", f"an ask-tier call completed under {ctx['permission_mode']}, where no human could answer: the gate's ask did not hold for this call"
+        elif not ctx.get("permission_mode"):
+            # The host never told us the mode, so "it completed" does not mean "a human said yes". On
+            # Antigravity that is not hypothetical: a session started with --dangerously-skip-permissions
+            # was OBSERVED completing an ask-tier case closure one second after the gate asked, with
+            # nobody prompted (2026-10-22, agy 1.4.5). Recording that as `approved` would put a consent
+            # in the audit trail that never happened, which is worse than recording less.
+            outcome, reason = "ran_consent_unconfirmed", ("an ask-tier call completed, but this host does "
+                "not report its permission mode, so the gate cannot tell an answered prompt from a "
+                "session that auto-approved it; consent is NOT evidenced by this record")
         else:
             outcome, reason = "approved", "an ask-tier call completed after the gate asked: inferred from completion, an ask completes only on a yes"
     elif decision == "deny":

@@ -254,14 +254,32 @@ above is the one for *this* copy, and the community build has its own.
 
 ### What is different on this host
 
-Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate
-is the same file as on Claude Code — the deny tier, the ask tier and the per-session write budget are
-in force, and every decision lands on the same audit trail. Antigravity reads it from `hooks.json` at
-the plugin root, and its documented hook contract makes a `deny` a hard block. A fresh install reports
-the gate (`hooks : 1`), and `preflight.sh` proves the gate's own answer by making it refuse a containment
-call — what no release has yet watched is this host calling the hook in a live session.
+Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate is
+the same file as on Claude Code, it reads the same tier file, and every decision lands on the same audit
+trail. Antigravity loads it from `hooks.json` at the plugin root; a fresh install reports it
+(`hooks : 1`), `preflight.sh` makes it refuse a containment call, and it has now been **observed being
+called in a live session**.
 
-Two differences are worth knowing before you run an investigation on this host.
+**One difference is not a gap in testing but a difference in what is enforced, and you need it before
+you choose how to run this host.** On Antigravity the gate's `ask` does **not** survive
+`--dangerously-skip-permissions`. We measured it: a session started with that flag completed an ask-tier
+case closure one second after the gate asked, with nobody prompted. The host's own documentation
+describes `deny` as a hard block and `ask` as "prompt the user", and the flag auto-answers the prompt.
+So on this host:
+
+- the **deny tier** is documented as a hard block. Whether it survives that flag is **untested** — we
+  say so rather than assume it, because assuming the documented contract is what produced the three
+  defects above;
+- the **ask tier** is enforced in a normal session and is **not** enforced under that flag;
+- a completed ask-tier call is therefore recorded as `ran_consent_unconfirmed` rather than `approved`,
+  because the gate cannot see whether a human answered. An `approved` line is evidence of consent; that
+  line is not.
+
+**If you run this host unattended, do not rely on the ask tier to hold.** Use a key whose entitlements
+cannot perform what you are unwilling to have happen without a human — that control does not depend on
+any host. See [Key entitlements](#key-entitlements).
+
+Two further differences are worth knowing before you run an investigation on this host.
 
 **No release has been red-teamed on a Gemini model.** Every Raffkin release is adversarially tested on the
 weakest supported model of each host before it ships, and that work has been done on Claude and GPT models

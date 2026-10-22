@@ -762,3 +762,34 @@ def test_a_key_spelling_cannot_hide_the_server_or_the_tool():
                                  "args": {server_key: "raffkin_exabeam", tool_key: "isolate_host"}}}
             out = run_agy(step)
             assert out.get("decision") == "deny", f"{server_key}/{tool_key} answered {out}"
+
+
+def test_a_completed_ask_on_this_host_does_not_claim_consent():
+    """Observed 2026-10-22 (agy 1.4.5): a session run with --dangerously-skip-permissions completed an
+    ask-tier case closure ONE SECOND after the gate asked, with nobody prompted. The post-call record
+    said `approved`, reason "an ask completes only on a yes" — a consent in the audit trail that never
+    happened, which is the one failure mode a log must not have. This host reports no permission mode, so
+    the gate cannot tell an answered prompt from an auto-approved one and must not pretend otherwise.
+
+    Also pins `arg1` rather than `arg0`: the real capture used both, so the positional index varies."""
+    import tempfile
+    step = json.loads(json.dumps(REAL_STEP))
+    step["toolCall"]["args"]["ToolName"] = "exabeam_update_case"
+    step["toolCall"]["args"]["Arguments"] = {"arg1": {"caseId": "ZZZZ-GATE-TEST-0000", "stage": "CLOSED"}}
+    with tempfile.TemporaryDirectory() as d:
+        log = pathlib.Path(d) / "gate.jsonl"
+        e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": str(log),
+             "RAFFKIN_GATE_STATE_DIR": d}
+        r = subprocess.run([sys.executable, str(HOOK), "--antigravity", "--post"],
+                           input=json.dumps(step), capture_output=True, text=True, env=e)
+        assert r.returncode == 0, r.stderr
+        rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    assert rows, "a completed ask-tier call left no record at all"
+    rec = rows[-1]
+    assert rec["decision"] != "approved", (
+        "the record claims a human approved this call; on this host the gate cannot see the prompt, and a "
+        "session with --dangerously-skip-permissions completes an ask without one")
+    assert rec["decision"] == "ran_consent_unconfirmed", rec["decision"]
+    assert "NOT evidenced" in rec["reason"], f"the reason must say what it cannot vouch for: {rec['reason']!r}"
+    assert rec.get("target") == {"caseId": "ZZZZ-GATE-TEST-0000", "stage": "CLOSED"}, (
+        f"positional arg index other than arg0 lost the target: {rec.get('target')!r}")
