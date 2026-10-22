@@ -38,8 +38,9 @@ red-teamed on a Gemini model. Read
 - **`python3` (3.7 or newer) on your `PATH`** — Claude Code and Antigravity. The safety gate is a small
   Python script the host runs before each Exabeam call. On Claude Code, without `python3` every gated call
   is refused. On Antigravity the hook falls back to `uv`, which you need anyway, so the gate still runs —
-  but if neither is present it cannot, and `preflight.sh` fails rather than reporting a gate. macOS and
-  most Linux distributions already have `python3` (`python3 --version`). Codex does not need it.
+  and if neither is present, every Exabeam call is refused there too, with a message naming what is
+  missing. Either way you lose the plugin, not the control. macOS and most Linux distributions already
+  have `python3` (`python3 --version`). Codex does not need it.
 - **An Exabeam New-Scale API key and secret**, created under **Settings → API Keys** in your New-Scale
   console. Keys don't carry a role — you grant them **access entitlements**, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
@@ -252,9 +253,16 @@ prompt-injection resistance, refusal discipline and how the skills hold up under
 properties, and on this host they are untested. That is a gap in our evidence, not a known weakness.
 
 **The gate needs an interpreter, and this host bundles neither.** The hook runs under `python3`, falling
-back to `uv`, which the Exabeam connector already requires. If both are missing, the connector cannot
-start either, so there are no Exabeam tools to gate — but `preflight.sh` checks for them and says so,
-and it is worth running once after you install.
+back to `uv`, which the Exabeam connector already requires. If both are missing the hook refuses the call
+outright — the refusal is written by the shell, not by the gate, and says which interpreters it looked
+for. That is deliberate and it is host-specific: on Claude Code a hook whose command fails blocks the
+call by exiting 2, but Antigravity reads a decision on standard output and nothing else, so a gate that
+cannot start would otherwise be a gate that is never heard. `preflight.sh` checks for an interpreter and
+says so, and it is worth running once after you install.
+
+The one case the refusal does not cover is the host killing the hook at its 20-second timeout, which
+takes the shell with it. Nothing has been observed to take that long: the gate reads one JSON object,
+compares a tool name against a static tier file and writes a line.
 
 One smaller difference shows up in the log rather than in what is enforced: Antigravity does not tell a
 hook which permission mode the session is running in. On Claude Code that lets the audit trail

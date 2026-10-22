@@ -767,6 +767,22 @@ def test_the_antigravity_hook_file_arms_the_same_gate():
         assert "uv run" in cmd, (
             f"{event} has no uv fallback: with no python3 on PATH the hook produces no JSON and the host "
             "reads that as no opinion, which is the deny tier failing open")
+        assert cmd.count("'") % 2 == 0, (
+            f"{event} has an unbalanced quote: its fallback is a single-quoted shell word, and an "
+            "apostrophe inside it would end the string early and emit broken JSON instead of a decision")
+    # Last resort when neither interpreter runs. This host hard-blocks on a `deny` object and nothing else
+    # -- a non-zero exit is not a block here as it is on Claude Code -- so the shell has to write one.
+    pre = spec["PreToolUse"][0]["hooks"][0]["command"]
+    assert '"decision":"deny"' in pre.replace(" ", ""), (
+        "PreToolUse has no written refusal after the interpreters: if neither python3 nor uv can run the "
+        "gate, the hook prints nothing and this host proceeds with the call (its changelog records the "
+        "permission manager handling an empty decision 'safely'). The deny tier would fail open")
+    assert pre.index("uv run") < pre.rindex("deny"), "the refusal must come after the fallback, not instead of it"
+    post = spec["PostToolUse"][0]["hooks"][0]["command"]
+    assert "deny" not in post, "a post-call record is not a decision; a deny here would mark the call failed"
+    assert post.rstrip().endswith("'{}'"), (
+        "PostToolUse must fall back to the empty object its contract asks for, or a hook that cannot run "
+        "marks the tool call itself failed")
     assert "--post" in spec["PostToolUse"][0]["hooks"][0]["command"], "the post-call record must pass --post"
     assert "--post" not in spec["PreToolUse"][0]["hooks"][0]["command"], "the decision must not be made as a record"
 

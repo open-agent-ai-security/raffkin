@@ -100,9 +100,19 @@ the allow tier, every read would prompt until the operator merged the snippet �
 
 **The gate never fails open.** If the tier file cannot be read, every tool asks. If the hook itself raises,
 the decision is `ask` with the exception class in the reason — interactively the human decides, headless
-the call is refused. The hook exits 0 always; the decision is the JSON on stdout, and `hooks.json` turns a
-non-zero exit into a block (`|| exit 2`). The host needs a POSIX shell and `python3` 3.7+ on `PATH`;
-without `python3` every gated call is refused, not allowed. The installer and `preflight.sh` verify that
+the call is refused. The hook exits 0 always; the decision is the JSON on stdout.
+
+**A gate that cannot start must still refuse, and each host needs a different mechanism for that.** On
+Claude Code `hooks/hooks.json` turns a non-zero exit into a block (`|| exit 2`, with a message naming the
+component — #296). Antigravity has no equivalent: a `deny` object on stdout is its only hard block, and
+the host's own changelog records its permission manager being fixed to handle "empty decision strings
+returned by pre-tool hooks" safely rather than erroring — so there, a hook that produces nothing is a
+hook that is never heard. `plugin/hooks.json` therefore ends its command with a literal `deny` written by
+the shell (`|| printf '%s' '{"decision":"deny",...}'`), which fires only when neither `python3` nor `uv`
+could run the gate; every path through `main()` returns 0, so the fallback can never append itself to a
+decision already on stdout, and a test asserts that property of `main()` rather than trusting it. The
+host needs a POSIX shell and `python3` 3.7+ (or `uv`) on `PATH`; without one, every gated call is refused
+on both hook hosts, not allowed. The installer and `preflight.sh` verify that
 the **installed** copy carries the hook before they report the gate as on (Praxen 2026-09-07-002: an
 offline operator holding a hook-less older install must not read "gate ON").
 
@@ -179,6 +189,13 @@ attempt on purpose, so the hook's save is observable.
   The count is the hook's own, keyed on the host's session id, so an injection cannot talk it out of
   counting; it applies on the two hook hosts — Claude Code and Antigravity, the latter keyed on
   `conversationId` — and not on Codex, which has no hook and runs its escalation writes as `auto`.
+- The shell-written refusal on Antigravity is the one decision the gate takes that it cannot record: the
+  interpreter that would write the log line is the thing that is missing. The operator sees it (the host
+  shows the reason, the shell's own `command not found` goes to stderr) but the decision log does not. The
+  alternative was saying nothing, which is worse.
+- Neither host's fallback covers the hook being killed at its `timeout` — the shell dies with the command,
+  so nothing writes a decision. Unmeasured, but the gate reads one JSON object, compares a name against a
+  static file and appends a line; the 20s budget is three orders of magnitude clear of that.
 - Antigravity does not tell a hook which permission mode the session is in, so the gate log cannot
   distinguish an ask a human answered from one that completed unattended there, as the Claude Code record
   can. Records carry `"host"` so the log is never ambiguous about which guarantee applied.

@@ -524,18 +524,45 @@ def manifest_fields(identity):
 #   bridge cannot start either, so there is no Exabeam tool to gate.
 HOOK_TIMEOUT = 20
 
+# The refusal the shell writes when no interpreter could run the gate at all.
+#
+# On Claude Code a hook command that exits 2 blocks the call, so there a failure IS a refusal (#296).
+# Antigravity has no such contract: the only hard block on this host is a `deny` object on stdout, and the
+# host's own changelog records the permission manager being FIXED to handle "empty decision strings returned
+# by pre-tool hooks" safely instead of erroring -- so a gate that cannot start does not stop the call, it
+# just goes unheard. That is the #212 shape ("0 HOOK MISS") on a new host, so the refusal has to be written
+# by the shell rather than left to an exit code nothing reads.
+#
+# Safe to chain onto the interpreters: every path through gate.py returns 0, including the broad `except`,
+# so a non-zero exit means the interpreter never ran the gate and printed nothing. The `||` cannot therefore
+# append a second object to a decision already on stdout. What it does NOT cover is the host killing the
+# command at `timeout` -- the shell dies with it, so no fallback runs (recorded as a residual in
+# security/design/human-in-the-loop-gate.md).
+AGY_NO_GATE = ("Raffkin gate could not run: neither python3 nor uv is on PATH, so this call cannot be checked "
+               "against the permission tiers. The gate fails closed, so every Exabeam call is refused until "
+               "an interpreter is available. See the installation guide for this host.")
+
 
 def antigravity_hooks(identity):
     gate = "./hooks/gate.py"           # cwd for a hook command is the directory holding hooks.json
-    def run(*flags):
+    deny = json.dumps({"decision": "deny", "reason": AGY_NO_GATE}, separators=(",", ":"))
+    if "'" in deny:                    # the fallback is a single-quoted shell word; an apostrophe ends it
+        sys.exit("AGY_NO_GATE must not contain an apostrophe: it would terminate the shell string early "
+                 "and the hook would emit broken JSON instead of a refusal")
+    def run(*flags, fallback):
         args = " ".join(("", *flags)).rstrip()
-        return (f"python3 {gate}{args} || uv run --quiet --no-project {gate}{args}")
-    group = lambda *flags: [{"matcher": "mcp_tool|call_mcp_tool",
-                             "hooks": [{"type": "command", "command": run(*flags), "timeout": HOOK_TIMEOUT}]}]
+        return (f"python3 {gate}{args} || uv run --quiet --no-project {gate}{args}"
+                f" || printf '%s' '{fallback}'")
+    group = lambda *flags, fallback: [{"matcher": "mcp_tool|call_mcp_tool",
+                             "hooks": [{"type": "command", "command": run(*flags, fallback=fallback),
+                                        "timeout": HOOK_TIMEOUT}]}]
     # Keyed on the plugin's own name: hook files from several plugins are merged into one map, so a fixed
     # key would collide with another copy of this payload (the vendored one installs alongside, #306).
-    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity"),
-                                         "PostToolUse": group("--antigravity", "--post")}}
+    # Pre refuses; post answers with the empty object its contract asks for. A post hook that cannot run
+    # loses an audit record, which is a real loss, but it is not a decision to make -- and this host marks
+    # the tool call failed if the hook says anything else.
+    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=deny),
+                                         "PostToolUse": group("--antigravity", "--post", fallback="{}")}}
 
 
 def build(identity, perms):

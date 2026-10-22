@@ -538,3 +538,53 @@ def test_the_write_budget_counts_on_antigravity_too(tmp_path):
     decisions = [run_agy(agy_step("exabeam_create_case_notes", "raffkin_exabeam", step=i), env=env)["decision"]
                  for i in range(3)]
     assert decisions == ["allow", "allow", "ask"], decisions
+
+
+def test_the_antigravity_hook_refuses_when_no_interpreter_can_run_the_gate(tmp_path):
+    """The host-specific half of fail-closed, and the reason it needs its own test.
+
+    On Claude Code a hook command that exits 2 blocks the call, so a missing python3 there is a refusal
+    (#296, PRAX-2026-09-05-001). Antigravity reads a `deny` object on stdout and nothing else: its own
+    changelog records the permission manager being fixed to handle "empty decision strings returned by
+    pre-tool hooks" safely rather than erroring, so a gate that cannot start on this host is a gate that
+    goes unheard -- the #212 "0 HOOK MISS" shape again. The command therefore writes the refusal itself.
+
+    Driven through /bin/sh with an empty PATH, which is the real failure (no interpreter), not a mocked one.
+    """
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    spec = AGY_HOOKS[f"{name}-gate"]
+    empty = tmp_path / "empty-bin"
+    empty.mkdir()
+    step = json.dumps(agy_step(tool="exabeam_search_cases", server="exabeam"))   # an ALLOW-tier call
+
+    def run(event):
+        command = spec[event][0]["hooks"][0]["command"]
+        r = subprocess.run(["/bin/sh", "-c", command], input=step, capture_output=True, text=True,
+                           cwd=str(PLUGIN), env={"PATH": str(empty)})
+        assert r.stdout.strip(), f"{event} printed nothing: this host would hear no decision — {r.stderr}"
+        return json.loads(r.stdout)
+
+    pre = run("PreToolUse")
+    assert pre["decision"] == "deny", (
+        f"a call the gate could not evaluate must be refused, not allowed through: {pre}")
+    assert "python3" in pre["reason"] and "uv" in pre["reason"], (
+        f"the refusal has to name what is missing, or the operator sees only the shell's own message: {pre}")
+
+    # Post expects the empty object. Anything else and this host marks the tool call itself failed.
+    assert run("PostToolUse") == {}
+
+
+def test_the_fallback_cannot_fire_once_the_gate_has_already_decided():
+    """The fallback is chained with `||`, so it must only run when nothing was printed. Every path through
+    gate.py returns 0 — including the broad `except` — so a non-zero exit means the interpreter never ran
+    it. If that ever stopped being true, the hook would print a decision AND the refusal, and this host
+    would be handed two JSON objects on one stdout."""
+    import ast
+    tree = ast.parse(HOOK.read_text())
+    main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    codes = [n.value for n in ast.walk(main) if isinstance(n, ast.Return) and n.value is not None]
+    assert codes, "main() has no explicit return: the fallback's safety rests on its exit code"
+    for c in codes:
+        assert isinstance(c, ast.Constant) and c.value == 0, (
+            f"main() can return {ast.unparse(c)}; a non-zero exit after printing would append the "
+            "Antigravity fallback to a decision already on stdout")
