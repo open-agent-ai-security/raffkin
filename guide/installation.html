@@ -283,12 +283,25 @@ red-teamed on a Gemini model. Read
 <ul>
 <li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code), the <code>codex</code> CLI (Codex) or the <code>agy</code> CLI
   (Google Antigravity), signed in.</li>
-<li><strong>On Antigravity, a Google account that Antigravity accepts.</strong> Sign-in and eligibility are two separate
-  gates: <code>agy</code> will complete the OAuth flow and then refuse the session with <em>"Your current account is not
-  eligible for Antigravity. Try signing in with another personal Google account."</em> We hit this with a
-  Google Workspace account on a managed domain, which is what most analysts will be using. Check this
-  <strong>before</strong> you install anything — the plugin, the gate and <code>preflight.sh</code> all work without a session, so
-  nothing else in this guide will warn you. If <code>agy -p "hi"</code> answers, you are eligible.</li>
+<li><strong>On Antigravity, two things that have nothing to do with this plugin — check both first.</strong> The plugin,
+  the gate and <code>preflight.sh</code> all install and report healthy without a session ever being opened, so
+  nothing else in this guide will warn you about either. <code>agy -p "hi"</code> answering is the one test that
+  covers both.<ul>
+<li><strong>A Google account Antigravity accepts.</strong> Signing in and being let in are separate gates: <code>agy</code>
+  completes the OAuth flow and then refuses the session with <em>"Eligibility check failed: Your current
+  account is not eligible for Antigravity. Try signing in with another personal Google account."</em> We
+  hit this on a managed Google Workspace domain — which is what an analyst at a company has. Ask
+  whoever administers your Google tenant whether Antigravity is enabled for it.</li>
+<li><strong><code>antigravity.google</code> reachable from your network.</strong> A corporate secure web gateway may reset it
+  while every other Google domain passes. On Zscaler we measured exactly that: <code>accounts.google.com</code>
+  302, <code>google.com</code> 200, <code>gemini.google.com</code> 200, <code>cloudcode-pa.googleapis.com</code> 404 — and
+  <code>antigravity.google</code> failing the TLS handshake outright (<code>curl: (35) Recv failure: Connection reset
+  by peer</code>), which in a browser shows up as <code>ERR_CONNECTION_RESET</code> on the consent page. That domain is
+  the OAuth callback, so sign-in cannot complete until it is allowlisted. Check it with
+  <code>curl -o /dev/null -w '%{http_code}\n' https://antigravity.google/</code> — anything other than <code>200</code>
+  means the login will fail no matter how many times you retry it.</li>
+</ul>
+</li>
 <li><strong>A supported model.</strong> On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See <a href="security-guardrails.html#how-it-is-tested">Security</a>
   for how the supported models are validated. <strong>The Gemini models Antigravity runs are not in that
