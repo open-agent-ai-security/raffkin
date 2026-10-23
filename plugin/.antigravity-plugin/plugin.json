@@ -1,0 +1,12 @@
+{
+  "name": "raffkin",
+  "displayName": "Raffkin — Agentic SOC Analyst",
+  "version": "1.0.0",
+  "description": "Triage Exabeam New-Scale alerts and cases end to end: gather the evidence, map MITRE, reach a verdict, and record it behind an approval step.",
+  "logo": "assets/icon.svg",
+  "suggestedPrompts": [
+    "Triage my open Exabeam cases and tell me what to look at first",
+    "Investigate the highest-risk Exabeam alert from the last 24 hours and give me a verdict",
+    "Find the noisiest Exabeam detection rules and propose tuning"
+  ]
+}

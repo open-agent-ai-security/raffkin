@@ -51,7 +51,7 @@
         },
         {
           "name": "ai:platform",
-          "value": "plugin for Claude Code and OpenAI Codex (skills + bundled MCP connector)"
+          "value": "plugin for Claude Code, OpenAI Codex and Google Antigravity (skills + bundled MCP connector)"
         },
         {
           "name": "ai:skillName",
@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-10-22T01:03:41Z"
+    "timestamp": "2026-10-22T04:17:39Z"
   },
   "components": [
     {
@@ -167,6 +167,42 @@
         },
         {
           "name": "ai:pinnedByThisProject",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "model:google-gemini",
+      "type": "machine-learning-model",
+      "name": "Gemini model (via Google Antigravity)",
+      "description": "Foundation model the skills run on when the host is Google Antigravity. Hosted API — weights are not distributed with Raffkin, and the specific member is selected by Antigravity, not pinned by Raffkin. The bundled human-in-the-loop gate DOES run on this host (hooks.json at the plugin root). NOT in the validated set: no release has been red-teamed on a Gemini model, so prompt-injection resistance and refusal discipline are untested here, and the host's honouring of a hook `deny` under --dangerously-skip-permissions has not been confirmed against a live session (see plugin/docs/installation.md).",
+      "supplier": {
+        "name": "Google",
+        "url": [
+          "https://ai.google"
+        ]
+      },
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://antigravity.google/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ai:hosting",
+          "value": "external-hosted-api"
+        },
+        {
+          "name": "ai:weightsDistributed",
+          "value": "false"
+        },
+        {
+          "name": "ai:pinnedByThisProject",
+          "value": "false"
+        },
+        {
+          "name": "ai:redTeamValidated",
           "value": "false"
         }
       ]

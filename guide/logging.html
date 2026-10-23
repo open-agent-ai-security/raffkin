@@ -350,11 +350,19 @@ three backups). One line per decision:</p>
  &quot;decision&quot;: &quot;ask&quot;, &quot;reason&quot;: &quot;Raffkin gate: exabeam_update_alert dismisses or closes. It needs the analyst's explicit yes — ask, and wait.&quot;,
  &quot;target&quot;: {&quot;alertId&quot;: &quot;4471&quot;, &quot;alertStatus&quot;: &quot;DISMISSED&quot;}}
 </code></pre>
-<p>The same hook runs again after the call. An ask-tier call that <strong>completed</strong> is recorded as <code>approved</code>,
-beside the <code>ask</code> line — inferred from completion: an ask completes only when a human answered yes. When
-the session ran in a mode where nobody could answer (<code>bypassPermissions</code>, <code>dontAsk</code>) the line says
-<code>ran_unasked</code> instead, because the ask did not hold for that call. That line should never appear; it
-exists so that a gate that somehow did not hold is visible in the record rather than silent. Both lines
+<p>The same hook runs again after the call, and records only what it can vouch for. An ask-tier call that
+<strong>completed</strong> is <code>approved</code> where the host reported an attended permission mode — there, completion does
+imply a human answered yes. Where it reported a mode in which nobody could answer (<code>bypassPermissions</code>,
+<code>dontAsk</code>) the line says <code>ran_unasked</code>, because the ask did not hold for that call. Where the host
+reports <strong>no</strong> permission mode at all — Antigravity — the line says <code>ran_consent_unconfirmed</code>: the call
+completed, and the gate cannot tell an answered prompt from a session that auto-approved it.</p>
+<p>That last one is not theoretical, and it is the reason this distinction exists. On Antigravity a session
+started with <code>--dangerously-skip-permissions</code> was observed completing an ask-tier case closure one second
+after the gate asked, with nobody prompted. Reading <code>approved</code> there would have put a consent in the
+audit trail that never happened. <strong>An <code>approved</code> line is evidence of a human's yes; a
+<code>ran_consent_unconfirmed</code> line is not, and is not meant to be read as one.</strong> <code>ran_unasked</code> and
+<code>ran_despite_deny</code> should never appear at all; they exist so a gate that did not hold is visible in the
+record rather than silent. Both lines
 carry the host's <code>permission_mode</code> and <code>tool_use_id</code> when present, so a post line ties to its ask:</p>
 <pre><code class="language-json">{&quot;ts&quot;: &quot;2026-09-05T16:01:41+00:00&quot;, &quot;tool&quot;: &quot;mcp__plugin_raffkin_exabeam__exabeam_update_alert&quot;,
  &quot;decision&quot;: &quot;approved&quot;, &quot;reason&quot;: &quot;an ask-tier call completed after the gate asked: inferred from completion, an ask completes only on a yes&quot;,

@@ -6,7 +6,9 @@ posture, that it reads the SAME tiers the permission snippet ships, and that the
 declares it (a hook that isn't declared is a file, not a gate)."""
 import json
 import os
+import pathlib
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -445,3 +447,458 @@ def test_parallel_escalation_writes_cannot_all_slip_under_the_budget(tmp_path):
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
         out = list(ex.map(lambda _: _esc("create_case_notes", "par", d)["permissionDecision"], range(6)))
     assert out.count("allow") == 2 and out.count("ask") == 4, out
+
+
+# ---- the Antigravity envelope (#306) ----
+AGY_HOOKS = json.loads((PLUGIN / "hooks.json").read_text())
+
+
+def agy_step(tool=None, server=None, args_json="{}", step=1, extra=None):
+    """An Antigravity PreToolUse payload: the STEP, as that host hands it to a hook. Every MCP call on the
+    machine arrives as `mcp_tool` whatever server it came from, with the real name nested inside."""
+    inner = {}
+    if tool is not None:
+        inner["toolName"] = tool
+    if args_json is not None:
+        inner["argumentsJson"] = args_json
+    args = {} if extra is None else dict(extra)
+    if server is not None:
+        args["serverName"] = server
+    if inner:
+        args["toolCall"] = inner
+    return {"conversationId": "test-conv", "stepIdx": step, "toolCall": {"name": "mcp_tool", "args": args}}
+
+
+def run_agy(payload, post=False, env=None):
+    """The hook as Antigravity runs it: --antigravity, the step on stdin, a JSON object back. `{}` is the
+    no-decision answer this host's contract wants, returned as NO_DECISION."""
+    e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": "off",
+         "RAFFKIN_GATE_STATE_DIR": os.environ.get("RAFFKIN_TEST_GATE_STATE_DIR", "/nonexistent-raffkin-state"),
+         **(env or {})}
+    argv = [sys.executable, str(HOOK), "--antigravity"] + (["--post"] if post else [])
+    r = subprocess.run(argv, input=json.dumps(payload), capture_output=True, text=True, env=e)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout) if r.stdout.strip() else {}
+    return out or {"decision": None}
+
+
+def test_the_antigravity_hook_file_invokes_this_gate_on_every_mcp_call():
+    """Its matcher keys on the STEP type, so it cannot select the Exabeam server the way Claude Code's
+    regex does -- it has to catch every MCP call and let the gate decide."""
+    spec = AGY_HOOKS[json.loads((PLUGIN / "identity.json").read_text())["name"] + "-gate"]
+    for event in ("PreToolUse", "PostToolUse"):
+        group = spec[event][0]
+        assert re.search(group["matcher"], "call_mcp_tool"), (
+            f"{event} matcher misses `call_mcp_tool`, which is what a real dispatched MCP call arrives "
+            "as; a matcher checked only against the documented `mcp_tool` passes and never fires")
+        assert re.search(group["matcher"], "mcp_tool")
+        assert "--antigravity" in group["hooks"][0]["command"]
+
+
+def test_antigravity_decisions_match_the_shipped_tiers():
+    assert run_agy(agy_step("exabeam_isolate_host", "raffkin_exabeam"))["decision"] == "deny"
+    assert run_agy(agy_step("exabeam_update_alert", "raffkin_exabeam"))["decision"] == "ask"
+    assert run_agy(agy_step("exabeam_get_case_details", "raffkin_exabeam"))["decision"] == "allow"
+    # the bundled bridge is `<plugin>_<server>` on this host; a hand-wired `exabeam` is not bundled, so an
+    # allow-tier read falls through to the operator's own rules rather than being waved past
+    assert run_agy(agy_step("exabeam_get_case_details", "exabeam"))["decision"] is None
+    out = run_agy(agy_step("exabeam_brand_new_thing", "raffkin_exabeam"))
+    assert out["decision"] == "ask" and "not classified" in out["reason"]
+
+
+def test_another_servers_call_gets_no_decision_on_antigravity():
+    """The matcher sees every MCP call on the machine. Someone else's tools must not collect our verdicts
+    -- a gate that prompts on `create_pull_request` gets switched off by the person it annoys."""
+    assert run_agy(agy_step("create_pull_request", "github"))["decision"] is None
+    assert run_agy(agy_step("list_issues", server=None))["decision"] is None
+
+
+def test_an_unidentifiable_mcp_step_asks_rather_than_standing_aside():
+    """THE fail-open hole on this host, closed deliberately.
+
+    The payload shape is read from the host's documented contract and its proto descriptor, not from a
+    live call. If it differs, every Exabeam call becomes a step the gate cannot read -- and treating that
+    like another server's call would mean no decision on exactly the tools we promise to gate, on the host
+    whose docs say the gate holds. So a step that names NOTHING we can recognise asks. The cost of being
+    wrong is a prompt on somebody else's call; the cost the other way is a silent ungated close.
+    """
+    for payload, why in [
+        ({"conversationId": "c", "stepIdx": 1, "toolCall": {"name": "mcp_tool", "args": {}}}, "no args"),
+        ({"conversationId": "c", "stepIdx": 1}, "no toolCall at all"),
+        ({"conversationId": "c", "toolCall": {"name": "mcp_tool", "args": {"payload": {"invocation": {"identifier": "exabeam_update_alert"}}}}},
+         "the shape changed: the tool is in there, under keys we do not read"),
+    ]:
+        out = run_agy(payload)
+        assert out["decision"] == "ask", f"an unreadable step ({why}) got {out!r} instead of asking"
+        assert "could not identify" in out["reason"]
+
+    # ...but the POST record is never a verdict: it answers {} and writes nothing
+    assert run_agy({"conversationId": "c", "toolCall": {"name": "mcp_tool", "args": {}}}, post=True) == {"decision": None}
+
+
+def test_the_write_budget_counts_on_antigravity_too(tmp_path):
+    """Keyed on conversationId there, since this host has no session_id. Without a counter the budget
+    fails open on the one host where nobody has watched the gate work."""
+    env = {"RAFFKIN_GATE_STATE_DIR": str(tmp_path)}
+    decisions = [run_agy(agy_step("exabeam_create_case_notes", "raffkin_exabeam", step=i), env=env)["decision"]
+                 for i in range(3)]
+    assert decisions == ["allow", "allow", "ask"], decisions
+
+
+def test_the_antigravity_hook_refuses_when_no_interpreter_can_run_the_gate(tmp_path):
+    """The host-specific half of fail-closed, and the reason it needs its own test.
+
+    On Claude Code a hook command that exits 2 blocks the call, so a missing python3 there is a refusal
+    (#296, PRAX-2026-09-05-001). Antigravity reads a `deny` object on stdout and nothing else: its own
+    changelog records the permission manager being fixed to handle "empty decision strings returned by
+    pre-tool hooks" safely rather than erroring, so a gate that cannot start on this host is a gate that
+    goes unheard -- the #212 "0 HOOK MISS" shape again. The command therefore writes the refusal itself.
+
+    Driven through /bin/sh with an empty PATH, which is the real failure (no interpreter), not a mocked one.
+    """
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    spec = AGY_HOOKS[f"{name}-gate"]
+    # Only the shell utilities, so the fault under test is the MISSING INTERPRETER and nothing else. An
+    # entirely empty PATH has no `cat` either, and that is a different fault with a different refusal
+    # (the payload never arrives at all) -- checked separately at the end.
+    bin_only = tmp_path / "sh-utils-only"
+    bin_only.mkdir()
+    for tool in ("cat", "grep"):
+        src = shutil.which(tool)
+        if not src:
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
+        (bin_only / tool).symlink_to(src)
+    step = json.dumps(agy_step(tool="exabeam_search_cases", server="exabeam"))   # an ALLOW-tier call
+
+    def run(event, path=str(bin_only), payload=step):
+        command = spec[event][0]["hooks"][0]["command"]
+        r = subprocess.run(["/bin/sh", "-c", command], input=payload, capture_output=True, text=True,
+                           cwd=str(PLUGIN), env={"PATH": path})
+        assert r.stdout.strip(), f"{event} printed nothing: this host would hear no decision — {r.stderr}"
+        return json.loads(r.stdout)
+
+    pre = run("PreToolUse")
+    assert pre["decision"] == "deny", (
+        f"a call the gate could not evaluate must be refused, not allowed through: {pre}")
+    assert "python3" in pre["reason"] and "uv" in pre["reason"], (
+        f"the refusal has to name what is missing, or the operator sees only the shell's own message: {pre}")
+
+    # Post expects the empty object. Anything else and this host marks the tool call itself failed.
+    assert run("PostToolUse") == {}
+
+    # Nothing on PATH at all: still a refusal, and it names the fault it can actually see.
+    nothing = run("PreToolUse", path=str(tmp_path / "empty-bin"))
+    assert nothing["decision"] == "deny", nothing
+    assert "standard input" in nothing["reason"], (
+        f"with no `cat` the payload never arrived, so the refusal should say that rather than blame the "
+        f"interpreters: {nothing}")
+
+
+def test_the_fallback_cannot_fire_once_the_gate_has_already_decided():
+    """The fallback is chained with `||`, so it must only run when nothing was printed. Every path through
+    gate.py returns 0 — including the broad `except` — so a non-zero exit means the interpreter never ran
+    it. If that ever stopped being true, the hook would print a decision AND the refusal, and this host
+    would be handed two JSON objects on one stdout."""
+    import ast
+    tree = ast.parse(HOOK.read_text())
+    main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    codes = [n.value for n in ast.walk(main) if isinstance(n, ast.Return) and n.value is not None]
+    assert codes, "main() has no explicit return: the fallback's safety rests on its exit code"
+    for c in codes:
+        assert isinstance(c, ast.Constant) and c.value == 0, (
+            f"main() can return {ast.unparse(c)}; a non-zero exit after printing would append the "
+            "Antigravity fallback to a decision already on stdout")
+
+
+def _bare_deny_names():
+    """The deny-tier entries written WITHOUT the `exabeam_` prefix. They exist because a hand-wired server
+    exposes containment under its bare verb, and they are the half of the tier that review found going
+    unjudged on Antigravity."""
+    tiers = json.loads((PLUGIN / "skills" / "soc-investigate" / "permissions.json").read_text())["tiers"]
+    return [t for t in tiers["deny"]["tools"] if not t.startswith("exabeam_")]
+
+
+def test_a_bare_deny_tier_name_on_our_server_is_denied():
+    """Review, blocking item 1: `agy_call()` decided "ours" from the tool-name regex `^exabeam_`, so a
+    containment call spelled `isolate_host` on our own server returned OTHER and got NO decision, while
+    Claude Code denied the same call. The server is what makes a step ours; the tool name only says which
+    tier it lands in."""
+    bare = _bare_deny_names()
+    assert bare, "the deny tier no longer carries bare spellings — this test is guarding nothing"
+    for name in bare:
+        for server in ("raffkin_exabeam", "raffkin-exabeam", "exabeam"):
+            out = run_agy(agy_step(tool=name, server=server))
+            assert out.get("decision") == "deny", (
+                f"{name} on {server} answered {out} — a containment tool on the Exabeam server must be "
+                "refused whatever spelling the host hands over")
+
+
+def test_the_tool_name_may_arrive_prefixed_by_its_server():
+    """`<server>/<tool>` is how the host's own guide spells a namespaced call, and `mcp__a__b` is the shape
+    a step could carry if it echoed Claude's naming. Both must reduce to the bare tool the tiers use."""
+    for spelling in ("raffkin_exabeam/exabeam_isolate_host", "raffkin_exabeam/isolate_host",
+                     "mcp__raffkin_exabeam__exabeam_isolate_host"):
+        out = run_agy(agy_step(tool=spelling, server="raffkin_exabeam"))
+        assert out.get("decision") == "deny", f"{spelling} answered {out}, so the tier lookup never saw the tool"
+
+
+def test_our_server_with_an_unreadable_tool_asks_and_says_why():
+    """Review's third case: the tool name present but under a key the gate does not read. The step names
+    OUR server, so standing aside is the hole; and the reason must not claim no server was named, which
+    is what the first fix printed because `serverName` is itself a name-ish key."""
+    out = run_agy(agy_step(tool=None, server="raffkin_exabeam", extra={"identifier": "exabeam_isolate_host"}))
+    assert out.get("decision") == "ask", f"a call on our server that cannot be read must ask, got {out}"
+    assert "no tool name and no server name" not in out["reason"], (
+        f"the reason contradicts the payload, which named our server: {out['reason']!r}")
+    assert "server" in out["reason"], f"the reason should say what it could and could not read: {out['reason']!r}"
+
+
+def test_either_separator_keeps_the_bundled_tiers():
+    """Review, blocking item 2: the host's guide namespaces servers `<plugin>-<server>` while the payload
+    we modelled used `_`, and no live call has settled it (#305). With the hyphen unrecognised, the deny
+    tier still held but the bundled allow, the ask and the #247 write budget were all lost — so the gate
+    looked fine on the one tier that is loudest and had quietly stopped governing the rest."""
+    for server in ("raffkin_exabeam", "raffkin-exabeam"):
+        allow = run_agy(agy_step(tool="exabeam_get_case_details", server=server))
+        assert allow.get("decision") == "allow", (
+            f"an allow-tier read on {server} answered {allow}: not recognised as the bundled bridge, so the "
+            "plugin's own permission grant does not apply")
+        ask = run_agy(agy_step(tool="exabeam_update_case", server=server))
+        assert ask.get("decision") == "ask", f"an ask-tier write on {server} answered {ask}"
+
+
+def test_the_shell_fallback_refuses_our_calls_and_only_ours(tmp_path):
+    """Review, should-fix item 4. The matcher is the step type, so with no interpreter the fallback is
+    handed every MCP call on the machine. Denying all of them protects nothing of ours and is how a
+    control gets switched off by whoever it annoys. It reads the step with `grep`, the only test available
+    without an interpreter — and only grep's exit 1, a clean "our server is not in here", stands aside.
+    A missing grep (127) cannot read the step at all, so it refuses."""
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    cmd = AGY_HOOKS[f"{name}-gate"]["PreToolUse"][0]["hooks"][0]["command"]
+    # `cat` as well as `grep`: the chain buffers the payload with `_in=$(cat)` so a later stage can
+    # still read a stdin an earlier one consumed. A probe PATH without `cat` leaves `_in` empty, and the
+    # empty case refuses by design -- which looks like the wrong answer and is really a broken harness.
+    grep_only = tmp_path / "grep-only"
+    grep_only.mkdir()
+    for tool in ("grep", "cat"):
+        for candidate in (f"/usr/bin/{tool}", f"/bin/{tool}"):
+            if os.path.exists(candidate):
+                (grep_only / tool).symlink_to(candidate)
+                break
+        else:
+            import pytest
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
+
+    def run(step, path):
+        r = subprocess.run(["/bin/sh", "-c", cmd], input=json.dumps(step), capture_output=True,
+                           text=True, cwd=str(PLUGIN), env={"PATH": path})
+        assert r.stdout.strip(), f"the fallback printed nothing, so this host would hear no decision: {r.stderr}"
+        return json.loads(r.stdout)
+
+    ours = agy_step(tool="exabeam_isolate_host", server="raffkin_exabeam")
+    theirs = {"conversationId": "c", "stepIdx": 1,
+              "toolCall": {"name": "mcp_tool", "args": {"serverName": "github",
+                                                        "toolCall": {"toolName": "create_pull_request"}}}}
+    assert run(ours, str(grep_only))["decision"] == "deny"
+    assert run(theirs, str(grep_only)) == {}, (
+        "another server's call was refused by a gate that is not even running — the deny the operator "
+        "turns off because it blocks their pull requests")
+    # Neither interpreter NOR grep: the step cannot be read, so it is not somebody else's by default.
+    assert run(ours, "/nonexistent")["decision"] == "deny"
+    assert run(theirs, "/nonexistent")["decision"] == "deny", (
+        "with no way to read the step, standing aside is a guess in the ungated direction")
+
+    # Review's case: an interpreter that CONSUMES the payload and then dies. A later stage cannot
+    # re-read a stdin an earlier one drank, so the fallback saw empty input, grep exited 1 ("not ours")
+    # and a containment call got `{}`. That is the shape of any crash in gate.py after it reads stdin.
+    eater = tmp_path / "stdin-eater"
+    eater.mkdir()
+    for tool in ("grep", "cat"):
+        if (grep_only / tool).exists():
+            (eater / tool).symlink_to((grep_only / tool).resolve())
+    (eater / "python3").write_text("#!/bin/sh\ncat > /dev/null\nexit 1\n")
+    (eater / "python3").chmod(0o755)
+    assert run(ours, str(eater))["decision"] == "deny", (
+        "an interpreter that read the payload and then failed left the fallback with nothing to read, "
+        "and a containment call was not refused")
+    assert run(theirs, str(eater)) == {}, "another server's call must still pass quietly"
+
+    # No payload at all is not a quiet 'not ours' either.
+    r = subprocess.run(["/bin/sh", "-c", cmd], input="", capture_output=True, text=True,
+                       cwd=str(PLUGIN), env={"PATH": str(grep_only)})
+    assert json.loads(r.stdout).get("decision") == "deny", (
+        f"an empty step must refuse rather than be read as somebody else's: {r.stdout!r}")
+
+
+# A REAL Antigravity PreToolUse payload, captured from a live `agy` 1.4.5 session on 2026-10-22 by
+# teeing the host's stdin (local paths replaced). Every earlier Antigravity fixture in this file was
+# written from the host's documented contract and its proto descriptor; this one is what the host
+# actually sends, and it disagreed with the documentation in three ways that each disabled part of the
+# gate:
+#   * the tool call's keys are PascalCase (`ServerName`, `ToolName`, `Arguments`) even though the hook
+#     docs say "All JSON keys in the hook payloads use camelCase (protojson encoding)" -- which is true
+#     of the common fields beside them. Read as camelCase, the SERVER was never seen: the bundled allow
+#     tier went inert and a bare deny-tier name (`isolate_host`) got no decision at all;
+#   * the tool name sits BESIDE the server, not nested under `toolCall`, and the step's own `name` is
+#     the dispatcher (`call_mcp_tool`), not the tool being dispatched;
+#   * arguments arrive positionally wrapped (`Arguments: {arg0: {...}}`), so an audit record would keep
+#     its decision and lose its target -- which case was closed.
+REAL_STEP = {
+    "artifactDirectoryPath": "/home/u/.gemini/antigravity-cli/brain/2da04291",
+    "conversationId": "2da04291-d330-480e-a753-5ec381532585",
+    "modelName": "gemini-3.8-flash-high",
+    "stepIdx": 4,
+    "toolCall": {"name": "call_mcp_tool",
+                 "args": {"Arguments": {"arg0": {"caseId": "ABC-123"}},
+                          "ServerName": "raffkin_exabeam",
+                          "ToolName": "exabeam_get_case_details"}},
+    "transcriptPath": "/home/u/.gemini/antigravity-cli/brain/2da04291/transcript_full.jsonl",
+    "workspacePaths": ["/tmp/ws"],
+}
+
+
+def _real(tool):
+    step = json.loads(json.dumps(REAL_STEP))
+    step["toolCall"]["args"]["ToolName"] = tool
+    return step
+
+
+def test_the_captured_payload_is_judged_on_every_tier():
+    """The shape the host really sends, across the tiers. Before the key spellings were handled, this
+    exact payload produced: allow-tier -> no decision, bare deny-tier -> no decision."""
+    tiers = json.loads((PLUGIN / "skills" / "soc-investigate" / "permissions.json").read_text())["tiers"]
+    assert run_agy(_real(tiers["allow"]["tools"][0])).get("decision") == "allow"
+    assert run_agy(_real(tiers["ask"]["tools"][0])).get("decision") == "ask"
+    for name in tiers["deny"]["tools"][:12]:
+        out = run_agy(_real(name))
+        assert out.get("decision") == "deny", f"{name} on the real payload shape answered {out}"
+
+
+def test_the_captured_payload_is_recognised_as_the_bundled_bridge():
+    """`ServerName: raffkin_exabeam` -- underscore, settling #305: the host's guide documents
+    `<plugin>-<server>`. Reading it is what makes the allow tier the PLUGIN's grant rather than a call
+    the gate has no opinion on, so a miss here is silent and total."""
+    assert run_agy(_real("exabeam_get_case_details")).get("decision") == "allow"
+
+
+def test_the_captured_payload_keeps_what_was_attempted():
+    """`Arguments: {arg0: {...}}`. A decision the log cannot attach to an object is close to no log."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        log = pathlib.Path(d) / "gate.jsonl"
+        e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": str(log),
+             "RAFFKIN_GATE_STATE_DIR": d}
+        subprocess.run([sys.executable, str(HOOK), "--antigravity"],
+                       input=json.dumps(_real("exabeam_update_case")), capture_output=True, text=True, env=e)
+        rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    assert rows, "the decision was never recorded"
+    assert rows[-1].get("target") == {"caseId": "ABC-123"}, (
+        f"the record lost which case was attempted: {rows[-1].get('target')!r}")
+
+
+def test_a_key_spelling_cannot_hide_the_server_or_the_tool():
+    """The generalisation of the defect, rather than the one spelling that caused it: a host that renames
+    these keys by case must not be able to turn the gate off by doing so."""
+    for server_key in ("ServerName", "serverName", "SERVERNAME", "server_name"):
+        for tool_key in ("ToolName", "toolName", "TOOLNAME", "tool_name"):
+            step = {"conversationId": "c", "stepIdx": 1,
+                    "toolCall": {"name": "call_mcp_tool",
+                                 "args": {server_key: "raffkin_exabeam", tool_key: "isolate_host"}}}
+            out = run_agy(step)
+            assert out.get("decision") == "deny", f"{server_key}/{tool_key} answered {out}"
+
+
+def test_a_completed_ask_on_this_host_does_not_claim_consent():
+    """Observed 2026-10-22 (agy 1.4.5): a session run with --dangerously-skip-permissions completed an
+    ask-tier case closure ONE SECOND after the gate asked, with nobody prompted. The post-call record
+    said `approved`, reason "an ask completes only on a yes" — a consent in the audit trail that never
+    happened, which is the one failure mode a log must not have. This host reports no permission mode, so
+    the gate cannot tell an answered prompt from an auto-approved one and must not pretend otherwise.
+
+    Also pins `arg1` rather than `arg0`: the real capture used both, so the positional index varies."""
+    import tempfile
+    step = json.loads(json.dumps(REAL_STEP))
+    step["toolCall"]["args"]["ToolName"] = "exabeam_update_case"
+    step["toolCall"]["args"]["Arguments"] = {"arg1": {"caseId": "ZZZZ-GATE-TEST-0000", "stage": "CLOSED"}}
+    with tempfile.TemporaryDirectory() as d:
+        log = pathlib.Path(d) / "gate.jsonl"
+        e = {**os.environ, "CLAUDE_PLUGIN_ROOT": str(PLUGIN), "RAFFKIN_GATE_LOG": str(log),
+             "RAFFKIN_GATE_STATE_DIR": d}
+        r = subprocess.run([sys.executable, str(HOOK), "--antigravity", "--post"],
+                           input=json.dumps(step), capture_output=True, text=True, env=e)
+        assert r.returncode == 0, r.stderr
+        rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    assert rows, "a completed ask-tier call left no record at all"
+    rec = rows[-1]
+    assert rec["decision"] != "approved", (
+        "the record claims a human approved this call; on this host the gate cannot see the prompt, and a "
+        "session with --dangerously-skip-permissions completes an ask without one")
+    assert rec["decision"] == "ran_consent_unconfirmed", rec["decision"]
+    assert "NOT evidenced" in rec["reason"], f"the reason must say what it cannot vouch for: {rec['reason']!r}"
+    assert rec.get("target") == {"caseId": "ZZZZ-GATE-TEST-0000", "stage": "CLOSED"}, (
+        f"positional arg index other than arg0 lost the target: {rec.get('target')!r}")
+
+
+def test_an_empty_payload_is_refused_before_any_interpreter_runs(tmp_path):
+    """Review: `cat` missing left `_in` empty, python3 SUCCEEDED on empty input so the fallback never
+    ran, and the gate's catch-all answered `ask` -- the one decision this host overrides under
+    --dangerously-skip-permissions. So a containment call silently dropped from deny to ask whenever an
+    interpreter was present and `cat` was not. The empty test now comes before the interpreters."""
+    name = json.loads((PLUGIN / "identity.json").read_text())["name"]
+    cmd = AGY_HOOKS[f"{name}-gate"]["PreToolUse"][0]["hooks"][0]["command"]
+    assert cmd.index('[ -z "$_in" ]') < cmd.index("python3"), (
+        "the empty-payload test must come before the interpreter stages, or python3 succeeds on the "
+        "empty input and answers for it")
+
+    no_cat = tmp_path / "no-cat"
+    no_cat.mkdir()
+    for tool in ("grep", "python3"):
+        src = shutil.which(tool)
+        if not src:
+            pytest.skip(f"no {tool} on this machine to build the probe PATH with")
+        (no_cat / tool).symlink_to(src)
+
+    ours = agy_step(tool="exabeam_isolate_host", server=f"{name}_exabeam")
+    r = subprocess.run(["/bin/sh", "-c", cmd], input=json.dumps(ours), capture_output=True, text=True,
+                       cwd=str(PLUGIN), env={"PATH": str(no_cat), "RAFFKIN_GATE_LOG": "off"})
+    assert json.loads(r.stdout).get("decision") == "deny", (
+        f"with no `cat` the payload never reaches the gate, and a containment call was not refused: "
+        f"{r.stdout!r}")
+
+
+def test_the_gate_itself_refuses_an_empty_payload_on_this_host():
+    """The same refusal where the gate can be run directly, not only in the chain that feeds it. Claude
+    Code is deliberately left as it was: there `ask` already refuses when nobody can answer."""
+    def run(*flags):
+        return subprocess.run([sys.executable, str(HOOK), *flags], input="", capture_output=True,
+                              text=True, env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+
+    agy = json.loads(run("--antigravity").stdout)
+    assert agy.get("decision") == "deny", f"an unreadable step must not be read as no objection: {agy!r}"
+    assert json.loads(run("--antigravity", "--post").stdout) == {}, (
+        "a record the gate cannot write is not a decision to make")
+    claude = json.loads(run().stdout)["hookSpecificOutput"]
+    assert claude["permissionDecision"] == "ask", "Claude Code's behaviour on an empty payload changed"
+
+
+def test_an_empty_payload_refusal_cannot_be_mistaken_for_a_live_gate():
+    """preflight proves the gate is armed by matching the words of its tier refusal. If the empty-payload
+    deny shared those words, an install that delivers nothing to the hook would PASS preflight -- the
+    false-pass shape review has found twice now. The two refusals must have no phrase in common."""
+    def words(s):
+        return {w for w in re.findall(r"[a-z]{4,}", s.lower())}
+
+    out = subprocess.run([sys.executable, str(HOOK), "--antigravity"], input="", capture_output=True,
+                         text=True, env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+    empty = json.loads(out.stdout)["reason"]
+    tier = subprocess.run([sys.executable, str(HOOK), "--antigravity"],
+                          input=json.dumps(agy_step(tool="exabeam_isolate_host",
+                                                    server="raffkin_exabeam")),
+                          capture_output=True, text=True,
+                          env={**os.environ, "RAFFKIN_GATE_LOG": "off"})
+    reason = json.loads(tier.stdout)["reason"]
+    assert "containment" in reason, "the tier refusal no longer says what preflight matches on"
+    assert "containment" not in empty.lower(), (
+        "the empty-payload refusal borrows the word preflight matches on, so a hook that is handed "
+        "nothing would be reported as a gate that refuses containment")
+    assert not (words(empty) & {"containment", "action", "tiers"}), empty

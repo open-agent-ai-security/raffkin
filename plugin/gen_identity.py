@@ -12,6 +12,17 @@
 Generated:
   .claude-plugin/plugin.json                    Claude Code manifest
   .codex-plugin/plugin.json                     Codex manifest (same skills, Codex-only fields)
+  .antigravity-plugin/plugin.json               Google Antigravity manifest. ONLY the fields its loader
+                                                reads: name, displayName, version, description, logo,
+                                                suggestedPrompts (see build())
+  mcp_config.json                               the same launch command as .mcp.json, derived from it with
+                                                ${CLAUDE_PLUGIN_ROOT} swapped for the ${PLUGIN_ROOT} Antigravity
+                                                resolves, and the `type` key dropped (not in its schema). At
+                                                the plugin ROOT: that is the only place Antigravity reads it
+  hooks.json                                    the same gate as hooks/hooks.json, in Antigravity's own hook
+                                                format, at the plugin ROOT. Antigravity stages hooks/hooks.json
+                                                only for an IMPORTED Claude Code extension, never for a native
+                                                plugin like this one, so the root file is the one it reads
   skills/soc-investigate/settings.snippet.json  the permission gate — every rule spelled out under the
                                                 bundled-MCP prefix mcp__plugin_<name>_<server>__ and/or the
                                                 manual prefix mcp__<server>__, from the bare-name tiers in
@@ -46,9 +57,16 @@ PERMISSIONS = HERE / "skills" / "soc-investigate" / "permissions.json"
 OUT = {
     "claude": HERE / ".claude-plugin" / "plugin.json",
     "codex": HERE / ".codex-plugin" / "plugin.json",
+    "antigravity": HERE / ".antigravity-plugin" / "plugin.json",
+    "antigravity_mcp": HERE / "mcp_config.json",
+    "antigravity_hooks": HERE / "hooks.json",
     "snippet": HERE / "skills" / "soc-investigate" / "settings.snippet.json",
     "shell": HERE / "identity.sh",
 }
+# The HAND-MAINTAINED MCP files, which is what `mcpServer` is cross-checked against. Deliberately not
+# mcp_config.json: that file is GENERATED from .mcp.json below, so reading its key here would make a
+# server-key rename self-blocking — check_server would see the stale generated key, disagree, and exit
+# before the regeneration that would have fixed it (review of #306).
 MCP_FILES = (".mcp.json", ".mcp.codex.json")
 
 
@@ -211,14 +229,14 @@ def terms_slug(terms):
     return terms.replace("-", "--").replace(" ", "_")
 
 
-def _switch_distribution_prose(text, dist=None):
+def _switch_distribution_prose(text, dist=None, name=""):
     """Drop community-only blocks, unwrap distribution-only blocks, fill that prose's {{vendor}}, {{terms}} and
     {{support}} from the distribution block, point the license badge at the Apache text (LICENSE holds the
     distribution's terms in such a copy), and tidy the blank lines the removals leave. Idempotent: a second
     pass finds nothing."""
     text = _COMMUNITY_BLOCK.sub("", text)
     text = _DISTRIBUTION_WRAP.sub("", text)
-    for token, value in _distribution_tokens(dist or {}).items():
+    for token, value in _distribution_tokens(dist or {}, name).items():
         text = text.replace(token, value)
     terms = terms_name(dist)
     if terms:       # the package's own terms lead: "License: Exabeam Enterprise Agreement", linked to its LICENSE
@@ -314,8 +332,20 @@ def rewrite_docs(prev, identity):
     new_key, new_repo = install_key(identity), identity["marketplace"]["repo"]
     prev_mkt, new_mkt = prev.get("marketplace", ""), identity["marketplace"]["name"]
     prev_path, new_path = f"plugins/cache/{prev_mkt}/{prev.get('name', '')}/", f"plugins/cache/{new_mkt}/{identity['name']}/"
-    subs = [(prev_path, new_path), (prev["key"], new_key), (prev["repo"], new_repo)]
-    subs = [(a, b) for a, b in subs if a and a != b and not a.startswith("plugins/cache//")]
+    # Antigravity installs by MANIFEST NAME, into ~/.gemini/config/plugins/<name>/ — so the re-keyed copy's
+    # preflight lives under its own name, and the Claude cache rewrite above does not reach that path. Left
+    # out, the `soc` docs sent the operator to .../plugins/raffkin/preflight.sh, which does not exist on
+    # their machine (review of #306).
+    # NO trailing slash, deliberately. _replace_bounded refuses a match that continues into a longer
+    # identifier, and _AFTER includes the alphanumerics a NEXT PATH SEGMENT starts with -- so
+    # "config/plugins/raffkin/" never matched ".../config/plugins/raffkin/preflight.sh", the one place the
+    # path appears. Ending the pattern at the name puts a `/` in the lookahead instead, which is not an
+    # identifier character, and `raffkin-dev` is still correctly left alone because `-` is.
+    prev_agy = f"config/plugins/{prev.get('name', '')}"
+    new_agy = f"config/plugins/{identity['name']}"
+    subs = [(prev_path, new_path), (prev_agy, new_agy), (prev["key"], new_key), (prev["repo"], new_repo)]
+    subs = [(a, b) for a, b in subs if a and a != b
+            and not a.startswith("plugins/cache//") and a != "config/plugins/"]
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
     switch = bool(identity.get("distribution"))
     prose = (prev.get("product", ""), product_name(identity))
@@ -330,7 +360,7 @@ def rewrite_docs(prev, identity):
         if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
             new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new, identity.get("distribution") or {})
+            new = _switch_distribution_prose(new, identity.get("distribution") or {}, identity["name"])
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -393,18 +423,67 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
-DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support")   # prose only, filled into the distribution-only text:
+DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support", "antigravityInstall")   # prose only, filled into the distribution-only text:
 # the distributor's name, the name of the terms the copy is licensed under, and its support page (a URL)
 _VENDOR_FALLBACK = "the organization that distributes it"
 
 
-def _distribution_tokens(dist):
+LOGO_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
+
+
+def logo_path(identity):
+    """The Marketplace listing's logo, as the manifest spells it: a path relative to the plugin root.
+
+    It lives in identity.json rather than here so a distribution's overlay can point the listing at its own
+    mark the same way it re-keys `name` (review of #306) -- which means it is overlay-supplied input, and is
+    checked like any other. It has to be a bundled file INSIDE the payload, carrying an image suffix and not
+    a symlink (a symlink's target is not in the payload the user installed).
+
+    A URL is NOT accepted, though the published guide reads as though one would be. The loader's own
+    documentation, which ships inside the `agy` binary, is explicit: "URLs and absolute paths are rejected
+    silently -- a bad value renders no logo rather than erroring." Silently is the operative word. A URL here
+    would pass every check we could write, ship, and show an empty card that nothing in CI could see
+    (#306, verified against agy 1.4.4)."""
+    raw = identity.get("logo")
+    if not raw:
+        sys.exit("identity.json needs a `logo`: the Marketplace listing needs one, and a missing logo is not an error on the card, just an empty one")
+    if "://" in raw:
+        sys.exit(f"identity.json logo {raw!r} is a URL. Antigravity rejects URLs and absolute paths SILENTLY "
+                 "(renders no logo, raises nothing), so the logo must be a file bundled in the payload")
+    rel = raw[2:] if raw.startswith("./") else raw
+    if not rel or rel.startswith("/") or ".." in Path(rel).parts or "" in Path(rel).parts[:-1]:
+        sys.exit(f"identity.json logo {raw!r} must be a relative path inside the plugin, with no '..' segment")
+    p = HERE / rel
+    if p.is_symlink():
+        sys.exit(f"identity.json logo {raw!r} is a symlink — the listing logo must be a real file in the payload")
+    if not p.is_file():
+        sys.exit(f"identity.json logo {raw!r} is not a file in the payload (looked for {p})")
+    if p.resolve().parent != p.parent.resolve() or not p.resolve().is_relative_to(HERE.resolve()):
+        sys.exit(f"identity.json logo {raw!r} resolves outside the plugin ({p.resolve()})")
+    if p.suffix.lower() not in LOGO_SUFFIXES:
+        sys.exit(f"identity.json logo {raw!r} is not an image ({', '.join(LOGO_SUFFIXES)}) — "
+                 "an unsupported suffix is another value that renders nothing rather than erroring")
+    return raw
+
+
+def _distribution_tokens(dist, name=""):
     """The distribution-only prose's placeholders, from the distribution block, with generic fallbacks so a
     distribution that sets none of them still reads correctly."""
     vendor = dist.get("vendor") or _VENDOR_FALLBACK
     terms = f"{dist['terms']} (see `LICENSE`)" if dist.get("terms") else "the terms in its `LICENSE` file"
     support = f"[{dist.get('vendor') or 'its'} support]({dist['support']})" if dist.get("support") else f"the support path of {vendor}"
-    return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support}
+    # Antigravity installs from a GitHub subpath, not from a marketplace key, so rewrite_docs's
+    # key/repo substitutions cannot re-point it: the source repo is not the marketplace repo. A
+    # distribution sets its own URL here, or the prose says to ask rather than naming the community
+    # build -- which is what an un-rewritten URL would otherwise do.
+    agy = dist.get("antigravityInstall") or "<the subpath URL for this distribution — ask its maintainer>"
+    # `agy plugin uninstall <name>` names the plugin BARE -- not as an install key, a repo or a path, so
+    # none of rewrite_docs's substitutions reach it, and the literal upstream name shipped in the
+    # distribution's own uninstall instructions (review of #306). The token lives only inside the
+    # distribution-only block, which stays an HTML comment upstream, so it survives a regeneration the way
+    # {{antigravity_install}} does.
+    return {"{{vendor}}": vendor, "{{terms}}": terms, "{{support}}": support,
+            "{{antigravity_install}}": agy, "{{plugin_name}}": name or "<this copy's plugin name>"}
 
 
 def manifest_fields(identity):
@@ -418,6 +497,114 @@ def manifest_fields(identity):
     if unknown:
         sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS}, got {unknown}")
     return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
+
+
+# Antigravity's PreToolUse hook is the SAME gate as Claude Code's, in a different envelope: the host
+# calls the hook with the pending call on stdin and honours `{"decision": "deny"}` as a hard block, plus
+# "ask" and "force_ask" for a prompt. So the deny tier, the ask tier and the per-session write budget are
+# all in force here -- which is why none of the documentation may say otherwise.
+#
+# Three details of this file are not interchangeable with hooks/hooks.json:
+#
+#   WHERE. The plugin ROOT, not hooks/. Antigravity stages hooks/hooks.json into the root only when it
+#   IMPORTS a Claude Code or Gemini CLI extension; a native plugin -- any directory carrying plugin.json or
+#   .antigravity-plugin/plugin.json, which is us -- gets no staging and "must place hooks.json directly at
+#   the plugin root". A gate in the wrong directory is a gate that silently does not run: #212 again.
+#
+#   THE MATCHER. Antigravity matches on the STEP TYPE, not the tool name: every MCP call, whichever server
+#   it belongs to, arrives as `mcp_tool` (CORTEX_STEP_TYPE_MCP_TOOL, lowercased with the prefix stripped),
+#   with the real tool name inside the payload. So the matcher cannot select the Exabeam server the way
+#   Claude Code's regex does -- it has to catch every MCP call and let the gate decide, which is the
+#   posture the gate was written for anyway ("the hook, not the matcher, decides whether a call is ours").
+#
+#   THE INTERPRETER. `python3` is not bundled with Antigravity, and a hook command that cannot start
+#   produces no JSON, which the host reads as "no opinion" -- a fail-OPEN that no test of ours would see.
+#   `uv` is what the bridge already needs, and it brings its own Python, so it is the fallback: if python3
+#   is missing the same gate runs under uv. The one case left is neither being present, and there the
+#   bridge cannot start either, so there is no Exabeam tool to gate.
+HOOK_TIMEOUT = 20
+
+# The refusal the shell writes when no interpreter could run the gate at all.
+#
+# On Claude Code a hook command that exits 2 blocks the call, so there a failure IS a refusal (#296).
+# Antigravity has no such contract: the only hard block on this host is a `deny` object on stdout, and the
+# host's own changelog records the permission manager being FIXED to handle "empty decision strings returned
+# by pre-tool hooks" safely instead of erroring -- so a gate that cannot start does not stop the call, it
+# just goes unheard. That is the #212 shape ("0 HOOK MISS") on a new host, so the refusal has to be written
+# by the shell rather than left to an exit code nothing reads.
+#
+# Chaining is safe because every path through gate.py returns 0, including the broad `except`, so a
+# non-zero exit means the interpreter never ran the gate TO COMPLETION and printed no decision -- the `||`
+# cannot append a second object to a decision already on stdout. It does NOT mean the gate read nothing:
+# a python3 that consumes the payload and then dies leaves the next stage with an empty stdin, which is
+# why the chain buffers the payload in `_in` rather than re-reading it. What nothing here covers is the
+# host killing the command at `timeout`, since the shell dies with it (a residual in
+# security/design/human-in-the-loop-gate.md).
+AGY_NO_GATE = ("Raffkin gate could not run, so this call cannot be checked against the permission tiers: "
+               "no python3 and no uv on PATH, or the gate script itself could not be executed. The gate "
+               "fails closed, so the call is refused. See the installation guide for this host.")
+
+# A separate refusal for an empty payload, because it is a different fault with a different fix and
+# naming the wrong one sends whoever reads it looking for an interpreter that is already there. It also
+# shares no phrase with the tier refusal preflight matches on, so an install that delivers nothing to the
+# hook fails preflight instead of satisfying it.
+AGY_NO_INPUT = ("Raffkin gate received no payload on standard input, so it could read nothing about this "
+                "step and refuses rather than standing aside. Something between the host and the hook is "
+                "dropping the payload: check that cat, printf and grep are on the PATH the host launches "
+                "hooks with.")
+
+
+def antigravity_hooks(identity, server):
+    gate = "./hooks/gate.py"           # cwd for a hook command is the directory holding hooks.json
+    deny = json.dumps({"decision": "deny", "reason": AGY_NO_GATE}, separators=(",", ":"))
+    no_input = json.dumps({"decision": "deny", "reason": AGY_NO_INPUT}, separators=(",", ":"))
+    if "'" in deny or "'" in no_input:  # the fallback is a single-quoted shell word; an apostrophe ends it
+        sys.exit("AGY_NO_GATE and AGY_NO_INPUT must not contain an apostrophe: it would terminate the "
+                 "shell string early and the hook would emit broken JSON instead of a refusal")
+    # The matcher is the STEP type, so with no interpreter this fallback is handed every MCP call on the
+    # machine -- another server's `create_pull_request` included. Denying all of them protects nothing of
+    # ours and is how a control gets switched off by whoever it annoys, so the shell reads the step it was
+    # given and refuses only the ones naming our server. `grep` on stdin is the whole test available
+    # without an interpreter; a free-text argument mentioning Exabeam on somebody else's call is refused
+    # too, which is the conservative direction and only while the gate is already broken.
+    # Only grep's exit 1 -- "ran fine, our server is not in this step" -- stands aside. 0 is ours, and
+    # anything above 1 (127 when grep itself is missing, 2 on an error) means the step could not be READ,
+    # which is not the same as reading that it is somebody else's. Those refuse. Written this way round
+    # because the first cut keyed on success/failure and failed open exactly when the machine was most
+    # broken: no interpreter AND no grep answered {} on a containment call.
+    # No input is NOT "somebody else's call". The chain reads the payload ONCE into `_in` and feeds every
+    # stage from it, because a later stage cannot re-read a stdin an earlier one consumed: review built a
+    # python3 that reads the payload and exits 1, and the fallback then handed `grep` nothing, which
+    # exited 1 ("not ours") and answered {} to a containment call. That is the shape of every crash in
+    # gate.py AFTER it has read stdin. An empty `_in` now refuses.
+    refuse_if_ours = (f'if [ -z "$_in" ]; then printf \'%s\' \'{no_input}\'; '
+                      f'else printf \'%s\' "$_in" | grep -qi {server}; _rc=$?; '
+                      f"if [ $_rc -eq 1 ]; then printf '%s' '{{}}'; else printf '%s' '{deny}'; fi; fi")
+    # An empty payload is answered BEFORE any interpreter is tried, because python3 SUCCEEDS on empty
+    # input: review ran the chain with `cat` missing and the gate answered `ask` (its own catch-all for an
+    # unreadable event) instead of denying, which is the one decision this host overrides under
+    # --dangerously-skip-permissions. The fallback keeps its own empty test as well, so the refusal is
+    # still correct if that snippet is ever reached or read on its own.
+    def run(*flags, fallback, empty):
+        args = " ".join(("", *flags)).rstrip()
+        return (f'_in=$(cat); if [ -z "$_in" ]; then printf \'%s\' \'{empty}\'; '
+                f'else printf \'%s\' "$_in" | python3 {gate}{args}'
+                f' || printf \'%s\' "$_in" | uv run --quiet --no-project {gate}{args}'
+                # a brace group needs the terminating semicolon; `{ cmd }` is a syntax error in sh
+                f" || {{ {fallback}; }}; fi")
+    group = lambda *flags, fallback, empty: [{"matcher": "mcp_tool|call_mcp_tool",
+                             "hooks": [{"type": "command",
+                                        "command": run(*flags, fallback=fallback, empty=empty),
+                                        "timeout": HOOK_TIMEOUT}]}]
+    # Keyed on the plugin's own name: hook files from several plugins are merged into one map, so a fixed
+    # key would collide with another copy of this payload (the vendored one installs alongside, #306).
+    # Pre refuses; post answers with the empty object its contract asks for. A post hook that cannot run
+    # loses an audit record, which is a real loss, but it is not a decision to make -- and this host marks
+    # the tool call failed if the hook says anything else.
+    return {f"{identity['name']}-gate": {"PreToolUse": group("--antigravity", fallback=refuse_if_ours,
+                                                             empty=no_input),
+                                         "PostToolUse": group("--antigravity", "--post",
+                                                              fallback="printf '%s' '{}'", empty="{}")}}
 
 
 def build(identity, perms):
@@ -440,7 +627,63 @@ def build(identity, perms):
     for tier, spec in perms["tiers"].items():
         tiers[tier] = [pre[p] + t for p in spec["prefixes"] for t in spec["tools"]]
     snippet = {"permissions": tiers}
-    return {"claude": claude, "codex": codex, "snippet": snippet, "shell": shell_include(identity, perms)}
+    # Antigravity resolves components from the plugin ROOT, and takes the manifest from
+    # .antigravity-plugin/plugin.json when a repo already keeps provider manifests in dot-folders --
+    # which is what its own guide recommends for a layout like ours.
+    #
+    # EVERY FIELD HERE IS LOAD-BEARING, AND NOTHING ELSE MAY BE ADDED. The loader's own documentation
+    # (shipped inside the `agy` binary; the published PDF is behind it) lists exactly seven accepted
+    # top-level fields -- name, description, logo, suggestedPrompts, displayName, version, disabled -- and
+    # then says: "Do not add any other top-level field. `author` and `homepage` are silently discarded by
+    # the loader -- they neither take effect nor error out."
+    #
+    # So this manifest is built field by field instead of spreading `common`, which carries author,
+    # homepage, repository and license. Three earlier keys are gone for the same reason, and each one was
+    # doing nothing:
+    #   mcpServers  -- NOT a manifest field. Antigravity reads the servers from mcp_config.json at the
+    #                  plugin root, and ignored this pointer silently: `agy plugin validate` reported
+    #                  "unknown field mcpServers is ignored" and "mcpServers 0", i.e. the whole Exabeam
+    #                  tool surface absent on this host. This is the bug that made #306 ship a plugin with
+    #                  no tools (verified against agy 1.4.4).
+    #   skills      -- unnecessary. skills/<name>/SKILL.md is discovered from the tree; the validator
+    #                  counted all three with the key removed.
+    #   category,   -- not in the accepted set, so both are dropped on load. `keywords` earned its place on
+    #   keywords       the other two hosts and stays in identity.json for them; Marketplace search matches
+    #                  on `description` here, which is why the short one is used.
+    #
+    # The listing's own description, NOT the long one: 120-160 characters for a Marketplace card, and the
+    # long description ends "dismiss/close gated by the host agent's tool-approval rules", which reads as a
+    # promise about a prompt we do not control. The gate's own guarantee is carried by hooks.json below.
+    # The logo comes from identity.json so a distribution's overlay can point its listing at its own mark.
+    antigravity = {"name": identity["name"],
+                   "displayName": identity["displayName"],
+                   "version": identity["version"],
+                   "description": identity["shortDescription"],
+                   "logo": logo_path(identity),
+                   "suggestedPrompts": identity["suggestedPrompts"]}
+    # Antigravity resolves ${PLUGIN_ROOT}, not ${CLAUDE_PLUGIN_ROOT}: pointing it at .mcp.json would
+    # hand it a command with an unresolved variable and the bridge would never start. So the Antigravity
+    # MCP file is generated FROM .mcp.json with the variable swapped -- one source for the launch command,
+    # so a change there (the --locked flag, #255) cannot reach one host and miss the other.
+    #
+    # One thing is dropped in the derivation, and only this one. `type` is not a field in Antigravity's MCP
+    # schema: the loader's documented stdio transport is `command` + optional `args`/`env`, and the only
+    # other transport is `url`. A strict reader would reject the server and the skills would load with no
+    # Exabeam tools, which is the failure this whole file exists to prevent; a lenient reader ignores it.
+    # Dropping it is correct either way, and the transport is still unambiguous: a `command` IS stdio.
+    #
+    # The server key matters beyond this file: Antigravity namespaces a plugin's servers as
+    # `<plugin>_<server>`, so the bundled bridge arrives as `<name>_exabeam` here where Claude Code calls it
+    # `plugin_<name>_exabeam`. The gate knows both (is_bundled).
+    mcp = json.loads((HERE / ".mcp.json").read_text())
+    antigravity_mcp = json.loads(
+        json.dumps(mcp).replace("${CLAUDE_PLUGIN_ROOT}", "${PLUGIN_ROOT}"))
+    for server in antigravity_mcp.get("mcpServers", {}).values():
+        if isinstance(server, dict):
+            server.pop("type", None)
+    return {"claude": claude, "codex": codex, "antigravity": antigravity,
+            "antigravity_mcp": antigravity_mcp, "antigravity_hooks": antigravity_hooks(identity, perms["server"]),
+            "snippet": snippet, "shell": shell_include(identity, perms)}
 
 
 def render(obj):
@@ -459,6 +702,16 @@ def main(argv):
         guide = HERE / "docs" / "installation.md"
         if guide.exists() and install_key(identity) not in guide.read_text():
             names.append(str(guide.relative_to(HERE.parent)) + " (does not name this distribution's install key)")
+        # An Antigravity install has no marketplace key to rewrite — it is a GitHub subpath URL, which only
+        # the distribution knows. Unset, the guide shipped "<the subpath URL for this distribution — ask its
+        # maintainer>" to real users (review of #306). Fail loudly instead, and only where it matters: a
+        # distribution copy that actually ships the Antigravity manifest. A distribution that is not listing
+        # on this host drops .antigravity-plugin/ and this never fires.
+        if identity.get("distribution") and OUT["antigravity"].exists() \
+                and not (identity["distribution"].get("antigravityInstall") or "").strip():
+            names.append("plugin/identity.json (ships .antigravity-plugin/plugin.json but its distribution block "
+                         "sets no `antigravityInstall`, so the install guide would tell users to ask its "
+                         "maintainer for the URL — set it, or drop .antigravity-plugin/ to skip this host)")
         lic = identity["license"]
         wrong = sorted({str(f.relative_to(HERE.parent)) for f, i in spdx_headers() if i != lic})
         if wrong:
@@ -492,7 +745,12 @@ def main(argv):
     dist = identity.get("distribution") or {}
     print(f"wrote {', '.join(str(OUT[k].relative_to(HERE.parent)) for k in OUT)} — name={identity['name']!r}, "
           f"version {identity['version']}, {n} permission rules"
-          + (f"; manifests carry the distribution's {', '.join(sorted(dist))}" if dist else "")
+          # Only the MANIFEST keys here. `antigravityInstall` and the other prose keys never reach a
+          # manifest, and naming them on this line said they did.
+          + (f"; manifests carry the distribution's {', '.join(sorted(set(dist) & set(DISTRIBUTION_KEYS)))}"
+             if set(dist) & set(DISTRIBUTION_KEYS) else "")
+          + (f"; distribution prose filled from {', '.join(sorted(set(dist) & set(DISTRIBUTION_PROSE_KEYS)))}"
+             if set(dist) & set(DISTRIBUTION_PROSE_KEYS) else "")
           + (f"; install key {prev['key']} → {install_key(identity)} in {len(changed)} file(s)" if changed else "")
           + (f"; left {len(kept)} longer identifier(s) untouched: {', '.join(kept)}" if kept else "")
           + (f"; license {prev['license']} → {identity['license']} in {len(relicensed)} file(s)" if relicensed else ""))
