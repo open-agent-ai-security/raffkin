@@ -1022,11 +1022,12 @@ def _listing_fixture(tmp_path):
     import shutil, sys
     work = tmp_path / "plugin"
     shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
-    # The payload ships no listing image: the catalog delivers it as a file overlay (Exabeam-Labs#47),
-    # which is exactly why the generator checks that the path is a real file in the payload. Plant one so
-    # these tests exercise the accept path as well as the rejections.
+    # The payload ships its own mark at assets/icon.svg since #306, which is what `logo` names. These
+    # tests used to plant assets/logo.svg and point at that -- a path the shipped tree does not have, so
+    # they were exercising the accept path against a file only the fixture knew about (review). A SECOND
+    # image is still planted, under a different name, for the tests that need a mark to switch TO.
     (work / "assets").mkdir(exist_ok=True)
-    (work / "assets" / "logo.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>\n')
+    (work / "assets" / "vendor-mark.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>\n')
     return work, [sys.executable, str(work / "gen_identity.py")]
 
 
@@ -1034,6 +1035,15 @@ def _set_dist(work, **keys):
     import json
     ident = json.loads((work / "identity.json").read_text())
     ident["distribution"] = {k: v for k, v in keys.items() if v is not None}
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    return ident
+
+
+def _set_top(work, **keys):
+    """Set TOP-LEVEL identity keys. `logo` owns the mark and lives here, not in the distribution block."""
+    import json
+    ident = json.loads((work / "identity.json").read_text())
+    ident.update(keys)
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     return ident
 
@@ -1049,7 +1059,7 @@ def test_a_listing_only_block_does_not_make_this_copy_a_redistribution(tmp_path)
     import subprocess, json
     work, gen = _listing_fixture(tmp_path)
     before = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
-    _set_dist(work, icon="./assets/logo.svg", supportUrl="https://example.invalid/support")
+    _set_dist(work, documentationUrl="https://example.invalid/docs", supportUrl="https://example.invalid/support")
     subprocess.run(gen, check=True, capture_output=True, text=True)
 
     after = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
@@ -1064,17 +1074,29 @@ def test_a_listing_only_block_does_not_make_this_copy_a_redistribution(tmp_path)
 
     # and the fields still reach the Claude listing, which is the point of the exercise
     claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
-    assert claude["icon"] == "./assets/logo.svg" and claude["supportUrl"] == "https://example.invalid/support"
+    assert claude["documentationUrl"] == "https://example.invalid/docs"
+    assert claude["supportUrl"] == "https://example.invalid/support"
+
+    # --check has to agree, on a tree that SHIPS .antigravity-plugin/. The same any-non-empty-block test
+    # survived in that path after being removed from rewrite_docs, so a listing-only block was clean to
+    # generate and stale to check, demanding an `antigravityInstall` that only a redistribution needs
+    # (review of the merge with #306). Both callers now ask `is_redistribution()`.
+    assert (work / ".antigravity-plugin" / "plugin.json").is_file(), "the fixture must ship this host's manifest"
+    r = subprocess.run(gen + ["--check"], capture_output=True, text=True)
+    assert r.returncode == 0, f"a listing-only block fails --check: {r.stdout}{r.stderr}"
 
 
 def test_the_listing_fields_reach_the_claude_manifest_alone(tmp_path):
     """Unset, the manifests are byte-identical to the committed ones; set, the fields land in the Claude
     manifest only. The directory reads them from there, and `claude plugin validate` rejects them in a
     marketplace entry, so there is nowhere else for them to go -- and Codex and Antigravity do not read
-    them at all, so emitting them there is noise in a file a host parses."""
+    them at all, so emitting them there is noise in a file a host parses.
+
+    `icon` is not among them: the mark has one home, the top-level `logo`, and Claude's `icon` is always
+    emitted from it (review of the merge with #306)."""
     import subprocess, json
     work, gen = _listing_fixture(tmp_path)
-    manifests = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+    manifests = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".antigravity-plugin/plugin.json")
 
     subprocess.run(gen, check=True, capture_output=True, text=True)
     for m in manifests:
@@ -1082,7 +1104,7 @@ def test_the_listing_fields_reach_the_claude_manifest_alone(tmp_path):
             f"{m} drifted with no distribution block set: the listing fields must be emitted ONLY when set, "
             "so an unset block cannot move a byte in a manifest a host parses")
 
-    fields = {"icon": "./assets/logo.svg", "documentationUrl": "https://example.invalid/docs",
+    fields = {"documentationUrl": "https://example.invalid/docs",
               "supportUrl": "https://example.invalid/support",
               "privacyPolicyUrl": "https://example.invalid/privacy",
               "termsOfServiceUrl": "https://example.invalid/terms"}
@@ -1090,9 +1112,47 @@ def test_the_listing_fields_reach_the_claude_manifest_alone(tmp_path):
     subprocess.run(gen, check=True, capture_output=True, text=True)
     claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
     codex = json.loads((work / ".codex-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
     for k, v in fields.items():
         assert claude.get(k) == v, f"{k} did not reach the Claude manifest"
         assert k not in codex, f"{k} leaked into the Codex manifest, which does not read it"
+        # Antigravity accepts seven top-level fields and silently drops the rest, so a listing key here
+        # is a value that looks stated and states nothing.
+        assert k not in agy, f"{k} leaked into the Antigravity manifest, which drops it silently"
+
+
+def test_one_field_owns_the_mark_on_both_hosts(tmp_path):
+    """Review of the merge with #306 reversed an earlier call: the top-level `logo` owns the mark, and
+    `distribution.icon` is gone. Two reasons. `logo` is required for Antigravity so it is always set,
+    which would have let a per-copy listing key override a product-identity key; and the catalog overlay
+    merges dotted keys INTO the block the payload already carries, so a `distribution.icon` set upstream
+    for the community listing would be inherited by a vendor copy that forgot to override it -- #307's
+    leak from the other side. One field, two emitters."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    logo = json.loads((work / "identity.json").read_text())["logo"]
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert agy["logo"] == logo, "the Antigravity listing lost the mark"
+    assert claude["icon"] == f"./{logo}", (
+        f"Claude's icon must name the same file as `logo`, spelled its way: {claude.get('icon')!r}")
+
+    # A distribution overrides ONE key and both listings follow. This is the #307 regression under test:
+    # the vendored copy showed its own mark on Claude and the community mark on Antigravity.
+    _set_top(work, logo="assets/vendor-mark.svg")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert (agy["logo"], claude["icon"]) == ("assets/vendor-mark.svg", "./assets/vendor-mark.svg"), (
+        f"the two hosts disagree about the mark: {agy['logo']!r} vs {claude['icon']!r}")
+
+    # `distribution.icon` is no longer a key at all, so an overlay still setting it is told rather than
+    # having it quietly ignored.
+    _set_dist(work, icon="./assets/vendor-mark.svg")
+    r = subprocess.run(gen, capture_output=True, text=True)
+    assert r.returncode != 0 and "distribution block accepts only" in r.stderr, r.stderr
 
 
 def test_gen_identity_refuses_a_listing_field_that_cannot_be_trusted(tmp_path):
@@ -1100,22 +1160,22 @@ def test_gen_identity_refuses_a_listing_field_that_cannot_be_trusted(tmp_path):
     inside the vendoring pipeline, so a bad value is not visible in review of the payload. Each case below
     passed the first version of the check (review of #302), and each fails in a way nothing downstream
     would notice -- a 404 on the listing, a dead link, or a file from outside the payload."""
-    import subprocess
+    import subprocess, json
     work, gen = _listing_fixture(tmp_path)
-    (work / "assets" / "escape.svg").symlink_to("/etc/hosts")
 
     for keys, why in [
-        ({"icon": "./nope.png"}, "not in the payload"),
-        ({"icon": ".//etc/hosts"}, "absolute after the './' is stripped"),
-        ({"icon": "../../etc/hosts"}, "parent escape"),
-        ({"icon": "./README.md"}, "not an image"),
-        ({"icon": "./assets/escape.svg"}, "symlink out of the payload"),
-        ({"icon": "https://cdn.example.invalid/i.png"}, "a URL, not a payload path"),
-        ({"icon": ""}, "empty"),
         ({"supportUrl": "http://example.invalid/s"}, "plain http"),
         ({"supportUrl": "https://"}, "https with no host"),
         ({"supportUrl": "not a url"}, "not a URL at all"),
         ({"supportUrl": ""}, "empty"),
+        # Each of the four below was VERIFIED accepted in review, and each renders as a dead link rather
+        # than failing anything downstream.
+        ({"supportUrl": "https://["}, "urlsplit raises ValueError: a traceback, not a labelled exit"),
+        ({"supportUrl": "https://exa mple.invalid/s"}, "a space in the host"),
+        ({"supportUrl": "https://exam\nple.invalid/s"}, "a newline, written into the manifest verbatim"),
+        ({"supportUrl": "https://@/"}, "a netloc with no host"),
+        ({"supportUrl": "https://:443"}, "a port with no host"),
+        ({"documentationUrl": "mailto:help@example.invalid"}, "mailto, which only supportUrl accepts"),
     ]:
         _set_dist(work, **keys)
         r = subprocess.run(gen, capture_output=True, text=True)
@@ -1127,10 +1187,80 @@ def test_gen_identity_refuses_a_listing_field_that_cannot_be_trusted(tmp_path):
     r = subprocess.run(gen, capture_output=True, text=True)
     assert r.returncode != 0 and "distribution block accepts only" in r.stderr, r.stderr
 
-    # and the shipped mark is accepted, with or without the './'
-    for good in ("./assets/logo.svg", "assets/logo.svg"):
-        _set_dist(work, icon=good)
+    # `claude plugin validate` accepts mailto: for supportUrl, so a vendor whose support contact is an
+    # address can set one -- and it defaults from `distribution.support`, which the overlay already fills
+    # for the prose, so naming it once is enough.
+    _set_dist(work, supportUrl="mailto:help@example.invalid")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["supportUrl"] == "mailto:help@example.invalid"
+
+    _set_dist(work, support="https://example.invalid/help", vendor="Example Inc", terms="Example EULA")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["supportUrl"] == "https://example.invalid/help", (
+        "a distribution that named its support page for the prose should not have to name it twice to be listed")
+
+
+def test_gen_identity_refuses_a_mark_that_cannot_be_trusted(tmp_path):
+    """The mark is OVERLAY-supplied: a distribution patches `logo` in identity.json and the generator runs
+    inside the vendoring pipeline, so a bad value is not visible in review of the payload. Neither host
+    raises on one -- both render nothing -- so this is the only place the fault can be seen. Every case
+    below passed some earlier version of the check."""
+    import subprocess
+    work, gen = _listing_fixture(tmp_path)
+    (work / "assets" / "escape.svg").symlink_to("/etc/hosts")
+    (work / "assets" / "text.png").write_text("this is not an image\n")
+    (work / "assets" / "empty.svg").write_bytes(b"")
+
+    for logo, why in [
+        ("./nope.png", "not in the payload"),
+        (".//etc/hosts", "absolute after the './' is stripped"),
+        ("../../etc/hosts", "parent escape"),
+        ("./README.md", "not an image"),
+        ("./assets/escape.svg", "symlink out of the payload"),
+        ("https://cdn.example.invalid/i.png", "a URL, which both hosts reject silently"),
+        ("http://example.invalid/i.png", "a plain-http URL, same silence"),
+        ("", "empty"),
+        ("./assets/text.png", "an image suffix on a text file"),
+        ("./assets/empty.svg", "a 0-byte file"),
+        ("./ASSETS/ICON.SVG", "wrong capitalisation, which only a case-insensitive filesystem forgives"),
+    ]:
+        _set_top(work, logo=logo)
+        r = subprocess.run(gen, capture_output=True, text=True)
+        assert r.returncode != 0, f"logo {logo!r} ({why}) was accepted"
+        assert "logo" in r.stderr, r.stderr
+
+    # The accept path, with the mark the payload really ships, spelled four ways. The manifests get the
+    # NORMALISED spelling: review verified `./assets//icon.svg` reached a manifest verbatim.
+    import json
+    for good in ("assets/icon.svg", "./assets/icon.svg", "./assets//icon.svg", "./assets/./icon.svg"):
+        _set_top(work, logo=good)
         subprocess.run(gen, check=True, capture_output=True, text=True)
+        agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+        claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+        assert agy["logo"] == "assets/icon.svg", f"{good!r} was emitted as {agy['logo']!r}"
+        assert claude["icon"] == "./assets/icon.svg", f"{good!r} was emitted as {claude['icon']!r}"
+
+
+def test_an_empty_terms_key_is_not_a_change_of_terms(tmp_path):
+    """Review: `{"license": null}` switched every doc into redistribution prose AND wrote `"license":
+    null` into both manifests, which predates this PR. A key present and empty is a key nobody filled
+    in, so both places test truthiness rather than membership."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    readme_before = (work / "README.md").read_text()
+    ident = json.loads((work / "identity.json").read_text())
+    ident["distribution"] = {"license": None}      # present and empty, which an overlay can produce
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+
+    assert (work / "README.md").read_text() == readme_before, (
+        "an empty terms key rewrote the README into redistribution prose")
+    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+        d = json.loads((work / m).read_text())
+        assert d["license"] == ident["license"], (
+            f"{m} took the empty value instead of falling back to the plugin's own: {d['license']!r}")
 
 
 def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp_path):
@@ -1302,43 +1432,6 @@ def test_the_listing_icon_meets_the_marketplace_guide(tmp_path):
     assert tile, "the icon must carry its own background tile; the bare mark is illegible on a light card"
     inset = int(tile.group(1))
     assert 0.07 <= inset / w <= 0.14, f"the guide asks for ~10% transparent padding, got {inset / w:.0%}"
-
-
-def test_gen_identity_refuses_a_logo_that_escapes_the_payload(tmp_path):
-    """`logo` is overlay-supplied input: a distribution points the listing at its own mark by patching
-    identity.json. A path that resolves outside the plugin either 404s on the card or ships whatever the
-    path landed on, so the generator checks it rather than copying it through."""
-    import shutil, subprocess, sys, json
-    work = tmp_path / "plugin"
-    shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
-    gen = [sys.executable, str(work / "gen_identity.py")]
-    ident = json.loads((work / "identity.json").read_text())
-    (work / "assets" / "elsewhere.svg").symlink_to("/etc/hosts")
-
-    for bad, why in [
-        ("./nope.svg", "not a file in the payload"),
-        (".//etc/hosts", "no '..' / absolute"),
-        ("../../etc/hosts", "parent escape"),
-        ("./README.md", "not an image"),
-        ("http://example.com/logo.png", "plain http"),
-        ("https://cdn.example.com/icon.png", "a URL: rejected silently by the loader, renders no logo"),
-        ("./assets/elsewhere.svg", "symlink out of the payload"),
-        ("", "unset"),
-    ]:
-        ident["logo"] = bad
-        (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
-        r = subprocess.run(gen, capture_output=True, text=True)
-        assert r.returncode != 0, f"{bad!r} ({why}) was accepted as a listing logo"
-        assert "logo" in r.stderr, r.stderr
-
-    # a bundled relative path is the only accepted form. A URL reads as valid in the published guide, but
-    # the loader's own docs say URLs and absolute paths "are rejected silently — a bad value renders no
-    # logo rather than erroring", so accepting one here would ship an empty card nothing could detect.
-    for good in ("assets/icon.svg", "./assets/icon.svg"):
-        ident["logo"] = good
-        (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
-        subprocess.run(gen, check=True, capture_output=True, text=True)
-        assert json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())["logo"] == good
 
 
 def test_marked_prose_blocks_are_well_formed_everywhere():
