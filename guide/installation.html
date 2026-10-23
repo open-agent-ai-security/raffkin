@@ -556,18 +556,20 @@ system still applies on top, and a headless <code>agy -p</code> session cannot p
 it auto-denies the call even when the gate has allowed it. Interactively you are asked. On Claude Code
 the plugin ships a permission snippet that grants the allow tier; there is no equivalent to ship here
 yet.</p>
-<p>Two things remain unexercised: whether a <code>deny</code> holds when a session runs with
-<code>--dangerously-skip-permissions</code> (it does on Claude Code), and what the host's own prompt looks like on
-an <code>ask</code>. Both are tracked in
+<p>One thing remains unexercised: what the host's own prompt looks like on an <code>ask</code> in an attended
+session. Whether a <code>deny</code> holds under <code>--dangerously-skip-permissions</code> is no longer open — it was probed
+directly and it holds, which is the measurement the section above rests on. The open item is tracked in
 <a href="https://github.com/open-agent-ai-security/raffkin/issues/305">raffkin#305</a>. Moving the deny tier into the
 connector as well, so it holds without depending on any host, is
 <a href="https://github.com/open-agent-ai-security/raffkin/issues/308">raffkin#308</a>.</p>
 <!-- /community-only -->
 <!-- distribution-only
 The gate has been driven in a live Antigravity session: the host calls the hook and the gate reads the
-step it is handed, verified against a captured payload that is now a test fixture. Two things remain
-unexercised — whether a `deny` holds under `--dangerously-skip-permissions`, and what the host's own
-prompt looks like on an `ask`. One behaviour is worth knowing in advance: on this host the gate's `allow`
+step it is handed, verified against a captured payload that is now a test fixture. A `deny` under
+`--dangerously-skip-permissions` was probed directly and holds, so containment stays refused even with
+the host's permission prompts switched off; the `ask` tier does not survive that flag, so read it as an
+attended-session control here. One thing remains unexercised: what the host's own prompt looks like on
+an `ask` in an attended session. One behaviour is worth knowing in advance: on this host the gate's `allow`
 restricts rather than entitles, so Antigravity's own permission system still applies on top and a
 headless session auto-denies MCP calls the gate has allowed. {{support}} can tell you where that
 verification stands for your release.
