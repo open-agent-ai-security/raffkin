@@ -185,9 +185,9 @@ def build_bom(timestamp):
                             "selected by Antigravity, not pinned by Raffkin. The bundled human-in-the-loop "
                             "gate DOES run on this host (hooks.json at the plugin root). NOT in the validated "
                             "set: no release has been red-teamed on a Gemini model, so prompt-injection "
-                            "resistance and refusal discipline are untested here. The host honours a hook "
-                            "`deny` under --dangerously-skip-permissions (measured on agy 1.4.5); its `ask` "
-                            "does not hold under that flag (see plugin/docs/installation.md)."),
+                            "resistance and refusal discipline are untested here, and the host's honouring of "
+                            "a hook `deny` under --dangerously-skip-permissions has not been confirmed "
+                            "against a live session (see plugin/docs/installation.md)."),
             "supplier": {"name": "Google", "url": ["https://ai.google"]},
             "externalReferences": [{"type": "website", "url": "https://antigravity.google/"}],
             "properties": [
