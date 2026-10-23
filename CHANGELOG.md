@@ -8,6 +8,49 @@
 Notable changes to Raffkin (named socxen before 1.0). Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
 governance model (feature → `dev`, release `dev` → `main`).
 
+## [1.1.0] — 2026-10-23
+
+**Raffkin runs on Google Antigravity.** A third host, beside Claude Code and Codex: the plugin's skills,
+its Exabeam MCP server and its human-in-the-loop gate all load on Antigravity. The Claude manifest can
+also carry the plugin directory's listing fields.
+
+*Release gate:* **both gates waived by Steve Wilson (maintainer), 2026-10-23**, for this release only. This
+release wraps the existing skills and gate for a new host. On Claude Code and Codex, the skills' procedures
+and the gate's decisions are unchanged: the `SKILL.md` edits are host wording plus stronger "never call it"
+language, and the new code in `gate.py` runs only under `--antigravity`; the Claude Code path keeps its
+decisions, under the test suite. The waiver and its conditions are recorded in
+[`security/redteam/HISTORY.md`](security/redteam/HISTORY.md) and [`security/praxen/README.md`](security/praxen/README.md).
+
+> **Antigravity support is not red-team validated.** No Gemini model is in the validated set, and the
+> harness has no Antigravity leg. On this host the `deny` tier is a hard block enforced by the host, but the
+> `ask` tier holds only in an attended session: a session started with `--dangerously-skip-permissions`
+> completes an ask-tier call with nobody prompted. The AI BOM records `ai:redTeamValidated: false` for it.
+
+### Added
+
+- **Google Antigravity is a supported host** (#306, building on @mdhedley's packaging in #304).
+  - `.antigravity-plugin/plugin.json`, generated from `identity.json` like the other two manifests, with
+    only the fields Antigravity's loader reads.
+  - `mcp_config.json` at the plugin root declares the Exabeam MCP server, derived from `.mcp.json`.
+  - `hooks.json` at the plugin root arms the gate: the deny tier, the ask tier and the per-session write
+    budget. If the hook gets no payload, it denies.
+  - `preflight.sh --platform antigravity` proves the gate is armed by handing it a containment call and
+    expecting a deny.
+  - An install quick start and a "What is different on this host" section in the install guide.
+- **The Claude manifest carries the plugin directory's listing fields** (#302): `icon` (from the
+  top-level `logo`) always, and `documentationUrl`, `supportUrl`, `privacyPolicyUrl` and
+  `termsOfServiceUrl` when a distribution sets them. Each one is validated at generation time. The
+  Codex and Antigravity manifests don't get them.
+- **The gate log records the host**, and records `ran_consent_unconfirmed` for a completed ask-tier call
+  on a host that reports no permission mode (Antigravity), rather than `approved`.
+
+### Changed
+
+- **The skills say "every host"** where they said "both hosts", and the refusal to call a containment or
+  rule-write tool is stated as standing on its own, whatever the host's gate does (#306).
+- **The bridge's lock pins `mcp` 1.30.0 and `certifi` 2026.10.19**, clearing CVE-2026-59951 and
+  PYSEC-2026-4320 (#309). The `markdown` used to build the guide is pinned to 3.11.2.
+
 ## [1.0.0] — 2026-09-28
 
 **Raffkin 1.0: the project is renamed, and compatibility starts here.** socxen was pre-release; this is

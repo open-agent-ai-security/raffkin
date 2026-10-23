@@ -1,14 +1,14 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178",
+  "serialNumber": "urn:uuid:ad8cd2ee-6825-593f-887c-af73f953fb85",
   "version": 1,
   "metadata": {
     "component": {
-      "bom-ref": "raffkin@1.0.0",
+      "bom-ref": "raffkin@1.1.0",
       "type": "application",
       "name": "raffkin",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
       "licenses": [
         {
@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-10-23T22:18:30Z"
+    "timestamp": "2026-10-23T23:01:20Z"
   },
   "components": [
     {
@@ -379,7 +379,7 @@
   ],
   "dependencies": [
     {
-      "ref": "raffkin@1.0.0",
+      "ref": "raffkin@1.1.0",
       "dependsOn": [
         "model:anthropic-claude",
         "model:openai-codex",

@@ -5,7 +5,7 @@
 
 # Design record — The human-in-the-loop gate
 
-> **Status:** Shipped and current with the code as of 1.0.0 (Antigravity added, #306). The authoritative
+> **Status:** Shipped and current with the code as of 1.1.0 (Antigravity added, #306). The authoritative
 > statement of behavior is the code: `plugin/hooks/gate.py` (its docstring is the decision table),
 > `plugin/hooks/hooks.json` (Claude Code), `plugin/hooks.json` (Antigravity),
 > `plugin/.mcp.codex.json`, and the tier file they are generated from,
@@ -60,9 +60,8 @@ Three differences are worth recording, because each one is a way the gate could 
   bridge already requires, and `preflight.sh` fails rather than reporting a gate when neither is present.
 
 What is NOT verified on that host, and is recorded as an evidence gap rather than a control: no release
-has been red-teamed on a Gemini model, and nobody has watched a `deny` hold under
-`--dangerously-skip-permissions` there (it does on Claude Code). Both need the desktop app and a Google
-sign-in; #305.
+has been red-teamed on a Gemini model. A `deny` holding under `--dangerously-skip-permissions` is no
+longer in that gap: it was measured on agy 1.4.5 (the table below), as it holds on Claude Code.
 
 The permission snippet (`settings.snippet.json`) stays as a **published artifact** — the same tiers
 under the plugin's prefixed rule names, for organizations that push them as host policy through managed
