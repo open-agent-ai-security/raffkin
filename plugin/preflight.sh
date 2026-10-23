@@ -487,7 +487,7 @@ else:
 ' "$root" "${RAFFKIN_ID_NAME:-raffkin}" 2>/dev/null)" || true
               case "$listing" in
                 HERE)
-                  ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. ${AGY_NAME:-Antigravity} also reports the hook registered as '${RAFFKIN_ID_NAME:-raffkin}-gate'. Not yet confirmed against a live session: whether this host's deny holds when you start it with --dangerously-skip-permissions" ;;
+                  ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. ${AGY_NAME:-Antigravity} also reports the hook registered as '${RAFFKIN_ID_NAME:-raffkin}-gate'. The deny holds even under --dangerously-skip-permissions; the ask does not, so run attended" ;;
                 DISABLED)
                   fail "Gate is OFF — the host has this plugin installed but DISABLED, so none of its hooks run and the deny tier is not in force. Run 'agy plugin enable ${RAFFKIN_ID_NAME:-raffkin}'" ;;
                 NOHOOK)
@@ -500,7 +500,7 @@ else:
                   warn "Human-in-the-loop gate ON for this copy — ran the host's own PreToolUse command and it refused a containment call. Could not read 'agy plugin list --json', so this verifies the plugin, not the installation" ;;
               esac
             else
-              ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. Not yet confirmed against a live session: whether this host's deny holds when you start it with --dangerously-skip-permissions"
+              ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. The deny holds even under --dangerously-skip-permissions; the ask does not, so run attended"
             fi ;;
           "")
             fail "Gate is OFF — the hook produced no decision when handed a containment call (ran: ${runner}). No decision is read as no objection here; run '$runner \"$root/hooks/gate.py\" --antigravity' by hand to see the error" ;;

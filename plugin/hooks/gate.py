@@ -77,8 +77,8 @@ Same tiers, same budget, same log; three differences, all in the envelope rather
   * The decision is `{"decision": "deny"|"ask"|"force_ask"|"allow", "reason": ...}` rather than Claude
     Code's `hookSpecificOutput`. The host documents `deny` as a hard block; what has been OBSERVED is
     that `ask` is NOT one — a session run with `--dangerously-skip-permissions` completed an ask-tier
-    write a second after the gate asked, nobody prompted (agy 1.4.5, 2026-10-22). Whether `deny` holds
-    under that flag is untested (#305).
+    write a second after the gate asked, nobody prompted (agy 1.4.5, 2026-10-22). `deny` does hold under
+    that flag: measured on the same host and version, a hook `deny` blocked the call.
   * The host does not report its permission mode, so a completed ask-tier call is logged as
     `ran_consent_unconfirmed` rather than `approved`
     without being able to prove a human answered -- the one thing the Claude Code record can distinguish
