@@ -1,12 +1,13 @@
 {
-  "_comment": "THE ONE PLACE the plugin's identity lives. Everything that carries it — .claude-plugin/plugin.json, .codex-plugin/plugin.json the 92 permission rules in skills/soc-investigate/settings.snippet.json and the identity.sh include that install.sh/preflight.sh source — is GENERATED from this file by gen_identity.py; CI fails if they drift. To re-brand or re-key the plugin (e.g. a vendor catalog shipping it under its own name), change `name`/`displayName`/`description` here and run `python3 plugin/gen_identity.py`. The optional `distribution` block holds everything that is per-COPY rather than per-plugin, and it has two halves that do different things. The terms half (`license`, `homepage`, `repository`, plus the prose keys `vendor`, `terms`, `support`) says this copy is redistributed under someone else's terms: the manifests take those values and the marked community-only/distribution-only prose switches. The listing half (`icon`, `documentationUrl`, `supportUrl`, `privacyPolicyUrl`, `termsOfServiceUrl`) only describes a directory ENTRY, is emitted into the Claude manifest alone, and does NOT switch the prose — so this repo can carry its own listing without its docs calling it a redistribution. `icon` is a path to an image shipped in the payload; the four URLs must be https:// with a host. The top-level `license` stays the software's either way and keeps driving the SPDX headers, README badge and identity.sh. `name` is load-bearing: it is the Claude Code plugin key and the skill/MCP namespace prefix (`<name>:<skill>`, `mcp__plugin_<name>_<server>__<tool>`) that the permission gate matches on. `mcpServer` must equal permissions.json's `server` and the server key in .mcp.json/.mcp.codex.json; the generator refuses to run when they disagree.",
+  "_comment": "THE ONE PLACE the plugin's identity lives. Everything that carries it — .claude-plugin/plugin.json, .codex-plugin/plugin.json, .antigravity-plugin/plugin.json, the generated mcp_config.json and hooks.json, the 92 permission rules in skills/soc-investigate/settings.snippet.json and the identity.sh include that install.sh/preflight.sh source — is GENERATED from this file by gen_identity.py; CI fails if they drift. To re-brand or re-key the plugin (e.g. a vendor catalog shipping it under its own name), change `name`/`displayName`/`description` here and run `python3 plugin/gen_identity.py`. The optional `distribution` block holds everything that is per-COPY rather than per-plugin, and it has two halves that do different things. The terms half (`license`, `homepage`, `repository`, plus the prose keys `vendor`, `terms`, `support`, `antigravityInstall`) says this copy is redistributed under someone else's terms: the manifests take those values, the distribution-only prose is filled from them ({{vendor}}, {{terms}}, {{support}}, {{antigravity_install}}) and the community-only/distribution-only prose switches. The listing half (`documentationUrl`, `supportUrl`, `privacyPolicyUrl`, `termsOfServiceUrl`) only describes a directory ENTRY, is emitted into the Claude manifest alone, and does NOT switch the prose — so this repo can carry its own listing without its docs calling it a redistribution. Those four must be https:// with a host. The top-level `license` stays the software's and keeps driving the SPDX headers, README badge and identity.sh. `name` is load-bearing: it is the Claude Code plugin key and the skill/MCP namespace prefix (`<name>:<skill>`, `mcp__plugin_<name>_<server>__<tool>`) that the permission gate matches on. `displayName`, `logo` and `suggestedPrompts` are what the Antigravity listing needs — a distribution overrides them here, including `logo`, so the listing carries its own mark. That manifest accepts ONLY name/displayName/version/description/logo/suggestedPrompts/disabled and silently drops anything else, so `keywords` and `category` reach the other two hosts only. `shortDescription` is the listing's description on Antigravity and Codex: Google recommends 120–160 characters, and it must not promise a prompt that the host controls rather than this plugin — the gate itself runs on all three hosts (hooks/hooks.json on Claude Code, hooks.json on Antigravity, the approval policy on Codex). `mcpServer` must equal permissions.json's `server` and the server key in .mcp.json/.mcp.codex.json; the generator refuses to run when they disagree.",
   "name": "raffkin",
   "version": "1.0.0",
   "displayName": "Raffkin — Agentic SOC Analyst",
   "productName": "Raffkin",
-  "shortDescription": "Triage Exabeam New-Scale alerts and cases end to end — evidence, verdict, and a guarded write path.",
+  "shortDescription": "Triage Exabeam New-Scale alerts and cases end to end: gather the evidence, map MITRE, reach a verdict, and record it behind an approval step.",
   "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
   "category": "Security",
+  "logo": "assets/icon.svg",
   "author": {
     "name": "Exabeam",
     "url": "https://www.exabeam.com/"
@@ -28,11 +29,20 @@
     ],
     "codex": [
       "codex"
+    ],
+    "antigravity": [
+      "antigravity",
+      "security"
     ]
   },
   "mcpServer": "exabeam",
   "marketplace": {
     "repo": "open-agent-ai-security/plugins",
     "name": "open-agent-ai-security"
-  }
+  },
+  "suggestedPrompts": [
+    "Triage my open Exabeam cases and tell me what to look at first",
+    "Investigate the highest-risk Exabeam alert from the last 24 hours and give me a verdict",
+    "Find the noisiest Exabeam detection rules and propose tuning"
+  ]
 }

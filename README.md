@@ -65,6 +65,44 @@ tests/         deterministic invariants, run in CI
 scripts/       release tooling
 ```
 
+## Where releases go
+
+This repository is the **source**. It is not what people install. Two distributions are cut from it,
+and each one has to serve all three hosts.
+
+|  | Claude Code | OpenAI Codex | Google Antigravity |
+|---|---|---|---|
+| **Community** — bleeding edge, Apache-2.0, served by `open-agent-ai-security/plugins` | `raffkin@open-agent-ai-security` | `raffkin@open-agent-ai-security` | `agy plugin install …/raffkin/tree/main/plugin` |
+| **Supported** — the Exabeam listing, served by `Exabeam-Labs/plugins` | `soc@exabeam` | `soc@exabeam` | `agy plugin install …/plugins/tree/main/soc` |
+
+How each distribution is built from this repo:
+
+- **Community** is a **pointer.** The catalog entry is a `git-subdir` source naming this repo's `plugin/`
+  on `main` — `ref: main`, no commit hash — so nothing is copied and an install resolves `main` at install
+  time. Merging to `main` ships a new version; there is no second step, and no pin to move.
+- **Supported** is a **copy.** `vendor_plugin.py` takes a `git archive` of `plugin/` at a pinned commit,
+  applies the declared identity overlay (re-keying `raffkin` → `soc` and relicensing), re-runs the
+  payload's own `gen_identity.py`, and commits the result as `soc/`. A build reaches customers only when
+  it is re-vendored and blessed, so the two distributions can sit on different versions on purpose.
+
+Three things about Antigravity, because it is the host that behaves differently:
+
+- **It has a Marketplace, but no catalog you add yourself.** There is no `agy plugin marketplace add`, so
+  neither of our catalogs is involved: `agy` installs whatever directory a GitHub subpath URL points at —
+  this repo's `plugin/` for community, the catalog's `soc/` for supported. Same tree, two addresses. A
+  Marketplace listing is a separate, Google-side submission on top of that URL.
+- **Nothing in the vendoring rewrites a source-repo URL.** The install key and the marketplace repo are
+  substituted on re-key; a subpath URL is neither. So the Antigravity command in the guide is
+  per-distribution (`{{antigravity_install}}` in the identity overlay) — otherwise the supported build's
+  own documentation would tell customers to install the community one.
+- **Its manifest is an allowlist, and its components live at the plugin root.** Antigravity reads seven
+  top-level manifest fields and silently discards the rest, takes a plugin's MCP servers from
+  `mcp_config.json` and its hooks from `hooks.json` — both at the plugin root, neither named in the
+  manifest. Every one of those failure modes is silent, so `gen_identity.py` generates all three files
+  together and `tests/test_repo_invariants.py` asserts the manifest carries *nothing* outside the
+  accepted set. The authoritative spec is the documentation inside the `agy` binary, which is ahead of
+  the published guide.
+
 ## Working on Raffkin
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — branching (`dev` → `main`), tests, review, cutting a release.

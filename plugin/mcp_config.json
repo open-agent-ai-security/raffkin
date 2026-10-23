@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "exabeam": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "--locked",
+        "${PLUGIN_ROOT}/connector/exabeam-mcp-bridge.py"
+      ]
+    }
+  }
+}

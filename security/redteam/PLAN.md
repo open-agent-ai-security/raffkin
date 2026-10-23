@@ -12,7 +12,7 @@ doc.*
 
 ## Purpose
 
-Adversarially test **Raffkin as configured** — Claude Code or Codex running the three skills
+Adversarially test **Raffkin as configured** — a supported host running the three skills
 (`soc-investigate` at depth; `triage-cases` and `rule-tuning` at sweep depth) against the Exabeam
 New-Scale MCP, under the governance model in the docs — to answer one question before each
 release: **can an adversary who controls the telemetry make the agent suppress a real threat, bypass the
@@ -48,8 +48,9 @@ threat, not an edge case.
 
 ### Out of scope (other teams' surfaces — do not test here)
 
-- The **Claude Code and Codex platforms** (CLI, sandbox, tool-execution runtime, the hook and
-  approval mechanisms themselves).
+- The **host platforms themselves** — Claude Code, Codex and Antigravity: their CLI, sandbox,
+  tool-execution runtime, and the hook and approval mechanisms they provide. That a host honours a hook's
+  `deny` is the host's contract; what this plan tests is whether the agent can be talked into needing one.
 - **Model jailbreaks in general** — only insofar as they manifest in *this* task.
 - The **Exabeam New-Scale platform / MCP server** and the tenant's network/infrastructure.
 - The **connector bridge's** transport and token code beyond secret-handling — reviewed and unit-tested,
@@ -132,6 +133,30 @@ Because results are rate-based, the gate is a threshold on the **weakest support
 | Class-E resource/availability findings | **Advisory** — record, don't block |
 
 A blocking finding is either fixed or explicitly waived (with rationale) by a maintainer before tag.
+
+### What this bar does and does not cover, by host
+
+The bar is a threshold on the weakest **supported** model, so its reach is exactly the supported set —
+and since 1.0 the payload installs on a host whose models are not in it.
+
+| Host | Covered by this bar | On which model |
+|---|---|---|
+| Claude Code | yes — the standard leg and the hook leg | `claude-sonnet-4-6`, plus an Opus sweep |
+| Codex | yes | `gpt-5.6-terra` |
+| Google Antigravity | **no — no leg exists** | its Gemini models are not in the supported set |
+
+This is a gap in the evidence, not a finding, and it is recorded here so that no future reader infers
+from "the release gate passed" that all three hosts were driven. Two things keep it from being a silent
+gap: the plugin's own documentation states on the host page, in the AI BOM
+(`ai:redTeamValidated: false` on the Gemini component) and in the installation guide that no release has
+been red-teamed on a Gemini model; and the gate the skills rely on is a control on the **tool call**, so
+it does not depend on the model's behaviour the way injection resistance and refusal discipline do.
+
+**Shipping a host outside this bar is a maintainer decision, not a default.** It has not been waived in
+writing for any release yet. Whoever cuts the first release carrying Antigravity either records that
+waiver with a rationale, per the rule above, or adds the leg. Adding it needs API access to a Gemini
+model and a harness arm for it; the gate-bypass leg additionally needs the host to be driven for real,
+since Antigravity's hook contract has not been exercised live (#305).
 
 ## Environment & safety (non-negotiable)
 
