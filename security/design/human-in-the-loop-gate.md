@@ -5,7 +5,7 @@
 
 # Design record — The human-in-the-loop gate
 
-> **Status:** Shipped and current with the code as of 1.0.0 (Antigravity added, #306). The authoritative
+> **Status:** Shipped and current with the code as of 1.1.0 (Antigravity added, #306). The authoritative
 > statement of behavior is the code: `plugin/hooks/gate.py` (its docstring is the decision table),
 > `plugin/hooks/hooks.json` (Claude Code), `plugin/hooks.json` (Antigravity),
 > `plugin/.mcp.codex.json`, and the tier file they are generated from,

@@ -1,7 +1,7 @@
 {
   "name": "raffkin",
   "displayName": "Raffkin — Agentic SOC Analyst",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Triage Exabeam New-Scale alerts and cases end to end: gather the evidence, map MITRE, reach a verdict, and record it behind an approval step.",
   "logo": "assets/icon.svg",
   "suggestedPrompts": [

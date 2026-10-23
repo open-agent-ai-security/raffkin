@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:32ddf7d0-d539-556a-b70d-713e204f3c35",
+  "serialNumber": "urn:uuid:c2c30889-cec9-59fc-bcb6-c42055586ca3",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-22T01:03:40Z",
+    "timestamp": "2026-10-23T22:11:18Z",
     "tools": {
       "components": [
         {
@@ -21,10 +21,10 @@
       ]
     },
     "component": {
-      "bom-ref": "raffkin@1.0.0",
+      "bom-ref": "raffkin@1.1.0",
       "type": "application",
       "name": "raffkin",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Raffkin plugin — the bundled Exabeam MCP bridge (plugin/connector/exabeam-mcp-bridge.py) and its locked Python dependency tree. The skills themselves are prompt/markdown and carry no runtime dependencies.",
       "licenses": [
         {
@@ -48,7 +48,7 @@
         {
           "type": "bom",
           "url": "aibom.cdx.json",
-          "comment": "The AI bill of materials for the same release (models, services, AI artifacts) — urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178"
+          "comment": "The AI bill of materials for the same release (models, services, AI artifacts) — urn:uuid:ad8cd2ee-6825-593f-887c-af73f953fb85"
         }
       ]
     },
@@ -2656,7 +2656,7 @@
   ],
   "dependencies": [
     {
-      "ref": "raffkin@1.0.0",
+      "ref": "raffkin@1.1.0",
       "dependsOn": [
         "pkg:pypi/certifi@2026.10.19",
         "pkg:pypi/httpx@0.28.1",
