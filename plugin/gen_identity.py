@@ -46,10 +46,12 @@ and regenerates — nothing else in the payload is touched.
 Stdlib only; the payload ships this file, so an installed copy can regenerate itself.
 """
 import json
+import os
 import re
 import shlex
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
 IDENTITY = HERE / "identity.json"
@@ -347,7 +349,14 @@ def rewrite_docs(prev, identity):
     subs = [(a, b) for a, b in subs if a and a != b
             and not a.startswith("plugins/cache//") and a != "config/plugins/"]
     bare = (prev_mkt, new_mkt) if prev_mkt and prev_mkt != new_mkt else None
-    switch = bool(identity.get("distribution"))
+    # Only the keys that mean "this copy is redistributed under other terms" switch the prose. The
+    # listing keys do not: an `icon` plus a `supportUrl` describe a DIRECTORY ENTRY, and this repo wants
+    # its own entry without telling its own README that it is somebody else's redistribution. Switching on
+    # the block's mere presence stripped the Project sponsor section and every community-only block from
+    # four docs, and re-pointed the licence badge at a LICENSE-APACHE this repo does not ship -- which made
+    # the fields unusable for the community listing they were added for (review of #302).
+    dist_block = identity.get("distribution") or {}
+    switch = is_redistribution(identity)
     prose = (prev.get("product", ""), product_name(identity))
     prefix = (f"mcp__plugin_{prev['name']}_", f"mcp__plugin_{identity['name']}_") if prev.get("name") and prev["name"] != identity["name"] else None
     changed, kept = [], []
@@ -360,7 +369,7 @@ def rewrite_docs(prev, identity):
         if prefix:      # the tool names the host really shows follow the plugin key (mcp__plugin_<name>_<server>__…)
             new = new.replace(prefix[0], prefix[1])
         if switch:
-            new = _switch_distribution_prose(new, identity.get("distribution") or {}, identity["name"])
+            new = _switch_distribution_prose(new, dist_block, identity["name"])
         new = _rename_prose(new, *prose)
         if new != text:
             f.write_text(new); changed.append(f)
@@ -423,47 +432,55 @@ def rewrite_license(prev_license, identity):
 
 
 DISTRIBUTION_KEYS = ("homepage", "repository", "license")      # manifest key order, unchanged from before the block
+DISTRIBUTION_LISTING_KEYS = ("documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl")
+# Anthropic's plugin directory reads these from .claude-plugin/plugin.json for the listing; Claude Code
+# ignores them at load time and `claude plugin validate` rejects them in a marketplace entry, so the
+# manifest is the only place they can go. They describe the LISTING, which is per-distribution -- the
+# community listing and a vendor's are different entries -- so they live in the distribution block and
+# are emitted only when set.
+#
+# `icon` is NOT one of them. The mark has ONE home, the top-level `logo`, and both manifests are emitted
+# from it (review of the merge with #306, which moved `logo` up here). Two reasons it cannot be a listing
+# key. It is required for Antigravity, so it is always set -- letting `distribution.icon` win would mean
+# a per-copy listing key overriding a product-identity key. And the catalog overlay merges dotted keys
+# into whatever `distribution` block the payload already carries, so a `distribution.icon` set upstream
+# for the community listing would be INHERITED by a vendor copy unless that overlay remembered to
+# override it: #307's leak from the other side. A top-level `logo` is replaced the way `displayName`
+# is. One field, two emitters.
 DISTRIBUTION_PROSE_KEYS = ("vendor", "terms", "support", "antigravityInstall")   # prose only, filled into the distribution-only text:
 # the distributor's name, the name of the terms the copy is licensed under, and its support page (a URL)
 _VENDOR_FALLBACK = "the organization that distributes it"
 
 
-LOGO_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
+def is_redistribution(identity) -> bool:
+    """Is this copy somebody else's redistribution, as opposed to this repo carrying its own listing?
+
+    One predicate, because asking the question two different ways is how the two halves of the
+    distribution block drifted apart. `any(k in block)` was the first answer and it was wrong: a block
+    holding only `documentationUrl` and `supportUrl` describes a DIRECTORY ENTRY, not a change of terms,
+    and reading it as one stripped the sponsor section out of four docs. Review of the merge with #306
+    then found the same test still live in the --check path, where a listing-only block demanded an
+    `antigravityInstall` no listing needs. The terms keys are the question; the listing keys are not.
+    """
+    dist = identity.get("distribution") or {}
+    # Truthiness, not membership: review found `{"license": null}` switched every doc into
+    # redistribution prose and wrote `"license": null` into both manifests. A key present and empty is a
+    # key nobody filled in.
+    return any(dist.get(k) for k in DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS)
 
 
 def logo_path(identity):
-    """The Marketplace listing's logo, as the manifest spells it: a path relative to the plugin root.
+    """The listing's mark, as the manifests should spell it: one validated path, two emitters.
 
-    It lives in identity.json rather than here so a distribution's overlay can point the listing at its own
-    mark the same way it re-keys `name` (review of #306) -- which means it is overlay-supplied input, and is
-    checked like any other. It has to be a bundled file INSIDE the payload, carrying an image suffix and not
-    a symlink (a symlink's target is not in the payload the user installed).
-
-    A URL is NOT accepted, though the published guide reads as though one would be. The loader's own
-    documentation, which ships inside the `agy` binary, is explicit: "URLs and absolute paths are rejected
-    silently -- a bad value renders no logo rather than erroring." Silently is the operative word. A URL here
-    would pass every check we could write, ship, and show an empty card that nothing in CI could see
-    (#306, verified against agy 1.4.4)."""
-    raw = identity.get("logo")
-    if not raw:
-        sys.exit("identity.json needs a `logo`: the Marketplace listing needs one, and a missing logo is not an error on the card, just an empty one")
-    if "://" in raw:
-        sys.exit(f"identity.json logo {raw!r} is a URL. Antigravity rejects URLs and absolute paths SILENTLY "
-                 "(renders no logo, raises nothing), so the logo must be a file bundled in the payload")
-    rel = raw[2:] if raw.startswith("./") else raw
-    if not rel or rel.startswith("/") or ".." in Path(rel).parts or "" in Path(rel).parts[:-1]:
-        sys.exit(f"identity.json logo {raw!r} must be a relative path inside the plugin, with no '..' segment")
-    p = HERE / rel
-    if p.is_symlink():
-        sys.exit(f"identity.json logo {raw!r} is a symlink — the listing logo must be a real file in the payload")
-    if not p.is_file():
-        sys.exit(f"identity.json logo {raw!r} is not a file in the payload (looked for {p})")
-    if p.resolve().parent != p.parent.resolve() or not p.resolve().is_relative_to(HERE.resolve()):
-        sys.exit(f"identity.json logo {raw!r} resolves outside the plugin ({p.resolve()})")
-    if p.suffix.lower() not in LOGO_SUFFIXES:
-        sys.exit(f"identity.json logo {raw!r} is not an image ({', '.join(LOGO_SUFFIXES)}) — "
-                 "an unsupported suffix is another value that renders nothing rather than erroring")
-    return raw
+    `payload_image` does the checking -- there is one image validator, not two. Review proved the two had
+    converged on identical answers for every path tried, and that the branch unique to this one
+    (`p.resolve().parent != p.parent.resolve()`) could never be true: `is_symlink()` returns first, and
+    for a non-symlink the two sides are equal by construction. A symlinked PARENT is caught by the
+    `is_relative_to` test both shared."""
+    if not identity.get("logo"):
+        sys.exit("identity.json needs a `logo`: the Marketplace listing needs one, and a missing logo is "
+                 "not an error on the card, just an empty one")
+    return payload_image(identity["logo"], "logo")
 
 
 def _distribution_tokens(dist, name=""):
@@ -493,12 +510,163 @@ def manifest_fields(identity):
     software's license: it drives the SPDX headers, the README badge and identity.sh, and is untouched by
     the block, so the source stays under its own license while the package states the distribution's."""
     dist = identity.get("distribution") or {}
-    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS) - set(DISTRIBUTION_PROSE_KEYS))
+    unknown = sorted(set(dist) - set(DISTRIBUTION_KEYS) - set(DISTRIBUTION_PROSE_KEYS) - set(DISTRIBUTION_LISTING_KEYS))
     if unknown:
-        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS}, got {unknown}")
-    return {k: dist.get(k, identity[k]) for k in DISTRIBUTION_KEYS}
+        sys.exit(f"identity.json distribution block accepts only {DISTRIBUTION_KEYS + DISTRIBUTION_PROSE_KEYS + DISTRIBUTION_LISTING_KEYS}, got {unknown}")
+    # `dist.get(k) or identity[k]`, not `dist.get(k, …)`: a key present and empty (`{"license": null}`,
+    # which an overlay can produce by patching a value it does not have yet) wrote `"license": null`
+    # straight into both manifests. An empty value falls back to the plugin's own, same as an absent one.
+    return {k: (dist.get(k) or identity[k]) for k in DISTRIBUTION_KEYS}
 
 
+IMAGE_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".webp")
+# Enough of each format to tell an image from a README someone renamed. SVG is text, so it is recognised
+# by its root element rather than a magic number -- an XML declaration or a comment may come first, which
+# is why the whole head is searched rather than only its start.
+_IMAGE_MAGIC = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff")   # the suffixes we accept, minus WEBP (two parts) and SVG (text)
+
+
+def _looks_like_image(p: Path) -> bool:
+    """Does the file's CONTENT match its suffix? Review verified that a text file and a 0-byte file named
+    `.png` both passed, and both render nothing on a listing rather than failing anything."""
+    head = p.read_bytes()[:1024]
+    if not head:
+        return False
+    if head.startswith(_IMAGE_MAGIC):
+        return True
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return True
+    try:
+        text = head.decode("utf-8", "strict").lstrip().lower()
+    except UnicodeDecodeError:
+        return False
+    return text.startswith(("<svg", "<?xml", "<!doctype svg", "<!--"))
+
+
+def payload_image(raw, label):
+    """A path to an image that SHIPS IN THE PAYLOAD, checked rather than copied through.
+
+    This is overlay-supplied input: a distribution points its listing at its own mark by patching
+    identity.json, and the generator runs inside the vendoring pipeline. A path that leaves the payload
+    either 404s on the listing or ships whatever the path landed on, and neither is visible in a diff of
+    identity.json. Every branch below was a path that passed the first version of this check (review of
+    #302): `.//etc/hosts`, because pathlib treats the remainder as absolute and drops HERE; a symlink out
+    of the tree, whose target is not in the payload the user installed; and `./README.md`, which is not an
+    image at all. Returns the path as the manifest should spell it.
+
+    NOTHING HERE RAISES ON THE HOST. Both loaders fail SILENTLY on a bad value: Antigravity's own
+    documentation, which ships inside the `agy` binary, says "URLs and absolute paths are rejected
+    silently -- a bad value renders no logo rather than erroring", and an unsupported suffix does the
+    same. So every check below is the only chance to see the fault: past this function the symptom is an
+    empty card that nothing in CI can observe (#306, verified against agy 1.4.4).
+
+    REQUIREMENT ON A VENDORING CATALOG. The file has to be there when this runs. Exabeam-Labs/plugins
+    currently regenerates the payload BEFORE applying its `overlay_files`, in both vendor_plugin.py and
+    verify_upstream -- so a mark delivered as a file overlay (`assets/icon.png`, Exabeam-Labs/plugins#47)
+    is not yet on disk and vendoring aborts here with "not a file in the payload". The fix belongs there,
+    applying file overlays before regenerating; the check stays here, because the alternative is a
+    listing whose mark 404s and nothing to tell anyone it will."""
+    if not isinstance(raw, str) or not raw.strip():
+        sys.exit(f"identity.json {label} must be a non-empty string, got {raw!r}")
+    raw = raw.strip()
+    if "://" in raw:
+        sys.exit(f"identity.json {label} must be a path to an image inside the payload, not a URL: {raw!r}. "
+                 "Both hosts reject a URL silently and render nothing")
+    rel = raw[2:] if raw.startswith("./") else raw
+    parts = Path(rel).parts
+    if not rel or rel.startswith("/") or ".." in parts or "" in parts:
+        sys.exit(f"identity.json {label} must be a relative path inside the plugin, with no '..' segment, got {raw!r}")
+    p = HERE / rel
+    if p.is_symlink():
+        sys.exit(f"identity.json {label} is a symlink ({raw!r}) — the image must be a real file in the payload")
+    if not p.is_file():
+        sys.exit(f"identity.json {label} names {raw!r}, which is not a file in the payload (looked for {p})")
+    if not p.resolve().is_relative_to(HERE.resolve()):
+        sys.exit(f"identity.json {label} resolves outside the plugin: {p.resolve()}")
+    if p.suffix.lower() not in IMAGE_SUFFIXES:
+        sys.exit(f"identity.json {label} is not an image ({', '.join(IMAGE_SUFFIXES)}), got {raw!r} — "
+                 "an unsupported suffix is another value that renders nothing rather than erroring")
+    # macOS is case-INSENSITIVE and case-preserving, so `./ASSETS/LOGO.SVG` opens the real file here and
+    # 404s everywhere the listing is actually served. Review verified it was accepted on APFS; Linux CI
+    # would reject it, so it only bites a vendoring run done locally on a Mac -- which is how the
+    # supported build gets made. Each component is matched against what the directory really holds.
+    probe = HERE
+    for part in parts:
+        if part not in os.listdir(probe):
+            sys.exit(f"identity.json {label} is spelled {raw!r}, but the payload holds {part!r} with "
+                     "different capitalisation. This machine's filesystem does not care and the server "
+                     "that hosts the listing will")
+        probe = probe / part
+    if not _looks_like_image(p):
+        sys.exit(f"identity.json {label} names {raw!r}, whose contents are not an image: no PNG, JPEG, "
+                 "WEBP or SVG/XML signature in the first bytes. A suffix is a claim, not evidence, and a "
+                 "0-byte or text file with an image suffix renders nothing on either host")
+    # The NORMALISED spelling, so `./assets//icon.svg` and `./assets/./icon.svg` cannot reach a manifest
+    # verbatim: review verified both were emitted as written. `as_posix()` because a manifest path is a
+    # URL-ish path on every platform, never a Windows one.
+    return Path(rel).as_posix()
+
+
+def listing_url(raw, label, schemes=("https",)):
+    """A URL fit for a directory listing. Everything it rejects renders as a dead link rather than
+    failing anything, which is why each case is checked here instead:
+
+      - a bare `https://` passed a prefix test (review of #302);
+      - `https://[` raised an uncaught ValueError traceback out of `urlsplit` instead of a labelled exit;
+      - `https://exa mple.com` and a URL with an embedded newline were accepted, and the newline went
+        into the manifest;
+      - `https://@/` and `https://:443` have a netloc but no HOST, so `.hostname` is the test, not
+        `.netloc`."""
+    if not isinstance(raw, str) or not raw.strip():
+        sys.exit(f"identity.json {label} must be a non-empty string, got {raw!r}")
+    raw = raw.strip()
+    bad = [c for c in raw if c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F]
+    if bad:
+        sys.exit(f"identity.json {label} contains whitespace or a control character ({bad[0]!r}), which "
+                 f"would be written into the manifest verbatim: {raw!r}")
+    try:
+        parts = urlsplit(raw)
+    except ValueError as e:
+        sys.exit(f"identity.json {label} is not a URL ({e}): {raw!r}")
+    if parts.scheme not in schemes:
+        sys.exit(f"identity.json {label} must be a {' or '.join(s + '://' for s in schemes)} URL, got {raw!r}")
+    if parts.scheme == "mailto":
+        if "@" not in parts.path or parts.path.startswith("@") or parts.path.endswith("@"):
+            sys.exit(f"identity.json {label} must be mailto: an address, got {raw!r}")
+        return raw
+    try:
+        host = parts.hostname
+    except ValueError as e:
+        sys.exit(f"identity.json {label} has no readable host ({e}): {raw!r}")
+    if not host:
+        sys.exit(f"identity.json {label} must be an https:// URL with a host, got {raw!r}")
+    return raw
+
+
+def https_url(raw, label):
+    """Back-compatible name for the https-only case."""
+    return listing_url(raw, label)
+
+
+def listing_fields(identity):
+    """The directory-listing fields, for the Claude manifest only, omitted when unset.
+
+    `supportUrl` accepts `mailto:` as well, because `claude plugin validate` does and a vendor whose
+    support contact is an address had no way to set it. It also defaults from the distribution block's
+    `support`, which the catalog overlay already fills for the prose: a distribution that named its
+    support page once should not have to name it twice to be listed."""
+    dist = identity.get("distribution") or {}
+    out = {}
+    for k in DISTRIBUTION_LISTING_KEYS:
+        schemes = ("https", "mailto") if k == "supportUrl" else ("https",)
+        if k in dist:
+            # PRESENT is the test here, not truthy -- unlike the terms keys, which fall back to the
+            # plugin's own value when empty. A listing key has nothing to fall back to, so an empty one
+            # is a value an overlay meant to fill and didn't, and saying so beats a quietly missing link.
+            out[k] = listing_url(dist[k], f"distribution.{k}", schemes=schemes)
+        elif k == "supportUrl" and dist.get("support"):
+            out[k] = listing_url(dist["support"], "distribution.support (used as supportUrl)", schemes=schemes)
+    return out
 # Antigravity's PreToolUse hook is the SAME gate as Claude Code's, in a different envelope: the host
 # calls the hook with the pending call on stdin and honours `{"decision": "deny"}` as a hard block, plus
 # "ask" and "force_ask" for a prompt. So the deny tier, the ask tier and the per-session write budget are
@@ -609,7 +777,12 @@ def antigravity_hooks(identity, server):
 
 def build(identity, perms):
     common = {k: identity[k] for k in ("name", "version", "description", "author")} | manifest_fields(identity)
-    claude = {**common, "keywords": identity["keywords"] + identity["hostKeywords"]["claude"], "skills": "./skills/"}
+    # `icon` comes from the top-level `logo`, the one home of the mark, so the community listing gets an
+    # icon with no distribution block at all and a vendor copy gets its own by overriding `logo` -- the
+    # same key the overlay already patches for `displayName`. Claude spells a payload-relative path with
+    # the leading `./`; Antigravity does not.
+    claude = {**common, "keywords": identity["keywords"] + identity["hostKeywords"]["claude"], "skills": "./skills/",
+              "icon": f"./{logo_path(identity)}", **listing_fields(identity)}
     # The bundled PreToolUse hook (#148) is deliberately NOT declared here. Claude Code loads
     # hooks/hooks.json from the standard path automatically, so declaring that same path makes the loader
     # see the file twice and fail the WHOLE plugin load -- skills, MCP server and gate together (#197).
@@ -707,8 +880,8 @@ def main(argv):
         # maintainer>" to real users (review of #306). Fail loudly instead, and only where it matters: a
         # distribution copy that actually ships the Antigravity manifest. A distribution that is not listing
         # on this host drops .antigravity-plugin/ and this never fires.
-        if identity.get("distribution") and OUT["antigravity"].exists() \
-                and not (identity["distribution"].get("antigravityInstall") or "").strip():
+        if is_redistribution(identity) and OUT["antigravity"].exists() \
+                and not ((identity.get("distribution") or {}).get("antigravityInstall") or "").strip():
             names.append("plugin/identity.json (ships .antigravity-plugin/plugin.json but its distribution block "
                          "sets no `antigravityInstall`, so the install guide would tell users to ask its "
                          "maintainer for the URL — set it, or drop .antigravity-plugin/ to skip this host)")
