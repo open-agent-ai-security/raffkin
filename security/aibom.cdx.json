@@ -1,14 +1,14 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:bfdd1193-56ba-5f98-b536-5dfa2c08c178",
+  "serialNumber": "urn:uuid:ad8cd2ee-6825-593f-887c-af73f953fb85",
   "version": 1,
   "metadata": {
     "component": {
-      "bom-ref": "raffkin@1.0.0",
+      "bom-ref": "raffkin@1.1.0",
       "type": "application",
       "name": "raffkin",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
       "licenses": [
         {
@@ -51,7 +51,7 @@
         },
         {
           "name": "ai:platform",
-          "value": "plugin for Claude Code and OpenAI Codex (skills + bundled MCP connector)"
+          "value": "plugin for Claude Code, OpenAI Codex and Google Antigravity (skills + bundled MCP connector)"
         },
         {
           "name": "ai:skillName",
@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-09-30T20:23:04Z"
+    "timestamp": "2026-10-23T23:01:20Z"
   },
   "components": [
     {
@@ -167,6 +167,42 @@
         },
         {
           "name": "ai:pinnedByThisProject",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "model:google-gemini",
+      "type": "machine-learning-model",
+      "name": "Gemini model (via Google Antigravity)",
+      "description": "Foundation model the skills run on when the host is Google Antigravity. Hosted API — weights are not distributed with Raffkin, and the specific member is selected by Antigravity, not pinned by Raffkin. The bundled human-in-the-loop gate DOES run on this host (hooks.json at the plugin root), and a `deny` is MEASURED to hold under --dangerously-skip-permissions, so containment stays refused here as it does everywhere. An `ask` is overridden by that flag, so on this host alone the ask tier is an attended-session control rather than a lock. NOT in the validated set: no release has been red-teamed on a Gemini model, so prompt-injection resistance and refusal discipline are untested here (see plugin/docs/installation.md).",
+      "supplier": {
+        "name": "Google",
+        "url": [
+          "https://ai.google"
+        ]
+      },
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://antigravity.google/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ai:hosting",
+          "value": "external-hosted-api"
+        },
+        {
+          "name": "ai:weightsDistributed",
+          "value": "false"
+        },
+        {
+          "name": "ai:pinnedByThisProject",
+          "value": "false"
+        },
+        {
+          "name": "ai:redTeamValidated",
           "value": "false"
         }
       ]
@@ -343,7 +379,7 @@
   ],
   "dependencies": [
     {
-      "ref": "raffkin@1.0.0",
+      "ref": "raffkin@1.1.0",
       "dependsOn": [
         "model:anthropic-claude",
         "model:openai-codex",

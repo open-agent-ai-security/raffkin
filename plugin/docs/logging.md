@@ -77,11 +77,20 @@ three backups). One line per decision:
  "target": {"alertId": "4471", "alertStatus": "DISMISSED"}}
 ```
 
-The same hook runs again after the call. An ask-tier call that **completed** is recorded as `approved`,
-beside the `ask` line — inferred from completion: an ask completes only when a human answered yes. When
-the session ran in a mode where nobody could answer (`bypassPermissions`, `dontAsk`) the line says
-`ran_unasked` instead, because the ask did not hold for that call. That line should never appear; it
-exists so that a gate that somehow did not hold is visible in the record rather than silent. Both lines
+The same hook runs again after the call, and records only what it can vouch for. An ask-tier call that
+**completed** is `approved` where the host reported an attended permission mode — there, completion does
+imply a human answered yes. Where it reported a mode in which nobody could answer (`bypassPermissions`,
+`dontAsk`) the line says `ran_unasked`, because the ask did not hold for that call. Where the host
+reports **no** permission mode at all — Antigravity — the line says `ran_consent_unconfirmed`: the call
+completed, and the gate cannot tell an answered prompt from a session that auto-approved it.
+
+That last one is not theoretical, and it is the reason this distinction exists. On Antigravity a session
+started with `--dangerously-skip-permissions` was observed completing an ask-tier case closure one second
+after the gate asked, with nobody prompted. Reading `approved` there would have put a consent in the
+audit trail that never happened. **An `approved` line is evidence of a human's yes; a
+`ran_consent_unconfirmed` line is not, and is not meant to be read as one.** `ran_unasked` and
+`ran_despite_deny` should never appear at all; they exist so a gate that did not hold is visible in the
+record rather than silent. Both lines
 carry the host's `permission_mode` and `tool_use_id` when present, so a post line ties to its ask:
 
 ```json

@@ -95,11 +95,13 @@ always the cause.
 - `exabeam_update_alert` — **dismiss/update an alert** *(ASK — gated; a wrong dismissal hides a threat)*
 - `exabeam_update_case` — **update/close a case** *(ASK — gated)*
 
-## Never (denied on both hosts)
+## Never (denied by the host gate on every host; never called regardless)
 - `exabeam_create_analytics_rule` — creates a detection rule in the tenant (server builds it from one of six
-  canned names; `arg1: {ruleName}`). **Denied**, both spellings, both hosts: `rule-tuning` produces
+  canned names; `arg1: {ruleName}`). **Denied**, both spellings, on every host: `rule-tuning` produces
   *proposals* for detection engineering, and no Raffkin skill applies detection content. Recommend; never call.
-  `exabeam_update_analytics_rule` — edits an existing rule; **denied** the same way, both spellings, both hosts.
+  `exabeam_update_analytics_rule` — edits an existing rule; **denied** the same way, both spellings.
+  The denial is a host control, so it is only ever defense in depth: the instruction never to call them
+  stands on its own, and is what holds if a host is misconfigured.
 - `exabeam_enable_analytics_rule`, `exabeam_disable_analytics_rule`, `exabeam_delete_analytics_rule`, `exabeam_create_correlation_rule`, `exabeam_update_correlation_rule`, `exabeam_enable_correlation_rule`, `exabeam_disable_correlation_rule`, `exabeam_delete_correlation_rule`, `exabeam_create_exclusion_rule`, `exabeam_update_exclusion_rule`, `exabeam_delete_exclusion_rule`, `exabeam_create_context_table`, `exabeam_update_context_table`, `exabeam_delete_context_table`, `exabeam_add_context_table_records`, `exabeam_delete_context_table_records` — every other detection-content write the remit names, denied under both spellings ahead of the MCP exposing it.
   A write tool the MCP grows under a name outside this list still asks (the hook's unknown-tool rule) and
   is treated as a write by the bridge (neutralized, audited, refused in a dry run) until it is classified.

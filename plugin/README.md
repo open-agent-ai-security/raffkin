@@ -4,11 +4,11 @@
 -->
 
 # Raffkin
-**An agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code and OpenAI Codex.**
+**An agentic SOC skill suite for Exabeam New-Scale — a plugin for Claude Code, OpenAI Codex and Google Antigravity.**
 
 [![Project level: Production](https://img.shields.io/badge/project_level-production-3fb950)](https://open-agent-ai-security.github.io/project-levels/)
 [![CI](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml/badge.svg)](https://github.com/open-agent-ai-security/raffkin/actions/workflows/ci.yml)
-[![version](https://img.shields.io/badge/version-v1.0.0-blue)](.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-v1.1.0-blue)](.claude-plugin/plugin.json)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
@@ -19,8 +19,10 @@
 Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
 skills work the tenant through the Exabeam MCP — one case, the whole queue, or the rules behind it —
 each named for the person whose job it does. No server, no database, no approval queue: the analyst at
-the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks
-out of the box** — a gate the plugin ships and your host enforces, and the skill asking you first.
+the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks** —
+a gate the plugin ships and your host enforces, and the skill asking you first. Both ship on all three
+hosts; what differs on Antigravity is that no release has been red-teamed on a Gemini model, so see
+[What is different on this host](docs/installation.md#what-is-different-on-this-host) before you run there.
 
 ## The three skills
 
@@ -28,7 +30,7 @@ out of the box** — a gate the plugin ships and your host enforces, and the ski
 |---|---|---|
 | **`soc-investigate`** | the analyst | One alert or case, first look to written verdict: gathers the evidence itself, pivots on the entities, weighs a benign explanation against a malicious one, and acts — opens or updates a case, writes notes, escalates. Asks you before any dismiss or close. |
 | **`triage-cases`** | the shift lead | The open queue rather than one case: clusters by attack shape, ranks by corroborated signal, hands back a short "start here" list. Read-only across the sweep. |
-| **`rule-tuning`** | the detection engineer | Finds rules that are *noisy*, not merely loud, and proposes the specific change mapped to real Exabeam mechanics. Propose-only: the MCP's rule-write tools are refused on both hosts. |
+| **`rule-tuning`** | the detection engineer | Finds rules that are *noisy*, not merely loud, and proposes the specific change mapped to real Exabeam mechanics. Propose-only: the skill never calls a rule-write tool, and the host gate refuses them on every host. |
 
 Each hands off to the others: a single case to `soc-investigate`, a noise cluster to `rule-tuning`.
 
@@ -42,17 +44,25 @@ Each hands off to the others: a single case to `soc-investigate`, a noise cluste
 - 🔧 **Tunes the source of the noise** so the fix lands on the detection instead of on the analyst.
 - ✍️ **Acts** — opens or updates a case, writes notes, dismisses true false positives (gated), and
   **recommends** containment for you to perform in EDR or IAM. It never executes containment.
-- 🔒 **Stops where it should** — dismiss and close sit behind a host-enforced gate that ships on, on
-  both hosts. No settings to edit.
+- 🔒 **Stops where it should** — dismiss and close sit behind a host-enforced gate that ships on, on all
+  three hosts. No settings to edit.
 - 🛡️ **Treats telemetry as hostile** — hidden-character smuggling is stripped from what it reads;
   formulas and links are disarmed and secrets and structured identifiers masked in what it writes.
 - 🧾 **Logs what it did** — a structured, local, privacy-preserving audit record, on by default.
 
 ## Get started
 
-1. Install: `claude plugin marketplace add open-agent-ai-security/plugins` then
-   `claude plugin install raffkin@open-agent-ai-security` (Codex:
-   `codex plugin marketplace add open-agent-ai-security/plugins` then `codex plugin add raffkin@open-agent-ai-security`).
+1. Install:
+   - **Claude Code** — `claude plugin marketplace add open-agent-ai-security/plugins` then
+     `claude plugin install raffkin@open-agent-ai-security`
+   - **Codex** — `codex plugin marketplace add open-agent-ai-security/plugins` then
+     `codex plugin add raffkin@open-agent-ai-security`
+<!-- community-only -->
+   - **Antigravity** — `agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin`
+<!-- /community-only -->
+<!-- distribution-only
+   - **Antigravity** — `agy plugin install {{antigravity_install}}`
+/distribution-only -->
 2. Add your Exabeam API key and secret to `~/.exabeam-mcp.env`.
 3. Run `preflight.sh` from the installed plugin to check the connection and the gate.
 4. Say *"investigate alert `<id>`"*.
@@ -64,7 +74,7 @@ The full five-minute quick start, with what to expect at each step, is in
 
 | Page | What's in it |
 |---|---|
-| **[Installation & setup](docs/installation.md)** | quick starts for Claude Code and Codex, credentials, troubleshooting, updating (**start here**) |
+| **[Installation & setup](docs/installation.md)** | quick starts for Claude Code, Codex and Antigravity, credentials, troubleshooting, updating (**start here**) |
 | **[Using the skills](docs/usage.md)** | what to say, what happens, what Raffkin asks you, how to read the report |
 | **[Example investigation](skills/soc-investigate/reference/examples/coordinated-credential-access.md)** | a real run, from alert to verdict |
 | **[Security](docs/security-guardrails.md)** | the human gate, the guardrails, the audit trail, how it is tested, what it does not cover |
@@ -77,7 +87,8 @@ Every release is red-teamed on the weakest supported model of each host and
 behavior-verified before it ships; the runs, the findings and any waivers are public in the repository's
 [`security/`](https://github.com/open-agent-ai-security/raffkin/tree/main/security) directory. The version
 badge above and the [changelog](https://github.com/open-agent-ai-security/raffkin/blob/main/CHANGELOG.md)
-track the current release; `claude plugin list` (or `codex plugin list`) shows your installed version.
+track the current release; `claude plugin list` (or `codex plugin list` / `agy plugin list`) shows your
+installed version.
 
 <!-- community-only -->
 ## Project sponsor

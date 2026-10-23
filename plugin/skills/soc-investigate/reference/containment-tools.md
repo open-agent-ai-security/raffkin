@@ -52,8 +52,9 @@ Not containment, but the same posture — actions Raffkin **must never perform**
 Exabeam MCP grew `exabeam_create_analytics_rule` (2026-09: builds and creates a detection rule
 server-side from one of six canned names) and the proxy defines `exabeam_update_analytics_rule`. The
 `rule-tuning` skill's contract is *proposals for detection engineering to act on*, and `SKILL.md`
-forbids applying or claiming to have applied a rule change, so both are denied on both hosts, under
-both spellings, exactly like the containment verbs. A future rule-write tool under a new name lands on
+forbids applying or claiming to have applied a rule change, so both are denied by the host gate on every
+host, under both spellings, exactly like the containment verbs. The skill rule is written to stand alone
+anyway: a gate is a host control, and the refusal does not depend on one. A future rule-write tool under a new name lands on
 the hook's unknown-tool rule (ask), which is the safety net until it is classified here.
 
 **Detection content** — every verb the Worker Remit names: create, update, enable, disable or delete a

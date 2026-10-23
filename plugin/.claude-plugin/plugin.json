@@ -1,6 +1,6 @@
 {
   "name": "raffkin",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Raffkin — agentic SOC analyst skill suite. Investigates and triages Exabeam New-Scale alerts and cases through the Exabeam MCP: evidence gathering, entity pivots, threat/false-positive verdict, and action — with containment recommended for human approval and dismiss/close gated by the host agent's tool-approval rules.",
   "author": {
     "name": "Exabeam",
@@ -18,5 +18,6 @@
     "mcp",
     "claude-code"
   ],
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "icon": "./assets/icon.svg"
 }

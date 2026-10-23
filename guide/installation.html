@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Installation &amp; setup · Raffkin Docs</title>
-<meta name="description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta name="description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://open-agent-ai-security.github.io/raffkin/guide/installation.html">
 <link rel="icon" type="image/png" sizes="32x32" href="../graphics/web/favicon-32.png">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Raffkin">
 <meta property="og:title" content="Installation &amp; setup · Raffkin Docs">
-<meta property="og:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta property="og:description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta property="og:url" content="https://open-agent-ai-security.github.io/raffkin/guide/installation.html">
 <meta property="og:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Installation &amp; setup · Raffkin Docs">
-<meta name="twitter:description" content="Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool interface for AI…">
+<meta name="twitter:description" content="Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam&#x27;s tool…">
 <meta name="twitter:image" content="https://open-agent-ai-security.github.io/raffkin/graphics/raffkin-social.png">
 <script type="application/ld+json">
-{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "Raffkin is a plugin for Claude Code and OpenAI Codex that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool interface for AI\u2026",
+{ "@context": "https://schema.org", "@type": "TechArticle", "headline": "Installation & setup", "description": "Raffkin is a plugin for Claude Code, OpenAI Codex and Google Antigravity that works your Exabeam New-Scale tenant through the Exabeam MCP, Exabeam's tool\u2026",
   "url": "https://open-agent-ai-security.github.io/raffkin/guide/installation.html", "isPartOf": { "@type": "WebSite", "name": "Raffkin", "url": "https://open-agent-ai-security.github.io/raffkin/" },
   "publisher": { "@type": "Organization", "name": "Exabeam", "url": "https://www.exabeam.com/" } }
 </script>
@@ -262,31 +262,64 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html" class="active">Installation &amp; setup</a><ul class="docs-subnav"><li><a href="#before-you-start">Before you start</a></li><li><a href="#quick-start-claude-code">Quick start — Claude Code</a></li><li><a href="#quick-start-codex">Quick start — Codex</a></li><li><a href="#quick-start-google-antigravity">Quick start — Google Antigravity</a></li><li><a href="#updating">Updating</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#advanced-wiring-the-exabeam-mcp-by-hand-not-recommended">Advanced: wiring the Exabeam MCP by hand (not recommended)</a></li><li><a href="#key-entitlements">Key entitlements</a></li><li><a href="#uninstalling">Uninstalling</a></li></ul></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="installation-setup">Installation &amp; setup</h1>
-<p>Raffkin is a plugin for <strong>Claude Code</strong> and <strong>OpenAI Codex</strong> that works your <strong>Exabeam New-Scale</strong> tenant
-through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the same shape on both hosts: install the plugin, add one credentials
-file, check, and run your first investigation. Five minutes.</p>
-<p>The safety gate is on from the moment the plugin is installed: dismissing an alert or closing a case
-always asks you first, and containment is never executed. Nothing to configure for that. On Claude Code
-the gate is a hook inside the plugin. It runs even when you start Claude Code with permission prompts
-turned off: containment is still refused, and a dismiss or close still needs a yes. Its deny on
-containment and its ask on dismiss and close still fire in those modes, and if nobody is there to give
-one, the call is refused.</p>
+<p>Raffkin is a plugin for <strong>Claude Code</strong>, <strong>OpenAI Codex</strong> and <strong>Google Antigravity</strong> that works your
+<strong>Exabeam New-Scale</strong> tenant through the Exabeam MCP, Exabeam's tool interface for AI agents. Setup is the
+same shape on all three hosts: install the plugin, add one credentials file, check, and run your first
+investigation. Five minutes.</p>
+<p>On <strong>all three hosts</strong> the safety gate is on from the moment the plugin is installed: containment is
+never executed, and in an attended session dismissing an alert or closing a case always asks you first.
+Nothing to configure for that. On Claude Code and Antigravity the gate is a hook inside the plugin; on
+Codex it comes from the approval policy the package sets.</p>
+<p>Start a session with permission prompts turned off and the two halves part company. <strong>Containment stays
+refused on every host</strong> — on Antigravity that is measured, not assumed. The ask does not hold everywhere:
+on Claude Code a dismiss or close still needs a yes, and if nobody is there to give one the call is
+refused; on <strong>Antigravity the host overrides the gate's ask and the call runs unasked</strong>, so read "always
+asks you first" on that host as <em>attended sessions only</em>. See
+<a href="#what-is-different-on-this-host">What is different on this host</a>.</p>
+<p><strong>Antigravity differs in what has been <em>tested</em>, not in what is enforced</strong> — no release has been
+red-teamed on a Gemini model. Read
+<a href="#what-is-different-on-this-host">What is different on this host</a> before you install there.</p>
 <h2 id="before-you-start">Before you start</h2>
 <ul>
-<li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code) or the <code>codex</code> CLI (Codex), signed in.</li>
+<li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code), the <code>codex</code> CLI (Codex) or the <code>agy</code> CLI
+  (Google Antigravity), signed in.</li>
+<li><strong>On Antigravity, two things that have nothing to do with this plugin — check both first.</strong> The plugin,
+  the gate and <code>preflight.sh</code> all install and report healthy without a session ever being opened, so
+  nothing else in this guide will warn you about either. <code>agy -p "hi"</code> answering is the one test that
+  covers both.<ul>
+<li><strong>A Google account Antigravity accepts.</strong> Signing in and being let in are separate gates: <code>agy</code>
+  completes the OAuth flow and then refuses the session with <em>"Eligibility check failed: Your current
+  account is not eligible for Antigravity. Try signing in with another personal Google account."</em> We
+  hit this on a managed Google Workspace domain — which is what an analyst at a company has. Ask
+  whoever administers your Google tenant whether Antigravity is enabled for it.</li>
+<li><strong><code>antigravity.google</code> reachable from your network.</strong> A corporate secure web gateway may reset it
+  while every other Google domain passes. On Zscaler we measured exactly that: <code>accounts.google.com</code>
+  302, <code>google.com</code> 200, <code>gemini.google.com</code> 200, <code>cloudcode-pa.googleapis.com</code> 404 — and
+  <code>antigravity.google</code> failing the TLS handshake outright (<code>curl: (35) Recv failure: Connection reset
+  by peer</code>), which in a browser shows up as <code>ERR_CONNECTION_RESET</code> on the consent page. That domain is
+  the OAuth callback, so sign-in cannot complete until it is allowlisted. Check it with
+  <code>curl -o /dev/null -w '%{http_code}\n' https://antigravity.google/</code> — anything other than <code>200</code>
+  means the login will fail no matter how many times you retry it.</li>
+</ul>
+</li>
 <li><strong>A supported model.</strong> On Claude Code, Sonnet 4.6 or newer, or Opus; on Codex, GPT-5.6 Terra or Sol.
   Smaller models (Haiku, Luna) are not supported. See <a href="security-guardrails.html#how-it-is-tested">Security</a>
-  for how the supported models are validated.</li>
+  for how the supported models are validated. <strong>The Gemini models Antigravity runs are not in that
+  validation set</strong> — no release has been red-teamed on one, so treat Antigravity as unvalidated on the
+  model axis. The gate itself runs there; it is the model behind it that is untested.</li>
 <li><strong><a href="https://docs.astral.sh/uv/"><code>uv</code></a> 0.5.23 or newer</strong> on your <code>PATH</code>. It runs the bundled Exabeam
   connector and installs the connector's own Python dependencies; there is nothing to <code>pip install</code>.
   Those dependencies are pinned by hash, and uv refuses to start the connector if the pin cannot be
   honored, which is why the version matters (<code>uv self update</code> brings an older uv current).</li>
-<li><strong><code>python3</code> (3.7 or newer) on your <code>PATH</code></strong> — Claude Code only. The safety gate is a small Python script
-  the host runs before each Exabeam call; without <code>python3</code> every gated call is refused. macOS and most
-  Linux distributions already have it (<code>python3 --version</code>). Codex does not need it.</li>
+<li><strong><code>python3</code> (3.7 or newer) on your <code>PATH</code></strong> — Claude Code and Antigravity. The safety gate is a small
+  Python script the host runs before each Exabeam call. On Claude Code, without <code>python3</code> every gated call
+  is refused. On Antigravity the hook falls back to <code>uv</code>, which you need anyway, so the gate still runs —
+  and if neither is present, every Exabeam call is refused there too, with a message naming what is
+  missing. Either way you lose the plugin, not the control. macOS and most Linux distributions already
+  have <code>python3</code> (<code>python3 --version</code>). Codex does not need it.</li>
 <li><strong>An Exabeam New-Scale API key and secret</strong>, created under <strong>Settings → API Keys</strong> in your New-Scale
   console. Keys don't carry a role — you grant them <strong>access entitlements</strong>, and Raffkin gets exactly what
   the key was issued with. Entitle the key to read alerts, cases, events, threat summaries, MITRE
@@ -381,6 +414,167 @@ you before Raffkin <em>opens</em> a case or writes a note, because Exabeam marks
 asks before every write. Noisier, not less safe. And if you script Raffkin with <code>codex exec</code>, where
 nobody is at the keyboard, Codex cancels any write that needs an approval rather than letting it
 through — the gate does not evaporate when the human does.</p>
+<h2 id="quick-start-google-antigravity">Quick start — Google Antigravity</h2>
+<p><strong>1. Install the plugin.</strong> Antigravity installs from a GitHub subpath into <code>~/.gemini/config/plugins/</code>:</p>
+<!-- community-only -->
+
+<pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin install {{antigravity_install}}
+</code></pre>
+
+/distribution-only -->
+
+<p>Read what it prints, because this is the earliest point at which a missing piece is visible:</p>
+<!-- community-only -->
+
+<pre><code>  [ok]    raffkin
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code>  [ok]    {{plugin_name}}
+          ✔ skills      : 3 processed
+          - agents      : skipped (not found)
+          - commands    : skipped (not found)
+          ✔ mcpServers  : 1 processed
+          ✔ hooks       : 1 processed
+</code></pre>
+
+/distribution-only -->
+
+<p><code>mcpServers : 1</code> is the Exabeam connection and <code>hooks : 1</code> is the safety gate. If either says <code>skipped</code>,
+stop: the skills will load and have nothing to call, or they will load with no gate in front of them.
+<code>agy plugin list --json</code> shows the same thing afterwards, and names the gate
+(<code>"hooks": ["&lt;this plugin's name&gt;-gate"]</code>).</p>
+<p><strong>2. Add your credentials</strong> — the same file as the other hosts (<code>~/.exabeam-mcp.env</code>, <code>https://</code>,
+<code>chmod 600</code>).</p>
+<p><strong>3. Check the setup.</strong></p>
+<pre><code class="language-bash">bash ~/.gemini/config/plugins/raffkin/preflight.sh
+</code></pre>
+<p>Expect <code>✓</code> on every line, the gate included. The script detects Antigravity from its own install path, so
+<code>--platform antigravity</code> is only needed if you run a copy from somewhere else. If the gate line reports a
+<code>!</code>, read it: the likeliest cause is that neither <code>python3</code> nor <code>uv</code> is on the PATH the host launches hooks
+with, and the gate cannot run without one of them.</p>
+<p><strong>4. Run your first investigation.</strong> In an Antigravity session:</p>
+<blockquote>
+<p>investigate alert <code>&lt;alert id&gt;</code></p>
+</blockquote>
+<h3 id="where-this-install-comes-from">Where this install comes from</h3>
+<p>Antigravity has a Marketplace, but no catalog you add yourself: there is no <code>agy plugin marketplace add</code>,
+so <code>agy</code> installs the directory the URL points at, and the plugin lands in <code>~/.gemini/config/plugins/</code>
+under its manifest name.</p>
+<!-- community-only -->
+<p>This is the <strong>community build</strong>, from the plugin's own source repository. The Exabeam-supported build is a
+vendored copy of the same tree, served from the <a href="https://plugins.exabeam.com/">Exabeam Plug-in Catalog</a>
+under its own terms and support, and it has its own install command.</p>
+<!-- /community-only -->
+<!-- distribution-only
+This is a **distribution copy** of the plugin, provided under {{terms}} by {{vendor}}, with {{support}}. It
+is a vendored copy of the community source tree, re-keyed to this distribution's own name; the command
+above is the one for *this* copy, and the community build has its own.
+/distribution-only -->
+
+<h3 id="what-is-different-on-this-host">What is different on this host</h3>
+<p>Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate is
+the same file as on Claude Code, it reads the same tier file, and every decision lands on the same audit
+trail. Antigravity loads it from <code>hooks.json</code> at the plugin root; a fresh install reports it
+(<code>hooks : 1</code>), <code>preflight.sh</code> makes it refuse a containment call, and it has now been <strong>observed being
+called in a live session</strong>.</p>
+<p><strong>One difference is not a gap in testing but a difference in what is enforced, and you need it before
+you choose how to run this host.</strong> On Antigravity the gate's <code>ask</code> does <strong>not</strong> survive
+<code>--dangerously-skip-permissions</code>. We measured it: a session started with that flag completed an ask-tier
+case closure one second after the gate asked, with nobody prompted. The host's own documentation
+describes <code>deny</code> as a hard block and <code>ask</code> as "prompt the user", and the flag auto-answers the prompt.
+So on this host:</p>
+<ul>
+<li>the <strong>deny tier</strong> holds. Probed directly — a stub hook returning <code>deny</code> under that flag blocked the
+  call — so the one guarantee this plugin rests on, that containment is never executed, survives an
+  operator turning permissions off;</li>
+<li>the <strong>ask tier</strong> is enforced in a normal session and is <strong>not</strong> enforced under that flag. Neither is
+  <code>force_ask</code>, the decision the host documents as "always prompt the user, ignoring cached permissions".
+  Both were probed and both were overridden, so there is <strong>no hook-level way to force a prompt</strong> on this
+  host once that flag is set. One limit of that measurement: a tool that ran under the flag cannot tell
+  us whether the host recognised the decision and auto-approved it, or did not recognise it and treated
+  it as no objection. Either way the call was not stopped;</li>
+<li>a completed ask-tier call is therefore recorded as <code>ran_consent_unconfirmed</code> rather than <code>approved</code>,
+  because the gate cannot see whether a human answered. An <code>approved</code> line is evidence of consent; that
+  line is not.</li>
+</ul>
+<p><strong>If you run this host unattended, do not rely on the ask tier to hold.</strong> Use a key whose entitlements
+cannot perform what you are unwilling to have happen without a human — that control does not depend on
+any host. See <a href="#key-entitlements">Key entitlements</a>.</p>
+<p>Two further differences are worth knowing before you run an investigation on this host.</p>
+<p><strong>No release has been red-teamed on a Gemini model.</strong> Every Raffkin release is adversarially tested on the
+weakest supported model of each host before it ships, and that work has been done on Claude and GPT models
+only. The gate is a control on the <em>tool call</em>, so it does not depend on the model's good behaviour — but
+prompt-injection resistance, refusal discipline and how the skills hold up under pressure are all model
+properties, and on this host they are untested. That is a gap in our evidence, not a known weakness.</p>
+<p><strong>The gate needs an interpreter, and this host bundles neither.</strong> The hook runs under <code>python3</code>, falling
+back to <code>uv</code>, which the Exabeam connector already requires. If both are missing the hook refuses the call
+outright — the refusal is written by the shell, not by the gate, and says which interpreters it looked
+for. That is deliberate and it is host-specific: on Claude Code a hook whose command fails blocks the
+call by exiting 2, but Antigravity reads a decision on standard output and nothing else, so a gate that
+cannot start would otherwise be a gate that is never heard. <code>preflight.sh</code> checks for an interpreter and
+says so, and it is worth running once after you install.</p>
+<p>The one case the refusal does not cover is the host killing the hook at its 20-second timeout, which
+takes the shell with it. Nothing has been observed to take that long: the gate reads one JSON object,
+compares a tool name against a static tier file and writes a line.</p>
+<p>One smaller difference shows up in the log rather than in what is enforced: Antigravity does not tell a
+hook which permission mode the session is running in. On Claude Code that lets the audit trail
+distinguish an ask a human answered from one that completed in an unattended mode; here the gate cannot
+make that distinction, so it does not claim it — see <code>ran_consent_unconfirmed</code> above. Records written on
+this host carry <code>"host": "antigravity"</code> so the log never has to be guessed at.</p>
+<p>What runs identically on every host, because it lives in the connector rather than the host: what the
+model reads is screened for injected instructions, what it writes back is neutralized and masked, a
+<code>create_case</code> carrying a closing disposition is refused, and every call is on the audit trail.</p>
+<p><strong>Your key is still the limit worth setting.</strong> Entitlements are enforced by Exabeam, not by the host, so
+they hold even if a host control is misconfigured — the gate denies a rule write, and an unentitled key
+means there is no rule-write tool to deny in the first place. <code>rule-tuning</code> only ever needs reads, so
+there is no reason to entitle the key for detection-content <em>writes</em>. See
+<a href="#key-entitlements">Key entitlements</a>.</p>
+<!-- community-only -->
+<p><strong>The gate has now been driven in a live <code>agy</code> session</strong> (1.4.5, 2026-10-22), which is what settled the
+question that mattered most: the host does call the hook, and the gate reads the step it is handed. The
+payload was captured and is now a test fixture, because it did <strong>not</strong> match the host's documented
+contract — the tool call's keys are PascalCase (<code>ServerName</code>, <code>ToolName</code>, <code>Arguments</code>) where the hook
+documentation says camelCase, the tool name sits beside the server rather than nested, and arguments
+arrive positionally wrapped. Read the documented way, the server went unseen: allow-tier reads got no
+decision and a containment tool named in its bare form (<code>isolate_host</code>) got none either. That is fixed
+and pinned by tests against the captured payload.</p>
+<p>One behaviour to know, because it is not a defect and will look like one: <strong>on this host the gate's
+<code>allow</code> is not a permission grant.</strong> It restricts; it does not entitle. Antigravity's own permission
+system still applies on top, and a headless <code>agy -p</code> session cannot prompt for the <code>mcp</code> permission, so
+it auto-denies the call even when the gate has allowed it. Interactively you are asked. On Claude Code
+the plugin ships a permission snippet that grants the allow tier; there is no equivalent to ship here
+yet.</p>
+<p>One thing remains unexercised: what the host's own prompt looks like on an <code>ask</code> in an attended
+session. Whether a <code>deny</code> holds under <code>--dangerously-skip-permissions</code> is no longer open — it was probed
+directly and it holds, which is the measurement the section above rests on. The open item is tracked in
+<a href="https://github.com/open-agent-ai-security/raffkin/issues/305">raffkin#305</a>. Moving the deny tier into the
+connector as well, so it holds without depending on any host, is
+<a href="https://github.com/open-agent-ai-security/raffkin/issues/308">raffkin#308</a>.</p>
+<!-- /community-only -->
+<!-- distribution-only
+The gate has been driven in a live Antigravity session: the host calls the hook and the gate reads the
+step it is handed, verified against a captured payload that is now a test fixture. A `deny` under
+`--dangerously-skip-permissions` was probed directly and holds, so containment stays refused even with
+the host's permission prompts switched off; the `ask` tier does not survive that flag, so read it as an
+attended-session control here. One thing remains unexercised: what the host's own prompt looks like on
+an `ask` in an attended session. One behaviour is worth knowing in advance: on this host the gate's `allow`
+restricts rather than entitles, so Antigravity's own permission system still applies on top and a
+headless session auto-denies MCP calls the gate has allowed. {{support}} can tell you where that
+verification stands for your release.
+/distribution-only -->
+
 <h2 id="updating">Updating</h2>
 <pre><code class="language-bash"># Claude Code
 claude plugin marketplace update open-agent-ai-security
@@ -390,6 +584,19 @@ claude plugin update raffkin@open-agent-ai-security
 codex plugin marketplace upgrade open-agent-ai-security
 codex plugin add raffkin@open-agent-ai-security
 </code></pre>
+<p>On Antigravity there is no catalog to refresh — re-run the install command, which re-reads the source:</p>
+<!-- community-only -->
+
+<pre><code class="language-bash">agy plugin install https://github.com/open-agent-ai-security/raffkin/tree/main/plugin
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin install {{antigravity_install}}
+</code></pre>
+
+/distribution-only -->
+
 <p>Both commands matter on Claude Code: the first refreshes the catalog, the second installs from it.
 Restart or <code>/reload-plugins</code> to apply. Auto-update on Claude Code is per marketplace and off by default
 for marketplaces you add yourself; turn it on under <code>/plugin</code> → <strong>Marketplaces</strong> → <code>open-agent-ai-security</code>,
@@ -430,8 +637,10 @@ none of them run when Claude Code talks to the remote MCP directly. Only the dis
 survives, and only if the server is named <code>exabeam</code>. Use this for a connectivity check, not for investigations you rely on.</p>
 <h2 id="key-entitlements">Key entitlements</h2>
 <p>Whoever grants the key's access entitlements can check against this list rather than guessing. These are
-the Exabeam MCP tools Raffkin calls, shown without their <code>exabeam_</code> prefix. Every containment or
-rule-writing tool is refused before it reaches your tenant, and any tool not on this list asks you first.</p>
+the Exabeam MCP tools Raffkin calls, shown without their <code>exabeam_</code> prefix. Any tool not on this list asks
+you first, and on every host each containment or rule-writing tool is refused by the gate before it
+reaches your tenant. Entitling the key to nothing beyond this list is the control that holds even if a host
+control is misconfigured, so do it whichever host you use.</p>
 <table>
 <thead>
 <tr>
@@ -467,8 +676,21 @@ claude plugin marketplace remove open-agent-ai-security   # optional; also remov
 codex plugin remove raffkin@open-agent-ai-security
 codex plugin marketplace remove open-agent-ai-security   # optional; same caveat
 </code></pre>
-<p>Removing the plugin removes the gate it shipped. Neither command touches <code>~/.exabeam-mcp.env</code>; delete
-that yourself when you are done with the credentials.</p></article>
+<p>On Antigravity the plugin is named, not keyed to a marketplace:</p>
+<!-- community-only -->
+
+<pre><code class="language-bash">agy plugin uninstall raffkin
+</code></pre>
+<!-- /community-only -->
+<!-- distribution-only
+
+<pre><code class="language-bash">agy plugin uninstall {{plugin_name}}
+</code></pre>
+
+/distribution-only -->
+
+<p>Removing the plugin removes the gate it shipped, on every host. None of the three commands
+touches <code>~/.exabeam-mcp.env</code>; delete that yourself when you are done with the credentials.</p></article>
     <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/docs/installation.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>
 </div>

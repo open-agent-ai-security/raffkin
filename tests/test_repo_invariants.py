@@ -16,6 +16,7 @@ Run:  uv run --with pytest pytest -q tests/
 """
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -383,6 +384,7 @@ def test_shipped_docs_never_link_outside_the_plugin():
 
 CODEX_PLUGIN = _load("plugin/.codex-plugin/plugin.json")
 CODEX_MCP = _load("plugin/.mcp.codex.json")
+AGY_MCP = _load("plugin/mcp_config.json")
 CODEX_SERVER = CODEX_MCP["exabeam"]
 
 
@@ -396,12 +398,18 @@ def _gen_codex_mcp():
     return mod.build()
 
 
-def test_the_bridge_is_launched_with_the_lock_enforced_on_both_hosts():
+def test_the_bridge_is_launched_with_the_lock_enforced_on_every_host():
     """#248: the connector ships a hash-pinned script lock, and it is honored only if the launch asks for
-    it. Both hosts launch with `uv run --quiet --locked`, preflight's connectivity check runs the bridge
+    it. EVERY host launches with `uv run --quiet --locked`, preflight's connectivity check runs the bridge
     the same way, and preflight states the uv floor the flag needs (script locks: 0.5.17; the `--locked`
-    warning on scripts gone: 0.5.23)."""
-    for label, args in (("plugin/.mcp.json", MCP["mcpServers"]["exabeam"]["args"]), ("plugin/.mcp.codex.json", CODEX_SERVER["args"])):
+    warning on scripts gone: 0.5.23).
+
+    Antigravity is enumerated here because it is derived, not hand-written: a derivation that dropped a
+    launch flag on the way would leave one host unpinned and nothing else would notice (review of #306).
+    """
+    for label, args in (("plugin/.mcp.json", MCP["mcpServers"]["exabeam"]["args"]),
+                        ("plugin/.mcp.codex.json", CODEX_SERVER["args"]),
+                        ("plugin/mcp_config.json", AGY_MCP["mcpServers"]["exabeam"]["args"])):
         assert args[:3] == ["run", "--quiet", "--locked"], f"{label} launches the bridge without --locked: {args}"
     assert (ROOT / "plugin" / "connector" / "exabeam-mcp-bridge.py.lock").is_file(), "the script lock must ship beside the bridge"
     assert 'uv run --quiet --locked "$bridge" --check' in PREFLIGHT_SH, "preflight's connectivity check must launch the bridge as the hosts do"
@@ -513,16 +521,33 @@ def test_install_never_claims_the_hook_gates_without_checking_the_installed_plug
 
 
 def _shell_code_only(text):
-    """Shell source with comments and quoted strings removed.
+    """Shell source with comments and quoted strings removed, so a scan sees CODE and not prose.
 
-    A tripwire, not a parser: the point is that a mutating command must not appear in
-    *code*, while the same word is fine inside a message ("consider: chmod 600 ..."),
-    which is where every legitimate occurrence in preflight.sh lives."""
-    lines = [l for l in text.splitlines() if not l.lstrip().startswith("#")]
-    body = "\n".join(lines)
-    body = re.sub(r'"(?:[^"\\]|\\.)*"', '""', body)
-    body = re.sub(r"'(?:[^'])*'", "''", body)
-    return body
+    A tripwire, not a parser -- but it has to lex quotes the way sh does, because preflight.sh contains
+    both apostrophes inside double-quoted operator messages ("the host's own command") and an embedded
+    python reader inside a single-quoted block that itself contains double quotes. Any single regex
+    mis-pairs one of those and leaks message text back in as code: a two-pass strip (all "..." then all
+    '...') desynchronises on the python block, and one left-to-right alternation desynchronises on the
+    apostrophes. So: scan once, and let whichever quote opens first decide where the span ends, which is
+    the rule the shell actually applies."""
+    src = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
+    out, i, n = [], 0, len(src)
+    while i < n:
+        c = src[i]
+        if c == '"':                       # double-quoted: backslash escapes, an apostrophe is literal
+            i += 1
+            while i < n and src[i] != '"':
+                i += 2 if src[i] == "\\" else 1
+            i += 1
+            out.append("''")
+        elif c == "'":                     # single-quoted: everything up to the next quote, no escapes
+            j = src.find("'", i + 1)
+            i = n if j < 0 else j + 1
+            out.append("''")
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def test_preflight_never_writes():
@@ -643,13 +668,74 @@ def test_docs_describe_the_gate_that_ships():
         assert "does not go through the plugin's hook" not in text, where
         assert "turn the hard gate off" not in text, where
         assert "cannot grant silent reads" not in text, where
-        assert "still fire in those modes" in text, f"{where} must say the hook's deny/ask hold under skip-permissions"
+        # Review of #306: the page used to promise both halves of the gate under skip-permissions on all
+        # three hosts. Measurement says only one half is true on Antigravity, so the page must now make
+        # the deny unconditional AND scope the ask. Both directions are asserted, because dropping either
+        # is a lie: silence about the ask oversells, silence about the deny gives away the one guarantee
+        # that was measured to hold.
+        assert "refused on every host" in text, (
+            f"{where} must still say containment is refused with permission prompts switched off — "
+            "that is the guarantee we measured")
+        assert "attended sessions only" in text, (
+            f"{where} must scope the ask tier: on Antigravity the host overrides it under "
+            "--dangerously-skip-permissions")
         assert "under a name the hook does not match" not in text, f"{where}: neither the hook nor the rules cover another server name"
     body = (SKILL_DIR / "SKILL.md").read_text()
     assert "hooks/gate.py" in body, "the skill body must name the bundled hook as the Claude-side gate"
     hooks = json.loads((ROOT / "plugin" / "hooks" / "hooks.json").read_text())
     matcher = hooks["hooks"]["PreToolUse"][0]["matcher"]
     assert re.match(matcher, "mcp__exabeam__exabeam_update_alert"), "installation.md says the hook covers a manual `exabeam` server"
+
+
+# The complete set of top-level fields Antigravity's plugin loader reads. Its own documentation, shipped
+# inside the `agy` binary, follows the list with "Do not add any other top-level field. `author` and
+# `homepage` are silently discarded by the loader — they neither take effect nor error out."
+AGY_MANIFEST_FIELDS = {"name", "description", "logo", "suggestedPrompts", "displayName", "version", "disabled"}
+
+
+def test_the_antigravity_manifest_carries_only_fields_the_loader_reads():
+    """#304/#306: this manifest is an allowlist, because everything outside it fails SILENTLY.
+
+    The first cut of this PR declared the MCP server as `"mcpServers": "./.mcp.antigravity.json"`, reading
+    the published guide. That is not a field. `agy plugin validate` answers "unknown field mcpServers is
+    ignored" and then "mcpServers 0" — the three skills install, load, and have no Exabeam tool between
+    them. A plugin that looks installed and does nothing, which is the exact failure the generator exists
+    to prevent, shipped as the fix for it.
+
+    So the rule is inverted here: an unknown key is the bug, not a missing one. Anything the loader does
+    not read either does nothing (`category`, `keywords`) or hides a real component somewhere it will
+    never be found (`mcpServers`, `skills`), and no test downstream of a silent drop can see it.
+    """
+    m = json.loads((ROOT / "plugin" / ".antigravity-plugin" / "plugin.json").read_text())
+    extra = sorted(set(m) - AGY_MANIFEST_FIELDS)
+    assert not extra, (
+        f"the Antigravity manifest carries {extra}, which its loader silently discards. If one of these is "
+        "meant to do something, it is not doing it — the components live in mcp_config.json and hooks.json "
+        "at the plugin root, and nothing else may be declared here")
+    for field in ("displayName", "logo", "suggestedPrompts", "description"):
+        assert m.get(field), f"{field} is required for the Antigravity listing"
+    assert (ROOT / "plugin" / m["logo"]).is_file(), f"the logo must ship in the payload: {m['logo']}"
+    assert 1 <= len(m["suggestedPrompts"]) <= 3, "Antigravity shows at most 3 suggested prompts"
+    assert "://" not in m["logo"], (
+        "a URL logo is rejected SILENTLY by the loader (no logo, no error), so it must be a bundled file")
+
+
+def test_the_antigravity_components_sit_where_the_host_reads_them():
+    """Antigravity resolves a plugin's MCP servers and hooks from fixed paths at the plugin ROOT, and not
+    from the manifest. Both files are generated, so this pins the two things a derivation can get wrong:
+    the location, and the variable the launch command is written in.
+
+    .mcp.json carries ${CLAUDE_PLUGIN_ROOT}, which Antigravity does not resolve — shipping that spelling
+    would hand the host a command with an unexpanded variable and the bridge would never start."""
+    mcp = ROOT / "plugin" / "mcp_config.json"
+    assert mcp.is_file(), "Antigravity reads the MCP servers from mcp_config.json at the plugin root"
+    assert not (ROOT / "plugin" / ".mcp.antigravity.json").exists(), (
+        "a manifest pointer to a privately-named MCP file is how this host ended up with no tools; the "
+        "servers belong in mcp_config.json")
+    text = mcp.read_text()
+    assert "${PLUGIN_ROOT}" in text and "${CLAUDE_PLUGIN_ROOT}" not in text, (
+        "mcp_config.json must use ${PLUGIN_ROOT}; Antigravity does not resolve ${CLAUDE_PLUGIN_ROOT}")
+    assert "exabeam" in json.loads(text)["mcpServers"], "the bundled bridge must be declared for this host"
 
 
 def test_the_gate_ships_but_no_manifest_names_it():
@@ -662,11 +748,89 @@ def test_the_gate_ships_but_no_manifest_names_it():
     """
     assert (ROOT / "plugin" / "hooks" / "hooks.json").is_file(), "the payload must carry the gate's hooks.json"
     assert (ROOT / "plugin" / "hooks" / "gate.py").is_file(), "the payload must carry the gate itself"
-    for manifest in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+    for manifest in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
         d = json.loads((ROOT / "plugin" / manifest).read_text())
         assert "hooks" not in d, (
             f"{manifest} declares the hook; the host loads hooks/hooks.json itself, so naming it "
             "duplicates the file and fails the entire plugin load (#197)")
+    # Antigravity reads hooks from a ROOT hooks.json, in its own format, and stages hooks/hooks.json into
+    # that place only for an IMPORTED Claude Code extension — never for a native plugin, which is what a
+    # directory carrying .antigravity-plugin/plugin.json is. So BOTH files ship, in their own formats, and
+    # the next test pins that they stay distinguishable: one file in the wrong format at the wrong path is
+    # the #212 failure mode, a matcher that never fires while the docs report a gate.
+    assert (ROOT / "plugin" / "hooks.json").is_file(), (
+        "the payload must carry plugin/hooks.json — Antigravity reads the gate from the plugin root and "
+        "nowhere else, so without it the deny tier is not enforced on that host at all")
+
+
+def test_the_antigravity_hook_file_arms_the_same_gate():
+    """The gate is a control, so the thing to pin is that it is ARMED on this host, not that a file exists.
+
+    Four ways this one silently does nothing, each asserted below:
+      - Antigravity's hook format is a map of hook NAME to events; Claude Code's is {"hooks": {...}}. A
+        file in the wrong shape loads as a plugin with no hooks and reports nothing.
+      - its matcher runs against the STEP type, so every MCP call arrives as `mcp_tool` whatever server it
+        came from. A matcher written against `mcp__…__exabeam_*`, as Claude Code's is, never fires.
+      - the gate must be invoked with --antigravity, or it answers in Claude Code's envelope and the
+        decision is discarded.
+      - `python3` is not bundled with this host, and a hook command that cannot start produces no JSON,
+        which reads as "no opinion" — a fail-open. `uv` is already required by the bridge, so it is the
+        fallback.
+    """
+    agy = json.loads((ROOT / "plugin" / "hooks.json").read_text())
+    assert "hooks" not in agy, (
+        "plugin/hooks.json is in Claude Code's shape ({'hooks': ...}); Antigravity expects a map of hook "
+        "name to events, and would load this as a plugin with no hooks at all")
+    name = json.loads((ROOT / "plugin" / "identity.json").read_text())["name"]
+    spec = agy.get(f"{name}-gate")
+    assert spec, f"the hook must be keyed on the plugin name ({name}-gate), so two installed copies do not collide"
+    for event in ("PreToolUse", "PostToolUse"):
+        group = spec[event][0]
+        # BOTH names, and `call_mcp_tool` is the one that matters: it is what a dispatched MCP call
+        # really arrives as (captured from a live session), while `mcp_tool` is what the host's docs
+        # imply. A matcher asserted against the documented name alone passes while missing every live
+        # call, which is what review found in this very assertion.
+        assert re.search(group["matcher"], "call_mcp_tool"), (
+            f"{event} matcher {group['matcher']!r} does not match `call_mcp_tool`, the step type a "
+            "dispatched MCP call arrives under on this host; the hook would never fire on a real call")
+        assert re.search(group["matcher"], "mcp_tool"), (
+            f"{event} matcher {group['matcher']!r} does not match `mcp_tool`, which is how EVERY MCP call "
+            "reaches a hook on this host; a tool-name matcher never fires here")
+        cmd = group["hooks"][0]["command"]
+        assert "--antigravity" in cmd, f"{event} must invoke the gate with --antigravity or its answer is discarded"
+        assert "hooks/gate.py" in cmd, f"{event} must run the one gate, not a second copy of the tier logic"
+        assert "uv run" in cmd, (
+            f"{event} has no uv fallback: with no python3 on PATH the hook produces no JSON and the host "
+            "reads that as no opinion, which is the deny tier failing open")
+        assert cmd.count("'") % 2 == 0, (
+            f"{event} has an unbalanced quote: its fallback is a single-quoted shell word, and an "
+            "apostrophe inside it would end the string early and emit broken JSON instead of a decision")
+    # Last resort when neither interpreter runs. This host hard-blocks on a `deny` object and nothing else
+    # -- a non-zero exit is not a block here as it is on Claude Code -- so the shell has to write one.
+    pre = spec["PreToolUse"][0]["hooks"][0]["command"]
+    assert '"decision":"deny"' in pre.replace(" ", ""), (
+        "PreToolUse has no written refusal after the interpreters: if neither python3 nor uv can run the "
+        "gate, the hook prints nothing and this host proceeds with the call (its changelog records the "
+        "permission manager handling an empty decision 'safely'). The deny tier would fail open")
+    assert pre.index("uv run") < pre.rindex("deny"), "the refusal must come after the fallback, not instead of it"
+    post = spec["PostToolUse"][0]["hooks"][0]["command"]
+    assert "deny" not in post, "a post-call record is not a decision; a deny here would mark the call failed"
+    assert "printf '%s' '{}'" in post, (
+        "PostToolUse must fall back to the empty object its contract asks for, or a hook that cannot run "
+        "marks the tool call itself failed")
+    # The fallback is a brace group, and `{ cmd }` without the terminating semicolon is a syntax error in
+    # sh -- which would make the hook print nothing at all in exactly the state it exists to cover. Asking
+    # sh itself rather than matching the end of the string: the chain now wraps the whole thing in an
+    # `if`, so the brace group is no longer last, and a positional check would have to be rewritten every
+    # time the shape changes while proving less than the parser does.
+    for event, cmd in (("PreToolUse", pre), ("PostToolUse", post)):
+        if "|| {" in cmd:
+            assert "; }" in cmd, (
+                f"{event}'s fallback brace group is not terminated with '; }}', so sh cannot parse it")
+        parsed = subprocess.run(["/bin/sh", "-n", "-c", cmd], capture_output=True, text=True)
+        assert parsed.returncode == 0, f"{event}'s command is not valid sh: {parsed.stderr.strip()}"
+    assert "--post" in spec["PostToolUse"][0]["hooks"][0]["command"], "the post-call record must pass --post"
+    assert "--post" not in spec["PreToolUse"][0]["hooks"][0]["command"], "the decision must not be made as a record"
 
 
 def test_skill_says_what_to_stop_doing():
@@ -693,7 +857,20 @@ def test_rule_write_tools_are_denied_and_documented():
     for name in ("exabeam_create_analytics_rule", "create_analytics_rule"):
         for ns in (PLUGIN_PREFIX, f"mcp__{next(iter(MCP['mcpServers']))}__"):
             assert f"{ns}{name}" in DENY, f"{ns}{name} not denied"
-    assert "exabeam_create_analytics_rule" in TOOL_MAP_MD and "Never (denied on both hosts)" in TOOL_MAP_MD
+    assert "exabeam_create_analytics_rule" in TOOL_MAP_MD
+    assert "Never (denied by the host gate on every host; never called regardless)" in TOOL_MAP_MD
+    # The deny tier is a HOST control on all three hosts -- the bundled hook on Claude Code and on
+    # Antigravity, disabled_tools on Codex. A host control can be misconfigured, so neither the tool map
+    # nor the skill may rest the refusal on it: the instruction not to call these names has to stand on
+    # its own, and say so (review of #306, raffkin#308).
+    assert "stands on its own" in TOOL_MAP_MD, \
+        "tool-map must not rest the refusal on a host control it cannot verify"
+    rt = (ROOT / "plugin" / "skills" / "rule-tuning" / "SKILL.md").read_text()
+    assert "your refusal to call them is" in rt, \
+        "rule-tuning must put the control in the skill's own refusal, not only in the gate"
+    # These two names are not hypothetical: they are on the live tenant surface (verified 2026-10-21,
+    # 27 tools, two of them deny-tier). The skill must not soften that to "may expose".
+    assert "confirmed present on a tenant" in rt, "rule-tuning must not hedge an exposure we observed"
     codex = _load("plugin/.mcp.codex.json")
     assert "exabeam_create_analytics_rule" in codex["exabeam"]["disabled_tools"]
 
@@ -840,6 +1017,252 @@ def test_gen_identity_rekey_relicenses_every_file_of_the_copy(tmp_path):
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
 
 
+def _listing_fixture(tmp_path):
+    """A temp copy of the payload plus the generator argv, for the listing-field tests below."""
+    import shutil, sys
+    work = tmp_path / "plugin"
+    shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
+    # The payload ships its own mark at assets/icon.svg since #306, which is what `logo` names. These
+    # tests used to plant assets/logo.svg and point at that -- a path the shipped tree does not have, so
+    # they were exercising the accept path against a file only the fixture knew about (review). A SECOND
+    # image is still planted, under a different name, for the tests that need a mark to switch TO.
+    (work / "assets").mkdir(exist_ok=True)
+    (work / "assets" / "vendor-mark.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>\n')
+    return work, [sys.executable, str(work / "gen_identity.py")]
+
+
+def _set_dist(work, **keys):
+    import json
+    ident = json.loads((work / "identity.json").read_text())
+    ident["distribution"] = {k: v for k, v in keys.items() if v is not None}
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    return ident
+
+
+def _set_top(work, **keys):
+    """Set TOP-LEVEL identity keys. `logo` owns the mark and lives here, not in the distribution block."""
+    import json
+    ident = json.loads((work / "identity.json").read_text())
+    ident.update(keys)
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    return ident
+
+
+def test_a_listing_only_block_does_not_make_this_copy_a_redistribution(tmp_path):
+    """#302 review: the listing keys describe a DIRECTORY ENTRY, not a change of terms.
+
+    `switch = bool(identity.get("distribution"))` treated any non-empty block as "somebody else is
+    shipping this", so setting `icon` + `supportUrl` to list the community build stripped the Project
+    sponsor section and every community-only block out of four docs and re-pointed the licence badge at a
+    LICENSE-APACHE this repo does not ship. The fields were unusable for the listing they were added for.
+    """
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    before = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
+    _set_dist(work, documentationUrl="https://example.invalid/docs", supportUrl="https://example.invalid/support")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+
+    after = {f.relative_to(work): f.read_text() for f in work.rglob("*.md")}
+    changed = sorted(str(k) for k in before if before[k] != after.get(k))
+    assert not changed, f"a listing-only block rewrote prose in {changed}"
+    readme = (work / "README.md").read_text()
+    assert "Project sponsor" in readme, "the sponsor section was stripped by a listing-only block"
+    assert "badge/license-Apache_2.0-" in readme, "the licence badge moved off the software's own licence"
+    # the distribution-only prose must still be INERT: unwrapping it is what re-points the badge at a
+    # LICENSE-APACHE this repo does not ship
+    assert "<!-- distribution-only" in readme, "the distribution-only block was unwrapped by a listing-only block"
+
+    # and the fields still reach the Claude listing, which is the point of the exercise
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["documentationUrl"] == "https://example.invalid/docs"
+    assert claude["supportUrl"] == "https://example.invalid/support"
+
+    # --check has to agree, on a tree that SHIPS .antigravity-plugin/. The same any-non-empty-block test
+    # survived in that path after being removed from rewrite_docs, so a listing-only block was clean to
+    # generate and stale to check, demanding an `antigravityInstall` that only a redistribution needs
+    # (review of the merge with #306). Both callers now ask `is_redistribution()`.
+    assert (work / ".antigravity-plugin" / "plugin.json").is_file(), "the fixture must ship this host's manifest"
+    r = subprocess.run(gen + ["--check"], capture_output=True, text=True)
+    assert r.returncode == 0, f"a listing-only block fails --check: {r.stdout}{r.stderr}"
+
+
+def test_the_listing_fields_reach_the_claude_manifest_alone(tmp_path):
+    """Unset, the manifests are byte-identical to the committed ones; set, the fields land in the Claude
+    manifest only. The directory reads them from there, and `claude plugin validate` rejects them in a
+    marketplace entry, so there is nowhere else for them to go -- and Codex and Antigravity do not read
+    them at all, so emitting them there is noise in a file a host parses.
+
+    `icon` is not among them: the mark has one home, the top-level `logo`, and Claude's `icon` is always
+    emitted from it (review of the merge with #306)."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    manifests = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json", ".antigravity-plugin/plugin.json")
+
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    for m in manifests:
+        assert (work / m).read_text() == (ROOT / "plugin" / m).read_text(), (
+            f"{m} drifted with no distribution block set: the listing fields must be emitted ONLY when set, "
+            "so an unset block cannot move a byte in a manifest a host parses")
+
+    fields = {"documentationUrl": "https://example.invalid/docs",
+              "supportUrl": "https://example.invalid/support",
+              "privacyPolicyUrl": "https://example.invalid/privacy",
+              "termsOfServiceUrl": "https://example.invalid/terms"}
+    _set_dist(work, **fields)
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    codex = json.loads((work / ".codex-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    for k, v in fields.items():
+        assert claude.get(k) == v, f"{k} did not reach the Claude manifest"
+        assert k not in codex, f"{k} leaked into the Codex manifest, which does not read it"
+        # Antigravity accepts seven top-level fields and silently drops the rest, so a listing key here
+        # is a value that looks stated and states nothing.
+        assert k not in agy, f"{k} leaked into the Antigravity manifest, which drops it silently"
+
+
+def test_one_field_owns_the_mark_on_both_hosts(tmp_path):
+    """Review of the merge with #306 reversed an earlier call: the top-level `logo` owns the mark, and
+    `distribution.icon` is gone. Two reasons. `logo` is required for Antigravity so it is always set,
+    which would have let a per-copy listing key override a product-identity key; and the catalog overlay
+    merges dotted keys INTO the block the payload already carries, so a `distribution.icon` set upstream
+    for the community listing would be inherited by a vendor copy that forgot to override it -- #307's
+    leak from the other side. One field, two emitters."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    logo = json.loads((work / "identity.json").read_text())["logo"]
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert agy["logo"] == logo, "the Antigravity listing lost the mark"
+    assert claude["icon"] == f"./{logo}", (
+        f"Claude's icon must name the same file as `logo`, spelled its way: {claude.get('icon')!r}")
+
+    # A distribution overrides ONE key and both listings follow. This is the #307 regression under test:
+    # the vendored copy showed its own mark on Claude and the community mark on Antigravity.
+    _set_top(work, logo="assets/vendor-mark.svg")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert (agy["logo"], claude["icon"]) == ("assets/vendor-mark.svg", "./assets/vendor-mark.svg"), (
+        f"the two hosts disagree about the mark: {agy['logo']!r} vs {claude['icon']!r}")
+
+    # `distribution.icon` is no longer a key at all, so an overlay still setting it is told rather than
+    # having it quietly ignored.
+    _set_dist(work, icon="./assets/vendor-mark.svg")
+    r = subprocess.run(gen, capture_output=True, text=True)
+    assert r.returncode != 0 and "distribution block accepts only" in r.stderr, r.stderr
+
+
+def test_gen_identity_refuses_a_listing_field_that_cannot_be_trusted(tmp_path):
+    """These are OVERLAY-supplied values: a distribution patches identity.json and the generator runs
+    inside the vendoring pipeline, so a bad value is not visible in review of the payload. Each case below
+    passed the first version of the check (review of #302), and each fails in a way nothing downstream
+    would notice -- a 404 on the listing, a dead link, or a file from outside the payload."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+
+    for keys, why in [
+        ({"supportUrl": "http://example.invalid/s"}, "plain http"),
+        ({"supportUrl": "https://"}, "https with no host"),
+        ({"supportUrl": "not a url"}, "not a URL at all"),
+        ({"supportUrl": ""}, "empty"),
+        # Each of the four below was VERIFIED accepted in review, and each renders as a dead link rather
+        # than failing anything downstream.
+        ({"supportUrl": "https://["}, "urlsplit raises ValueError: a traceback, not a labelled exit"),
+        ({"supportUrl": "https://exa mple.invalid/s"}, "a space in the host"),
+        ({"supportUrl": "https://exam\nple.invalid/s"}, "a newline, written into the manifest verbatim"),
+        ({"supportUrl": "https://@/"}, "a netloc with no host"),
+        ({"supportUrl": "https://:443"}, "a port with no host"),
+        ({"documentationUrl": "mailto:help@example.invalid"}, "mailto, which only supportUrl accepts"),
+    ]:
+        _set_dist(work, **keys)
+        r = subprocess.run(gen, capture_output=True, text=True)
+        assert r.returncode != 0, f"{keys} ({why}) was accepted"
+        assert "distribution." in r.stderr, r.stderr
+
+    # an unknown key is refused rather than silently written into a manifest
+    _set_dist(work, iconUrl="https://example.invalid/i.png")
+    r = subprocess.run(gen, capture_output=True, text=True)
+    assert r.returncode != 0 and "distribution block accepts only" in r.stderr, r.stderr
+
+    # `claude plugin validate` accepts mailto: for supportUrl, so a vendor whose support contact is an
+    # address can set one -- and it defaults from `distribution.support`, which the overlay already fills
+    # for the prose, so naming it once is enough.
+    _set_dist(work, supportUrl="mailto:help@example.invalid")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["supportUrl"] == "mailto:help@example.invalid"
+
+    _set_dist(work, support="https://example.invalid/help", vendor="Example Inc", terms="Example EULA")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+    claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+    assert claude["supportUrl"] == "https://example.invalid/help", (
+        "a distribution that named its support page for the prose should not have to name it twice to be listed")
+
+
+def test_gen_identity_refuses_a_mark_that_cannot_be_trusted(tmp_path):
+    """The mark is OVERLAY-supplied: a distribution patches `logo` in identity.json and the generator runs
+    inside the vendoring pipeline, so a bad value is not visible in review of the payload. Neither host
+    raises on one -- both render nothing -- so this is the only place the fault can be seen. Every case
+    below passed some earlier version of the check."""
+    import subprocess
+    work, gen = _listing_fixture(tmp_path)
+    (work / "assets" / "escape.svg").symlink_to("/etc/hosts")
+    (work / "assets" / "text.png").write_text("this is not an image\n")
+    (work / "assets" / "empty.svg").write_bytes(b"")
+
+    for logo, why in [
+        ("./nope.png", "not in the payload"),
+        (".//etc/hosts", "absolute after the './' is stripped"),
+        ("../../etc/hosts", "parent escape"),
+        ("./README.md", "not an image"),
+        ("./assets/escape.svg", "symlink out of the payload"),
+        ("https://cdn.example.invalid/i.png", "a URL, which both hosts reject silently"),
+        ("http://example.invalid/i.png", "a plain-http URL, same silence"),
+        ("", "empty"),
+        ("./assets/text.png", "an image suffix on a text file"),
+        ("./assets/empty.svg", "a 0-byte file"),
+        ("./ASSETS/ICON.SVG", "wrong capitalisation, which only a case-insensitive filesystem forgives"),
+    ]:
+        _set_top(work, logo=logo)
+        r = subprocess.run(gen, capture_output=True, text=True)
+        assert r.returncode != 0, f"logo {logo!r} ({why}) was accepted"
+        assert "logo" in r.stderr, r.stderr
+
+    # The accept path, with the mark the payload really ships, spelled four ways. The manifests get the
+    # NORMALISED spelling: review verified `./assets//icon.svg` reached a manifest verbatim.
+    import json
+    for good in ("assets/icon.svg", "./assets/icon.svg", "./assets//icon.svg", "./assets/./icon.svg"):
+        _set_top(work, logo=good)
+        subprocess.run(gen, check=True, capture_output=True, text=True)
+        agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+        claude = json.loads((work / ".claude-plugin" / "plugin.json").read_text())
+        assert agy["logo"] == "assets/icon.svg", f"{good!r} was emitted as {agy['logo']!r}"
+        assert claude["icon"] == "./assets/icon.svg", f"{good!r} was emitted as {claude['icon']!r}"
+
+
+def test_an_empty_terms_key_is_not_a_change_of_terms(tmp_path):
+    """Review: `{"license": null}` switched every doc into redistribution prose AND wrote `"license":
+    null` into both manifests, which predates this PR. A key present and empty is a key nobody filled
+    in, so both places test truthiness rather than membership."""
+    import subprocess, json
+    work, gen = _listing_fixture(tmp_path)
+    readme_before = (work / "README.md").read_text()
+    ident = json.loads((work / "identity.json").read_text())
+    ident["distribution"] = {"license": None}      # present and empty, which an overlay can produce
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+
+    assert (work / "README.md").read_text() == readme_before, (
+        "an empty terms key rewrote the README into redistribution prose")
+    for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+        d = json.loads((work / m).read_text())
+        assert d["license"] == ident["license"], (
+            f"{m} took the empty value instead of falling back to the plugin's own: {d['license']!r}")
+
+
 def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp_path):
     """A catalog that distributes the payload under its own terms (Exabeam-Labs/plugins) sets `distribution`
     in identity.json — license, homepage, repository. The manifests describe the plugin AS DISTRIBUTED,
@@ -854,7 +1277,8 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     readme_before = (work / "README.md").read_text()
     headers_before = {p.relative_to(work): p.read_text() for p in work.rglob("*") if p.is_file() and "SPDX-License-Identifier" in p.read_text(errors="ignore")}
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
-                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
+                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins",
+                             "antigravityInstall": "https://github.com/Exabeam-Labs/plugins/tree/main/soc"}
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 1, "the manifests are stale until regenerated"
     out = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
@@ -863,19 +1287,29 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
         d = json.loads((work / m).read_text())
         assert d["license"] == "LicenseRef-Exabeam-Enterprise-Agreement" and d["homepage"] == d["repository"] == "https://github.com/Exabeam-Labs/plugins", m
         assert d["name"] == ident["name"] and d["version"] == ident["version"]
+    # Antigravity's manifest is the exception, and not by our choice: its loader reads seven fields and
+    # silently discards the rest, license and homepage among them. Writing the distribution's terms there
+    # would look like they were stated and state nothing, so they are left out and the identity fields that
+    # host DOES read still re-key.
+    agy = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert not ({"license", "homepage", "repository"} & set(agy)), (
+        "the distribution's terms were written into a manifest that drops them; the copy states its terms "
+        "in the docs, which is where a reader of this host's listing can actually see them")
+    assert agy["name"] == ident["name"] and agy["version"] == ident["version"]
     # the README changes only in its marked community-only / distribution-only blocks (#256): with those
     # switched on the "before" text the same way, the rest is byte-identical — badge, License line, headers
     import importlib.util
     spec = importlib.util.spec_from_file_location("gen_identity_dist", work / "gen_identity.py")
     mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
-    assert (work / "README.md").read_text() == mod._switch_distribution_prose(readme_before), "the README is the software's outside the marked blocks"
+    dist = ident["distribution"]
+    assert (work / "README.md").read_text() == mod._switch_distribution_prose(readme_before, dist, ident["name"]), "the README is the software's outside the marked blocks"
     assert "badge/license-Apache_2.0-" in (work / "README.md").read_text()
     assert "RAFFKIN_ID_LICENSE=Apache-2.0" in (work / "identity.sh").read_text()
     for rel, text in headers_before.items():
-        if rel.parts[0] in (".claude-plugin", ".codex-plugin"):
+        if rel.parts[0] in (".claude-plugin", ".codex-plugin", ".antigravity-plugin"):
             continue
         if rel.parts[0] == "docs" or rel.name == "README.md":      # prose switches its marked blocks and nothing else (#256)
-            assert (work / rel).read_text() == mod._switch_distribution_prose(text), f"{rel} changed outside its marked blocks"
+            assert (work / rel).read_text() == mod._switch_distribution_prose(text, dist, ident["name"]), f"{rel} changed outside its marked blocks"
         else:
             assert (work / rel).read_text() == text, f"{rel} changed: the block must not touch the source"
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
@@ -884,11 +1318,120 @@ def test_gen_identity_distribution_block_sets_the_manifests_and_nothing_else(tmp
     (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
     r = subprocess.run(gen, capture_output=True, text=True)
     assert r.returncode != 0 and "distribution block accepts only" in r.stderr
-    # the shipped tree has no block: the manifests equal the identity's own fields
+    # the shipped tree has no block: the manifests equal the identity's own fields (bar Antigravity's,
+    # which carries none of the three — see above)
     live = json.loads((ROOT / "plugin" / "identity.json").read_text())
     for m in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         d = json.loads((ROOT / "plugin" / m).read_text())
         assert (d["license"], d["homepage"], d["repository"]) == (live["license"], live["homepage"], live["repository"])
+
+
+def test_a_rekeyed_distribution_gets_a_correct_antigravity_listing(tmp_path):
+    """The `soc` copy is what gets submitted to Google, and almost nothing about Antigravity re-keys the
+    way the other hosts do: the install is a GitHub subpath URL, not a marketplace key, and the install
+    path on disk is the host's own `~/.gemini/config/plugins/<name>/`.
+
+    Every assertion here is a bug the review of #306 found in the vendored output:
+      - the manifest kept the upstream name,
+      - the docs sent the operator to .../plugins/raffkin/preflight.sh, a path not on their machine,
+      - {{antigravity_install}} shipped as a "ask its maintainer" placeholder,
+      - the community install URL survived into the distribution's own guide,
+      - and the upstream issue tracker was linked in prose a distribution does not route users to (#289).
+    """
+    import shutil, subprocess, sys, json
+    work = tmp_path / "plugin"
+    shutil.copytree(ROOT / "plugin", work, ignore=shutil.ignore_patterns("__pycache__"))
+    gen = [sys.executable, str(work / "gen_identity.py")]
+    ident = json.loads((work / "identity.json").read_text())
+    ident["name"] = "soc"
+    ident["productName"] = "the Exabeam Agentic SOC plugin"
+    ident["marketplace"] = {"repo": "Exabeam-Labs/plugins", "name": "exabeam"}
+    ident["distribution"] = {
+        "license": "LicenseRef-Exabeam-Enterprise-Agreement",
+        "homepage": "https://plugins.exabeam.com/",
+        "repository": "https://github.com/Exabeam-Labs/plugins",
+        "vendor": "Exabeam",
+        "terms": "the Exabeam Enterprise Agreement",
+        "support": "https://community.exabeam.com/",
+        "antigravityInstall": "https://github.com/Exabeam-Labs/plugins/tree/main/soc",
+    }
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    subprocess.run(gen, check=True, capture_output=True, text=True)
+
+    m = json.loads((work / ".antigravity-plugin" / "plugin.json").read_text())
+    assert m["name"] == "soc", f"the Antigravity manifest kept the upstream name: {m['name']!r}"
+    assert (work / m["logo"]).is_file(), f"the re-keyed copy's logo must ship: {m['logo']}"
+    # the gate's hook key is namespaced on the plugin name, or the vendored copy and the community one
+    # collide in the host's merged hook map and one of the two gates is dropped
+    assert "soc-gate" in json.loads((work / "hooks.json").read_text()), \
+        "the re-keyed copy's hook kept the upstream key, which collides when both copies are installed"
+
+    guide = (work / "docs" / "installation.md").read_text()
+    assert ident["distribution"]["antigravityInstall"] in guide, "the distribution's own install URL is missing"
+    assert "{{antigravity_install}}" not in guide and "ask its maintainer" not in guide, \
+        "the install URL placeholder shipped to users"
+    assert "open-agent-ai-security/raffkin/tree" not in guide, \
+        "the community install URL survived into the distribution's guide"
+    assert "config/plugins/soc/" in guide, "the preflight path must re-key to this distribution's name"
+    assert "config/plugins/raffkin/" not in guide, "the guide points at a path not on the operator's machine"
+    assert "raffkin#305" not in guide and "open-agent-ai-security/raffkin/issues" not in guide, \
+        "a distribution does not route users to the upstream issue tracker (#289)"
+    assert "Raffkin" not in guide, "the upstream product name survived in the distribution's prose"
+    # Nothing in the INSTALL guide may name the upstream plugin, in any case, because every mention of it
+    # there is an instruction the reader types or a path they open. Twice now a bare `raffkin` has reached
+    # this file where no substitution could follow it -- `agy plugin uninstall raffkin`, then the install
+    # command's example output -- so the assertion is the whole file rather than a list of known shapes.
+    # Other docs legitimately keep the name: the attribution line a vendored copy MUST carry, and the
+    # RAFFKIN_* env vars and ~/.raffkin paths, which the code uses whatever the copy is called.
+    import re as _re
+    leaks = [l.strip() for l in guide.splitlines() if _re.search(r"raffkin", l, _re.I)]
+    assert not leaks, ("the upstream plugin name is still in the distribution's install guide, where every "
+                       f"mention is something the reader types or opens: {leaks[:3]}")
+
+    # --check stays clean, and goes RED if the distribution forgets the one field it alone can supply
+    assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
+    del ident["distribution"]["antigravityInstall"]
+    (work / "identity.json").write_text(json.dumps(ident, indent=2) + "\n")
+    r = subprocess.run(gen + ["--check"], capture_output=True, text=True)
+    assert r.returncode == 1 and "antigravityInstall" in r.stderr, r.stderr
+
+
+def test_the_antigravity_mcp_file_is_derived_and_carries_no_undocumented_keys():
+    """One source for the launch command, so a change cannot reach one host and miss another: the
+    Antigravity MCP file must equal .mcp.json with ${CLAUDE_PLUGIN_ROOT} swapped and `type` dropped.
+
+    `type` is not a field in Google's MCP schema — its documented stdio example carries command/args/env
+    and nothing else — so a strict reader would reject the server and every skill would load with no
+    Exabeam tool to call (review of #306).
+    """
+    base = json.loads((ROOT / "plugin" / ".mcp.json").read_text())
+    want = json.loads(json.dumps(base).replace("${CLAUDE_PLUGIN_ROOT}", "${PLUGIN_ROOT}"))
+    for server in want["mcpServers"].values():
+        server.pop("type", None)
+    assert AGY_MCP == want, "the Antigravity MCP file is not the derivation of .mcp.json"
+    for name, server in AGY_MCP["mcpServers"].items():
+        assert "type" not in server, f"{name} declares `type`, which is not in Google's MCP schema"
+
+
+def test_the_listing_icon_meets_the_marketplace_guide(tmp_path):
+    """Google's publishing guide: a 1:1 square, at least 128x128, with ~10% transparent padding, legible on
+    BOTH themes. The bare mark is not legible on a light card (its body is #f5f7fa, about 1.07:1), so the
+    listing icon carries its own dark tile inset to leave the padding (review of #306)."""
+    import re as _re
+    logo = json.loads((ROOT / "plugin" / ".antigravity-plugin" / "plugin.json").read_text())["logo"]
+    svg = (ROOT / "plugin" / logo).read_text()
+    box = _re.search(r'viewBox="0 0 (\d+) (\d+)"', svg)
+    assert box, "the icon needs an explicit viewBox"
+    w, h = int(box.group(1)), int(box.group(2))
+    assert w == h, f"the listing icon must be 1:1, got {w}x{h}"
+    assert w >= 128, f"the guide asks for at least 128px, the icon declares {w}"
+    size = _re.search(r'width="(\d+)" height="(\d+)"', svg)
+    assert size and int(size.group(1)) >= 128 and int(size.group(2)) >= 128, \
+        "the icon's declared width/height must be at least 128 too"
+    tile = _re.search(r'<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"', svg)
+    assert tile, "the icon must carry its own background tile; the bare mark is illegible on a light card"
+    inset = int(tile.group(1))
+    assert 0.07 <= inset / w <= 0.14, f"the guide asks for ~10% transparent padding, got {inset / w:.0%}"
 
 
 def test_marked_prose_blocks_are_well_formed_everywhere():
@@ -940,7 +1483,8 @@ def test_gen_identity_rekey_with_a_distribution_block_serves_that_distributions_
     # now WITH the block: the community-only prose goes, the distribution-only prose appears; the distribution
     # also names its own product in English, so the upstream project's name leaves the prose
     ident["distribution"] = {"license": "LicenseRef-Exabeam-Enterprise-Agreement",
-                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins"}
+                             "homepage": "https://github.com/Exabeam-Labs/plugins", "repository": "https://github.com/Exabeam-Labs/plugins",
+                             "antigravityInstall": "https://github.com/Exabeam-Labs/plugins/tree/main/soc"}
     ident["productName"] = "the Exabeam Agentic SOC plugin"
     ident["distribution"].update(vendor="Exabeam", terms="the Exabeam Enterprise Agreement",
                                  support="https://www.exabeam.com/support-and-services/")
@@ -1023,9 +1567,14 @@ def test_gen_identity_rewrites_the_install_key_in_the_shipped_prose_on_a_rekey(t
     again = subprocess.run(gen, check=True, capture_output=True, text=True).stdout
     assert "install key" not in again and guide.read_text() == after
     assert subprocess.run(gen + ["--check"], capture_output=True, text=True).returncode == 0
-    # the prose was touched only where the key or repo appeared: the same lines changed, nothing else
+    # The prose was touched only where the key or repo appeared: the same lines changed, nothing else.
+    # A line may change for exactly two reasons — it carried the old install key / marketplace repo, or it
+    # carried the old plugin NAME inside an Antigravity install path (~/.gemini/config/plugins/<name>/,
+    # which the host spells from the manifest name, and no marketplace string appears in it).
     b, a = before.splitlines(), after.splitlines()
-    assert len(b) == len(a) and all(x == y or ("open-agent-ai-security" in x) for x, y in zip(b, a))
+    assert len(b) == len(a) and all(
+        x == y or "open-agent-ai-security" in x or "config/plugins/raffkin" in x
+        for x, y in zip(b, a))
 
 
 def test_no_tracked_text_file_carries_a_nul_byte():

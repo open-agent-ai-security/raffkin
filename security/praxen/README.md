@@ -38,6 +38,22 @@ defeated on the shipped default path* — not a hardening opportunity. For an ag
 reads attacker-influenceable telemetry and writes dispositions into a production SOC
 platform, that is the class of defect that must not reach a tag.
 
+## 1.1.0 — gate WAIVED (2026-10-23), no scan
+
+**WAIVED by Steve Wilson (maintainer), 2026-10-23**, for the 1.1.0 release only. No Praxen scan was
+run on the 1.1.0 tree; the most recent scan is the 1.0.0 release candidate, below, with 0 Critical.
+
+- **What 1.1.0 changes:** it adds Google Antigravity as a host (#306) and the directory-listing fields
+  in the Claude manifest (#302), and refreshes the bridge lock (#309).
+- **Rationale:** this release wraps the existing skills and gate for a new host. On Claude Code and Codex,
+  the skills' procedures and the gate's decisions are unchanged. The `SKILL.md` edits are host wording,
+  plus stronger language that the skill never calls a containment or rule-write tool whatever the gate
+  does. The new code in `gate.py` runs only under `--antigravity`, and the Claude Code path keeps its
+  decisions under the test suite.
+- **What this leaves unmeasured:** a Praxen reading of the Antigravity host's controls. The host's
+  limits are documented instead, in the install guide's "What is different on this host" section.
+- **Next release:** a scan of the release candidate, as usual. Waiving again needs its own record here.
+
 ## Current status — remit v1.9 @ `adc6014` (2026-09-28, the 1.0.0 release candidate)
 
 | | |

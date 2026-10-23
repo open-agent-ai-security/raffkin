@@ -4,17 +4,18 @@
 #
 # Raffkin preflight — read-only diagnostics, on any host agent.
 #
-# Everything Raffkin needs to actually work is the same on Claude Code and on Codex:
+# Everything the plugin needs to actually work is the same on Claude Code, Codex and Antigravity:
 # credentials, a toolchain, and a bridge that can reach the tenant. Only the
-# human-in-the-loop gate is stored differently, so only the gate check branches.
+# human-in-the-loop gate differs — a bundled hook on Claude Code, approval policy on Codex, and
+# nothing of ours on Antigravity — so only the gate check branches.
 #
 # This script NEVER writes. Not to settings.json, not to config.toml, not to the
-# credentials file. On both hosts the gate ships inside the plugin (a PreToolUse hook on Claude
+# credentials file. Where a gate exists it ships inside the plugin (a PreToolUse hook on Claude
 # Code, approval policy on Codex); this stays a mirror, not a hand.
 #
 # Usage:
 #   preflight.sh                       detect the host agent and check everything
-#   preflight.sh --platform codex      force a host (claude | codex | none)
+#   preflight.sh --platform codex      force a host (claude | codex | antigravity | none)
 #   preflight.sh --skip-connectivity   skip the live MCP call
 #   preflight.sh --no-color
 #
@@ -38,6 +39,10 @@ else
   PLUGIN_NAME="${PLUGIN_NAME:-plugin}"
   PLUGIN_KEY="<plugin>@<marketplace>  (identity.sh missing — regenerate with python3 $_PF_DIR/gen_identity.py)"
 fi
+# The product's name as prose uses it, for the handful of user-visible strings this script writes itself.
+# Shell text is not rewritten on a re-key — only the docs are — so a literal product name here would ship
+# inside a distribution's copy under the upstream's name (review of #306).
+PRODUCT_NAME="${RAFFKIN_ID_PRODUCT_NAME:-the plugin}"
 
 
 # ---- ui (only if the sourcing script has not already provided these) ----
@@ -74,14 +79,25 @@ fi
 # and fall back to whichever CLI exists.
 detect_platform() {
   if [ -n "${RAFFKIN_PLATFORM:-}" ]; then printf '%s' "$RAFFKIN_PLATFORM"; return; fi
-  local has_claude=0 has_codex=0
+  # Where this copy SITS beats which CLIs exist. Antigravity installs a plugin into
+  # ~/.gemini/config/plugins/<name>/, so a preflight.sh running from there is an Antigravity install by
+  # construction -- no guessing. Without this, a machine that also has Claude Code reported "claude" and
+  # then told an Antigravity operator the gate was OFF and to reinstall with `claude plugin install`
+  # (review of #306). The match is on the host's own directory layout, not on our plugin name, so it
+  # holds for a re-keyed distribution too.
+  case "$_PF_DIR/" in
+    */.gemini/config/plugins/*) printf 'antigravity'; return ;;
+  esac
+  local has_claude=0 has_codex=0 has_agy=0
   command -v claude >/dev/null 2>&1 && has_claude=1
   command -v codex  >/dev/null 2>&1 && has_codex=1
+  command -v agy    >/dev/null 2>&1 && has_agy=1
   if [ "$has_claude" = 1 ] && [ "$has_codex" = 1 ]; then
     # Both installed — let an actual Raffkin install break the tie.
     if codex mcp get exabeam >/dev/null 2>&1; then printf 'codex'; else printf 'claude'; fi
   elif [ "$has_codex" = 1 ]; then printf 'codex'
   elif [ "$has_claude" = 1 ]; then printf 'claude'
+  elif [ "$has_agy" = 1 ]; then printf 'antigravity'
   else printf 'none'; fi
 }
 
@@ -114,11 +130,17 @@ check_toolchain() {
       fail "python3 is older than 3.7 — the bundled dismiss/close gate (hooks/gate.py) cannot run on it, and the hook fails closed (every gated call refused). Install a current python3."
     fi
   else
-    # A failure only where the gate needs it: on Claude Code the bundled hook is python3. On Codex the gate
-    # is approval policy and the bridge runs under uv's own interpreter, so a python3-less Codex host is a
-    # healthy install and "warnings do not fail" holds (review, 2026-09-05).
+    # A failure only where the gate needs it. On Claude Code the bundled hook is python3 and nothing else,
+    # so this is fatal. On Codex the gate is approval policy and the bridge runs under uv's own interpreter,
+    # so a python3-less Codex host is a healthy install and "warnings do not fail" holds (review,
+    # 2026-09-05). On Antigravity the hook is the same python3 script, but its command falls back to uv --
+    # so python3 alone is not the question, and this branch must not answer it. The gate check below runs
+    # the hook for real and is the authority; saying anything stronger here would be guessing at a control
+    # (review of #306).
     if [ "${PF_PLATFORM:-}" = claude ]; then
       fail "python3 not found — the bundled dismiss/close gate (hooks/gate.py) cannot execute. The hook is wired to fail closed (every gated call is refused until python3 is on PATH), so install python3: https://www.python.org/downloads/"
+    elif [ "${PF_PLATFORM:-}" = antigravity ]; then
+      warn "python3 not found — this host runs the same bundled gate (hooks/gate.py), falling back to uv when python3 is absent. The gate line below ran the hook and is the authority on whether it is active; installing python3 removes the dependency on uv for it"
     else
       warn "python3 not found — fine on this host (the gate is approval policy here); on a Claude Code host the bundled hook would need it"
     fi
@@ -369,6 +391,125 @@ check_gate_reach() {
 check_gate() {
   local platform="$1" state
   case "$platform" in
+    antigravity)
+      # Antigravity reads a plugin's hooks from hooks.json at the plugin ROOT and honours {"decision":
+      # "deny"} as a hard block, so the bundled gate runs here. What this branch must NOT do is report it
+      # from the file's existence: "0 HOOK MISS" meant nothing on the red team's hook leg precisely
+      # because nobody had made the control answer. So the gate is EXERCISED -- fed a containment call on
+      # stdin exactly as the host would, and believed only if it denies it.
+      local root hookfile runner pyc verdict spec matcher cmd
+      root="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+      hookfile="$root/hooks.json"
+      runner=""; pyc=""
+      command -v python3 >/dev/null 2>&1 && { runner="python3"; pyc="python3"; }
+      # uv brings its own Python and the connector already needs it, so it is the fallback the hook itself
+      # falls back to; neither present means the bridge cannot start either.
+      [ -z "$runner" ] && command -v uv >/dev/null 2>&1 && {
+        runner="uv run --quiet --no-project"; pyc="uv run --quiet --no-project python"; }
+      if [ ! -f "$hookfile" ]; then
+        fail "Gate is OFF — no hooks.json at the plugin root (${root}). Antigravity reads a plugin's hooks from there and nowhere else, so ${PRODUCT_NAME}'s deny tier, ask tier and write budget are not in force; reinstall the plugin"
+      elif ! grep -q '"PreToolUse"' "$hookfile" 2>/dev/null; then
+        fail "Gate is OFF — ${hookfile} declares no PreToolUse handler, so nothing is consulted before an Exabeam write; reinstall the plugin"
+      elif [ -z "$runner" ]; then
+        fail "Gate is OFF — neither 'python3' nor 'uv' is on PATH, so the hook cannot start and the shell fallback answers instead. That fallback refuses EVERY Exabeam call, reads included: containment is still never executed, but there is no ask tier and no write budget, and ${PRODUCT_NAME} cannot work a case in this state. Install uv (https://docs.astral.sh/uv/) — the Exabeam connector needs it too"
+      else
+        # Read the hook the way the HOST reads it, then run exactly what it says. The earlier version
+        # invoked gate.py itself and only grepped for "PreToolUse", so it reported the gate ON with the
+        # command pointing at a missing script and with a matcher (^run_command$) the host would never
+        # fire on. That proves the decision function and leaves the wiring untested -- the same "0 HOOK
+        # MISS" shape one layer up. Review verified all three false passes.
+        spec="$($pyc -c '
+import json, re, sys
+h = json.load(open(sys.argv[1]))
+keys = [k for k in h if k.endswith("-gate")] or list(h)
+g = h[keys[0]]["PreToolUse"][0]
+# call_mcp_tool is the step name a REAL dispatched MCP call arrives under (captured 2026-10-22);
+# mcp_tool is the one the host docs imply. A matcher catching only the documented name would never
+# fire on a live call, so the live name is the one that must match. (No apostrophes in here: this
+# program is a single-quoted shell word and one would end it.)
+print("MATCH" if re.search(g["matcher"], "call_mcp_tool") else "NOMATCH")
+print(g["hooks"][0]["command"])
+' "$hookfile" 2>/dev/null)" || true
+        matcher="$(printf '%s' "$spec" | sed -n 1p)"
+        cmd="$(printf '%s' "$spec" | sed -n '2,$p')"
+        if [ -z "$cmd" ]; then
+          fail "Gate is OFF — ${hookfile} has no runnable PreToolUse command for this plugin, so the host has nothing to consult before an Exabeam write; reinstall the plugin"
+          return 0
+        fi
+        if [ "$matcher" != "MATCH" ]; then
+          fail "Gate is OFF — the PreToolUse matcher in ${hookfile} does not match 'call_mcp_tool', the step type a dispatched MCP call actually arrives under on this host. A matcher that misses it is never fired, so the gate is never asked; reinstall the plugin"
+          return 0
+        fi
+        # RAFFKIN_GATE_LOG=off: a probe must not forge a decision in the analyst's audit trail. cwd is the
+        # directory holding hooks.json, which is what this host sets for a hook command.
+        # The probe is in the shape the host really sends -- PascalCase keys beside the server, the
+        # dispatcher as the step name -- not the documented camelCase one. Probing with the documented
+        # shape is how a gate that cannot read live calls still passed its own diagnostic.
+        verdict="$(printf '%s' '{"conversationId":"preflight","stepIdx":0,"toolCall":{"name":"call_mcp_tool","args":{"ServerName":"'"${RAFFKIN_ID_NAME:-raffkin}"'_'"${RAFFKIN_ID_MCP_SERVER:-exabeam}"'","ToolName":"exabeam_isolate_host","Arguments":{"arg0":{}}}}}' \
+          | ( cd "$root" && RAFFKIN_GATE_LOG=off sh -c "$cmd" ) 2>/dev/null | tr -d ' \n')" || true
+        # Spaces are stripped so one pattern matches whatever spacing the JSON came with, which is why
+        # the reason fragments below are run together.
+        case "$verdict" in
+          *'"decision":"deny"'*couldnotrun*)
+            # The shell fallback refuses everything on our server, reads included: no ask tier, no write
+            # budget. It is the right failure direction and it is NOT the gate, so reporting it as one
+            # would be the false pass review found after the fallback was added.
+            fail "Gate CANNOT RUN — ${hookfile} is wired correctly, but neither python3 nor uv could execute hooks/gate.py, so the hook answered with its last-resort refusal. Every Exabeam call is refused, reads included: there is no ask tier and no write budget. Check that hooks/gate.py exists in this install and that python3 or uv is on the PATH the host launches hooks with" ;;
+          *'"decision":"deny"'*containmentaction*)
+            # The command refuses containment. One thing is still unproven from in here: whether the HOST
+            # has this copy registered at all. agy can answer that without a session.
+            if command -v agy >/dev/null 2>&1; then
+              local listing
+              # Does the HOST have THIS copy registered, with the gate among its hooks? `path` in the
+              # listing is what makes the difference between "these files are fine" and "the agent you
+              # are about to run will consult them" -- the gap review found when preflight passed from a
+              # clone the host had never been told about.
+              listing="$(agy plugin list --json 2>/dev/null | $pyc -c '
+import json, os, sys
+root = os.path.realpath(sys.argv[1])
+gate = sys.argv[2] + "-gate"
+try:
+    rows = json.load(sys.stdin)
+except Exception:
+    print("UNREADABLE"); raise SystemExit(0)
+here = [r for r in rows if os.path.realpath(r.get("path") or "") == root]
+if here:
+    r = here[0]
+    if not r.get("enabled"):
+        print("DISABLED")
+    elif gate in (r.get("hooks") or []):
+        print("HERE")
+    else:
+        print("NOHOOK")
+else:
+    named = [r for r in rows if gate in (r.get("hooks") or [])]
+    print("ELSEWHERE " + (named[0].get("path") or "?") if named else "NOTLISTED")
+' "$root" "${RAFFKIN_ID_NAME:-raffkin}" 2>/dev/null)" || true
+              case "$listing" in
+                HERE)
+                  ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. ${AGY_NAME:-Antigravity} also reports the hook registered as '${RAFFKIN_ID_NAME:-raffkin}-gate'. The deny holds even under --dangerously-skip-permissions; the ask does not, so run attended" ;;
+                DISABLED)
+                  fail "Gate is OFF — the host has this plugin installed but DISABLED, so none of its hooks run and the deny tier is not in force. Run 'agy plugin enable ${RAFFKIN_ID_NAME:-raffkin}'" ;;
+                NOHOOK)
+                  fail "Gate is OFF — the host lists this install but names no '${RAFFKIN_ID_NAME:-raffkin}-gate' hook for it, so hooks.json was not picked up at install time. The files here refuse containment; the host is not consulting them. Reinstall with 'agy plugin install'" ;;
+                ELSEWHERE*)
+                  warn "Gate verified for THIS copy, but the host is running a different one (${listing#ELSEWHERE }). These files refuse containment; the agent will consult that install instead, which this check has not exercised. Re-run preflight from there, or reinstall from this directory" ;;
+                NOTLISTED)
+                  warn "Gate verified for this copy, but the host does not list it at all — the agent will not load this directory. Install it with 'agy plugin install', or run this script from the installed copy under ~/.gemini/config/plugins/" ;;
+                *)
+                  warn "Human-in-the-loop gate ON for this copy — ran the host's own PreToolUse command and it refused a containment call. Could not read 'agy plugin list --json', so this verifies the plugin, not the installation" ;;
+              esac
+            else
+              ok "Human-in-the-loop gate ON via the bundled hook at ${hookfile} — ran the host's own PreToolUse command, asked it to isolate a host, and it refused. Denies containment, asks on dismiss/close. The deny holds even under --dangerously-skip-permissions; the ask does not, so run attended"
+            fi ;;
+          "")
+            fail "Gate is OFF — the hook produced no decision when handed a containment call (ran: ${runner}). No decision is read as no objection here; run '$runner \"$root/hooks/gate.py\" --antigravity' by hand to see the error" ;;
+          *'"decision":"deny"'*)
+            fail "Gate refused the containment call, but not with the gate's own reason — the hook answered ${verdict}. ${PRODUCT_NAME} cannot confirm that its permission tiers are what refused this, rather than a fallback refusing everything; treat the ask tier and the write budget as unverified on this install" ;;
+          *)
+            fail "Gate is NOT refusing containment — handed an isolate-host call, the hook answered ${verdict}. ${PRODUCT_NAME} never executes containment, so this is a broken gate, not a configuration choice" ;;
+        esac
+      fi ;;
     codex)
       state="$(gate_state_codex)"
       case "$state" in
@@ -412,7 +553,7 @@ preflight_main() {
     case "$1" in
       --platform=*) platform="${1#*=}" ;;
       --platform)   shift; platform="${1:-}"
-                    [ -n "$platform" ] || { printf '--platform needs a value (claude|codex|none)\n' >&2; return 2; } ;;
+                    [ -n "$platform" ] || { printf '--platform needs a value (claude|codex|antigravity|none)\n' >&2; return 2; } ;;
       --skip-connectivity) SKIP_CONN=1 ;;
       --no-color) USE_COLOR=0 ;;
       -h|--help) awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; return 0 ;;
@@ -421,8 +562,8 @@ preflight_main() {
     shift
   done
   case "${platform:-auto}" in
-    claude|codex|none|auto) ;;
-    *) printf 'unknown platform: %s (want claude|codex|none)\n' "$platform" >&2; return 2 ;;
+    claude|codex|antigravity|none|auto) ;;
+    *) printf 'unknown platform: %s (want claude|codex|antigravity|none)\n' "$platform" >&2; return 2 ;;
   esac
   [ "$platform" = "auto" ] && platform=""
   [ -n "$platform" ] || platform="$(detect_platform)"
@@ -435,7 +576,10 @@ preflight_main() {
   case "$platform" in
     claude) ok "Claude Code — $(claude --version 2>/dev/null | head -1)" ;;
     codex)  ok "OpenAI Codex — $(codex --version 2>/dev/null | head -1)" ;;
-    *)      warn "No host agent CLI found (looked for 'claude' and 'codex')" ;;
+    antigravity)
+            if command -v agy >/dev/null 2>&1; then ok "Google Antigravity — $(agy --version 2>/dev/null | head -1)"
+            else warn "Google Antigravity CLI ('agy') not found on PATH — the checks below still apply to the installed plugin"; fi ;;
+    *)      warn "No host agent CLI found (looked for 'claude', 'codex' and 'agy')" ;;
   esac
 
   head2 "Toolchain";    check_toolchain
