@@ -341,18 +341,20 @@ it auto-denies the call even when the gate has allowed it. Interactively you are
 the plugin ships a permission snippet that grants the allow tier; there is no equivalent to ship here
 yet.
 
-Two things remain unexercised: whether a `deny` holds when a session runs with
-`--dangerously-skip-permissions` (it does on Claude Code), and what the host's own prompt looks like on
-an `ask`. Both are tracked in
+One thing remains unexercised: what the host's own prompt looks like on an `ask` in an attended
+session. Whether a `deny` holds under `--dangerously-skip-permissions` is no longer open — it was probed
+directly and it holds, which is the measurement the section above rests on. The open item is tracked in
 [raffkin#305](https://github.com/open-agent-ai-security/raffkin/issues/305). Moving the deny tier into the
 connector as well, so it holds without depending on any host, is
 [raffkin#308](https://github.com/open-agent-ai-security/raffkin/issues/308).
 <!-- /community-only -->
 <!-- distribution-only
 The gate has been driven in a live Antigravity session: the host calls the hook and the gate reads the
-step it is handed, verified against a captured payload that is now a test fixture. Two things remain
-unexercised — whether a `deny` holds under `--dangerously-skip-permissions`, and what the host's own
-prompt looks like on an `ask`. One behaviour is worth knowing in advance: on this host the gate's `allow`
+step it is handed, verified against a captured payload that is now a test fixture. A `deny` under
+`--dangerously-skip-permissions` was probed directly and holds, so containment stays refused even with
+the host's permission prompts switched off; the `ask` tier does not survive that flag, so read it as an
+attended-session control here. One thing remains unexercised: what the host's own prompt looks like on
+an `ask` in an attended session. One behaviour is worth knowing in advance: on this host the gate's `allow`
 restricts rather than entitles, so Antigravity's own permission system still applies on top and a
 headless session auto-denies MCP calls the gate has allowed. {{support}} can tell you where that
 verification stands for your release.
