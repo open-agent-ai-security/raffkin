@@ -136,7 +136,15 @@ assert_load_check_works() {  # assert_load_check_works <config-dir> <payload-dir
   while IFS='|' read -r label patch; do
     [ -z "${label}" ] && continue
     cp "${manifest}.smoke-bak" "${manifest}"
-    eval "${patch}"
+    # Guarded, not bare: under `set -e` a patch that errors on its own would stop the script here, before
+    # the restore below, and leave the installed manifest planted. Harmless in a throwaway config, which
+    # is why it was a nit and not a bug -- but a control that can exit holding the payload broken is the
+    # wrong shape for a control (#318 review).
+    if ! eval "${patch}"; then
+      mv "${manifest}.smoke-bak" "${manifest}"
+      echo "  FAIL: positive control - could not plant ${label}, so the load check was never exercised" >&2
+      exit 1
+    fi
     if assert_loads "positive control (expected to fail)" "$1" >/dev/null 2>&1; then
       restore=1
       echo "  FAIL: positive control - ${label} still passed assert_loads, so the load check proves nothing" >&2
