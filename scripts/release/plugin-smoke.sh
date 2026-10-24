@@ -81,7 +81,12 @@ assert_loads() {  # assert_loads <leg> <config-dir>
   # reported success and `enabled` stayed true (#197).
   #
   # `plugin list --json` carries the failure in `errors[]` beside `"enabled": true`, so the check is
-  # deterministic: a non-empty errors array for our plugin fails the leg, whatever the text says.
+  # deterministic: a non-empty errors array for our plugin fails the leg, whatever the text says. The
+  # key is OMITTED when there is nothing wrong (not an empty list), which is why this reads it with
+  # `or []` rather than trusting its presence.
+  #
+  # Do not try to reproduce 0.8.6's exact defect to test this: the host tolerates that shape now. The
+  # positive control below plants defects it still rejects, and says why.
   local js
   js="$(CLAUDE_CONFIG_DIR="$2" claude plugin list --json 2>/dev/null)" || true
   printf '%s' "${js}" | PLUGIN_ID="${PLUGIN}@${MARKETPLACE}" LEG="$1" python3 -c '
@@ -105,19 +110,45 @@ print(f"  ok: {leg} - plugin loaded, no errors reported")
 }
 
 assert_load_check_works() {  # assert_load_check_works <config-dir> <payload-dir>
-  # Positive control: inject a manifest field that makes the plugin fail to load (#197), require
-  # assert_loads to FAIL, then restore and require it to pass.
+  # Positive control: plant a defect that MUST make the plugin fail to load, require assert_loads to
+  # FAIL on it, then restore and require it to pass.
+  #
+  # #197's OWN shape -- "hooks": "./hooks/hooks.json", a path the host already auto-loads -- no longer
+  # fails. Claude Code 2.1.309 tolerates the duplicate declaration: the plugin loads with no `errors`,
+  # measured 2026-10-23 on the 1.1.0 post-release smoke, which is the run that failed this control and
+  # sent us looking. Good news upstream, and fatal to a control that depends on it: a control that
+  # cannot fail proves nothing about the check it is meant to prove (#212). So it plants two defects
+  # the host does still reject, and BOTH must fail the check:
+  #
+  #   * a `hooks` path that does not exist -> "Path not found: .../hooks/nope.json (hooks)". In family
+  #     with #197 and the one that earns its keep: it proves the loader still READS and validates the
+  #     hooks declaration, which is the mechanism the gate rides on. If this one ever stops failing,
+  #     that is a finding, not a nuisance -- go and look before relaxing it.
+  #   * a manifest that is not valid JSON -> "Manifest parse error". Definitionally fatal, so this
+  #     control cannot go vacuous again even if every semantic check upstream is relaxed.
+  #
+  # Verified against 2.1.309: a missing `name` also fails ("Manifest validation failed"), so there is
+  # no shortage of replacements if either of these is ever tolerated too.
   local manifest="$2/.claude-plugin/plugin.json"
   [ -f "${manifest}" ] || { echo "  FAIL: positive control - no manifest at ${manifest}" >&2; exit 1; }
   cp "${manifest}" "${manifest}.smoke-bak"
-  python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["hooks"]="./hooks/hooks.json"; json.dump(d,open(p,"w"))' "${manifest}"
-  if assert_loads "positive control (expected to fail)" "$1" >/dev/null 2>&1; then
-    mv "${manifest}.smoke-bak" "${manifest}"
-    echo "  FAIL: positive control - a manifest declaring hooks/hooks.json still passed assert_loads" >&2
-    exit 1
-  fi
+  local restore=0
+  while IFS='|' read -r label patch; do
+    [ -z "${label}" ] && continue
+    cp "${manifest}.smoke-bak" "${manifest}"
+    eval "${patch}"
+    if assert_loads "positive control (expected to fail)" "$1" >/dev/null 2>&1; then
+      restore=1
+      echo "  FAIL: positive control - ${label} still passed assert_loads, so the load check proves nothing" >&2
+      break
+    fi
+  done <<CONTROLS
+a manifest whose hooks path does not exist|python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["hooks"]="./hooks/this-path-does-not-exist.json"; json.dump(d,open(p,"w"))' "${manifest}"
+a manifest that is not valid JSON|printf '%s' '{ not json' > "${manifest}"
+CONTROLS
   mv "${manifest}.smoke-bak" "${manifest}"
-  echo "  ok: positive control - the load check fails a plugin that cannot load"
+  [ "${restore}" = "1" ] && exit 1
+  echo "  ok: positive control - the load check fails a plugin that cannot load (two defects, both caught)"
 }
 
 git -C "${REPO_ROOT}" fetch origin --quiet
