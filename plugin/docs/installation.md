@@ -82,8 +82,8 @@ red-teamed on a Gemini model. Read
   permissions, which Git Bash on NTFS does not enforce — so Git Bash can run the scripts but leaves your
   key and secret unprotected. There is no PowerShell path.
   On native Windows `python3` is a Microsoft Store alias stub rather than an interpreter, so the gate
-  cannot start and fails closed: every Exabeam call is refused. That is the intended direction of
-  failure, and the hook now says so by name rather than leaving you with the Store's own message.
+  cannot start and fails closed: every Exabeam call is refused, and the hook says on stderr that the
+  gate could not run.
 <!-- community-only -->
 - **Exabeam customers:** the supported build is delivered through the
   [Exabeam Plug-in Catalog](https://plugins.exabeam.com/), with its own install command. These
