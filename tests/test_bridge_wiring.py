@@ -715,9 +715,16 @@ class _FakeStore:
 
 
 def _store(monkeypatch, pairs=None, fail=None):
-    """Install a fake keyring backend for `_from_os_store`, which imports keyring lazily."""
-    import keyring
-    from keyring.errors import KeyringError
+    """Install a fake keyring backend for `_from_os_store`, which imports keyring lazily.
+
+    `importorskip`, not a plain import. Several CI jobs -- the repo-invariants run and the
+    neutralizer mutation gate -- install a narrower dependency set that deliberately omits
+    `keyring`. The bridge imports it lazily and degrades without it, so those jobs are right
+    not to install it, and these tests must SKIP there rather than fail. A plain import made
+    them fail, which is what this comment exists to stop happening again.
+    """
+    keyring = pytest.importorskip("keyring")
+    KeyringError = pytest.importorskip("keyring.errors").KeyringError
 
     fake = _FakeStore(fail=fail)
     for entry, value in (pairs or {}).items():
