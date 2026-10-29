@@ -117,6 +117,28 @@ chmod 600 ~/.exabeam-mcp.env
 Replace `<region>` with your region. The URL must be `https://`. Then restart Claude Code, or run
 `/reload-plugins` inside it — the connector reads this file when it starts.
 
+> **Using a secrets manager instead.** The connector reads `EXABEAM_MCP_URL`, `EXABEAM_API_KEY` and
+> `EXABEAM_API_SECRET` from the **environment first**, and falls back to the file for whatever the
+> environment did not supply. So if you already run Vault, AWS Secrets Manager, SOPS or a keychain
+> helper, export them at process start and keep no file at all:
+>
+> ```bash
+> export EXABEAM_API_KEY="$(vault kv get -field=key secret/exabeam)"
+> export EXABEAM_API_SECRET="$(vault kv get -field=secret secret/exabeam)"
+> ```
+>
+> **The environment wins**, so a stale file left from an earlier install cannot silently override a
+> live broker. An empty variable counts as unset, so `EXABEAM_API_KEY=` in a shell profile does not
+> blank out a working file. Set none of them and nothing changes.
+>
+> `preflight.sh` and the connector's startup line both name **which source supplied each setting**
+> (names only, never values), so you can confirm the broker is actually being used.
+>
+> **What this does and does not buy.** It does not make the environment safer than the file in
+> general — both are readable by anything running as you. What it removes is the file-at-rest
+> exposure: backup and sync agents that sweep your home directory, crash dumps, an accidental `cat`
+> or screen share, and home-directory archives taken for support or migration.
+
 **3. Check the setup.** The plugin ships a read-only diagnostic that tells you what, if anything, is
 missing. It lives in the installed plugin. Run it with the exact version step 1 showed (not a wildcard:
 the cache keeps earlier versions, and a wildcard would run the oldest one):

@@ -187,22 +187,40 @@ print(state, p.get("version") or "unknown", path)
 # never changes it: 0600 is advice here, exactly as it is in install.sh.
 check_credentials() {
   CREDS_OK=0
-  if [ ! -f "$ENV_FILE" ]; then
-    warn "No credentials yet — create $ENV_FILE with EXABEAM_MCP_URL, EXABEAM_API_KEY and EXABEAM_API_SECRET (chmod 600)"
-    return
-  fi
-  local missing="" k perms
+  # #295: the bridge reads the credential triple from the environment first, then the file for
+  # whatever the environment did not supply. Report WHICH source each one came from -- an operator
+  # sourcing from Vault or a keychain helper otherwise cannot tell the broker is being used rather
+  # than a stale file, because both produce a working bridge. Names only; never a value.
+  local env_keys="" missing="" k perms url host scheme
   for k in EXABEAM_MCP_URL EXABEAM_API_KEY EXABEAM_API_SECRET; do
-    grep -q "^${k}=" "$ENV_FILE" 2>/dev/null || missing="$missing $k"
+    if [ -n "${!k:-}" ]; then                      # bash indirect expansion; the shebang is bash
+      env_keys="$env_keys $k"
+    elif [ -f "$ENV_FILE" ] && grep -q "^${k}=" "$ENV_FILE" 2>/dev/null; then
+      :                                            # supplied by the file, which is the default posture
+    else
+      missing="$missing $k"
+    fi
   done
+  [ -n "$env_keys" ] && ok "Credentials from the environment:$env_keys (these win over $ENV_FILE)"
+
   if [ -n "$missing" ]; then
-    warn "Credentials file present but missing:$missing"
+    if [ ! -f "$ENV_FILE" ] && [ -z "$env_keys" ]; then
+      warn "No credentials yet — create $ENV_FILE with EXABEAM_MCP_URL, EXABEAM_API_KEY and EXABEAM_API_SECRET (chmod 600), or export them from your secrets manager"
+    else
+      warn "Credentials incomplete — missing from both the environment and $ENV_FILE:$missing"
+    fi
     return
   fi
+
   # #174: the bridge refuses to start over any scheme but https (plain http to a loopback host excepted),
-  # so say so here, before it is ever started, with the value that needs fixing.
-  local url host scheme
-  url="$(grep -m1 '^EXABEAM_MCP_URL=' "$ENV_FILE" | cut -d= -f2- | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+  # so say so here, before it is ever started, with the value that needs fixing. Read the URL from
+  # whichever source actually supplies it (#295) -- checking only the file would skip the check
+  # entirely for an operator feeding the bridge from a broker.
+  if [ -n "${EXABEAM_MCP_URL:-}" ]; then
+    url="$EXABEAM_MCP_URL"
+  else
+    url="$(grep -m1 '^EXABEAM_MCP_URL=' "$ENV_FILE" | cut -d= -f2- | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+  fi
   scheme="$(printf '%s' "${url%%://*}" | tr '[:upper:]' '[:lower:]')"    # the bridge compares schemes case-insensitively (#231)
   case "$scheme" in
     https) ;;
@@ -223,7 +241,15 @@ check_credentials() {
     *) fail "EXABEAM_MCP_URL must start with https:// (found: ${url:-<empty>}) — the bridge refuses to start over any other scheme"
        return ;;
   esac
-  CREDS_OK=1; ok "Credentials — $ENV_FILE (all keys present, https)"
+  CREDS_OK=1
+  if [ ! -f "$ENV_FILE" ]; then
+    # #295: an operator feeding the bridge from a broker has no file, and there is nothing to
+    # chmod. Saying "all keys present" against a path that does not exist would be worse than
+    # saying nothing.
+    ok "Credentials — supplied entirely from the environment (https); no $ENV_FILE needed"
+    return
+  fi
+  ok "Credentials — $ENV_FILE (all keys present, https)"
   perms="$(stat -f '%A' "$ENV_FILE" 2>/dev/null || stat -c '%a' "$ENV_FILE" 2>/dev/null || echo '?')"
   [ "$perms" = "600" ] || warn "  $ENV_FILE is mode $perms — consider: chmod 600 $ENV_FILE"
 }

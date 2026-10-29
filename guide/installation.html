@@ -370,6 +370,24 @@ chmod 600 ~/.exabeam-mcp.env
 </code></pre>
 <p>Replace <code>&lt;region&gt;</code> with your region. The URL must be <code>https://</code>. Then restart Claude Code, or run
 <code>/reload-plugins</code> inside it — the connector reads this file when it starts.</p>
+<blockquote>
+<p><strong>Using a secrets manager instead.</strong> The connector reads <code>EXABEAM_MCP_URL</code>, <code>EXABEAM_API_KEY</code> and
+<code>EXABEAM_API_SECRET</code> from the <strong>environment first</strong>, and falls back to the file for whatever the
+environment did not supply. So if you already run Vault, AWS Secrets Manager, SOPS or a keychain
+helper, export them at process start and keep no file at all:</p>
+<p><code>bash
+export EXABEAM_API_KEY="$(vault kv get -field=key secret/exabeam)"
+export EXABEAM_API_SECRET="$(vault kv get -field=secret secret/exabeam)"</code></p>
+<p><strong>The environment wins</strong>, so a stale file left from an earlier install cannot silently override a
+live broker. An empty variable counts as unset, so <code>EXABEAM_API_KEY=</code> in a shell profile does not
+blank out a working file. Set none of them and nothing changes.</p>
+<p><code>preflight.sh</code> and the connector's startup line both name <strong>which source supplied each setting</strong>
+(names only, never values), so you can confirm the broker is actually being used.</p>
+<p><strong>What this does and does not buy.</strong> It does not make the environment safer than the file in
+general — both are readable by anything running as you. What it removes is the file-at-rest
+exposure: backup and sync agents that sweep your home directory, crash dumps, an accidental <code>cat</code>
+or screen share, and home-directory archives taken for support or migration.</p>
+</blockquote>
 <p><strong>3. Check the setup.</strong> The plugin ships a read-only diagnostic that tells you what, if anything, is
 missing. It lives in the installed plugin. Run it with the exact version step 1 showed (not a wildcard:
 the cache keeps earlier versions, and a wildcard would run the oldest one):</p>
