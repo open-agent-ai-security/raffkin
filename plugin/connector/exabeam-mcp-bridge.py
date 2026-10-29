@@ -49,8 +49,41 @@ _token = {"value": None, "exp": 0.0}
 _token_lock = None                      # created lazily inside the running loop (single-flight refresh)
 
 
+#: The three settings an operator may supply from the environment instead of the file (#295).
+#: Deliberately exactly these: the credential triple, nothing else. RAFFKIN_* settings are read
+#: from os.environ directly where they are used and are not part of this precedence.
+ENV_CREDENTIAL_KEYS = ("EXABEAM_MCP_URL", "EXABEAM_API_KEY", "EXABEAM_API_SECRET")
+
+#: Where each setting came from, for the startup report. Filled by load_env().
+CREDENTIAL_ORIGIN: dict[str, str] = {}
+
+
 def load_env(path="~/.exabeam-mcp.env"):
+    """The credential triple: environment first, then the file for whatever it did not supply (#295).
+
+    **Environment wins, deliberately.** #295 raised the precedence as a real question, so it is
+    answered here rather than left incidental. The point of the feature is to let an operator feed
+    the bridge from Vault, AWS Secrets Manager, SOPS or a keychain helper at process start. If the
+    file won, a stale `~/.exabeam-mcp.env` left behind from an earlier install would silently
+    override a live broker -- the exact failure the issue exists to prevent, and one that would be
+    invisible because both paths produce a working bridge pointed at the wrong credentials.
+
+    No new dependency, and no behavior change for an existing install: with none of the three set in
+    the environment this returns exactly what it always did. An empty-string variable counts as
+    unset, so `EXABEAM_API_KEY=` in a shell profile does not blank out a working file.
+
+    This does NOT make the environment safer than the file in general -- both are readable by
+    anything running as the same user, which is why #102 was closed as accepted risk. What it
+    removes is the file-at-rest exposure: backup and sync agents, crash dumps, an accidental `cat`
+    or screen share, and home-directory archives for support or migration.
+    """
     cfg = {}
+    CREDENTIAL_ORIGIN.clear()
+    for k in ENV_CREDENTIAL_KEYS:
+        v = os.environ.get(k)
+        if v is not None and v.strip():
+            cfg[k] = v.strip()
+            CREDENTIAL_ORIGIN[k] = "environment"
     p = os.path.expanduser(path)
     if not os.path.exists(p):
         return cfg
@@ -59,8 +92,33 @@ def load_env(path="~/.exabeam-mcp.env"):
         if not s.strip() or s.lstrip().startswith("#") or "=" not in s:
             continue
         k, v = s.split("=", 1)
-        cfg[k.strip()] = re.sub(r"\s+#.*$", "", v).strip()
+        k = k.strip()
+        if k in cfg:
+            continue                      # the environment already supplied this one
+        cfg[k] = re.sub(r"\s+#.*$", "", v).strip()
+        if k in ENV_CREDENTIAL_KEYS:
+            CREDENTIAL_ORIGIN[k] = "file"
     return cfg
+
+
+def credential_origin_summary(path="~/.exabeam-mcp.env") -> str:
+    """One line naming where each credential setting came from (#295's paired ask).
+
+    An operator who has wired up a broker needs to be able to confirm it is actually being used
+    rather than a stale file. Names the settings, never a value.
+    """
+    if not CREDENTIAL_ORIGIN:
+        return f"no credentials found in the environment or {path}"
+    by_source: dict[str, list[str]] = {}
+    for key in ENV_CREDENTIAL_KEYS:
+        src = CREDENTIAL_ORIGIN.get(key)
+        if src:
+            by_source.setdefault(src, []).append(key)
+    parts = [f"{src}: {', '.join(keys)}" for src, keys in by_source.items()]
+    missing = [k for k in ENV_CREDENTIAL_KEYS if k not in CREDENTIAL_ORIGIN]
+    if missing:
+        parts.append(f"not set: {', '.join(missing)}")
+    return "; ".join(parts)
 
 
 CFG = load_env()
@@ -1272,6 +1330,10 @@ def main():
     if DRY_RUN:
         sys.stderr.write("bridge: DRY RUN is ON (RAFFKIN_DRY_RUN) - every write is refused at the "
                          "bridge; nothing reaches Exabeam\n")
+    # Which source supplied each credential setting (#295). An operator who has wired a broker to
+    # the environment needs to confirm it is being used and not a stale file; the two are otherwise
+    # indistinguishable, because both produce a working bridge.
+    sys.stderr.write(f"bridge: credentials -- {credential_origin_summary()}\n")
     asyncio.run(_check() if "--check" in sys.argv else _serve())
 
 

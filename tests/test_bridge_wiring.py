@@ -601,3 +601,97 @@ def test_error_facts_accepts_only_the_platform_code_shape_and_never_prose():
     assert B._error_facts('host:"WIN_SRV_01" rule:"UBA_DC_SVC_ACCT_ANOMALY"') == (None, None)
     assert B._error_facts("alert 4471 not found: case 447 missing; timeout after 500ms") == (None, None)
     assert B._error_facts('{"errors":[{"code":"AAA_ESA_1000_400","status":"nope"}]}') == ("AAA_ESA_1000_400", None)
+
+
+# ---- #295: credentials may come from the environment, so a broker can supply them -----------------
+
+def _env_only(monkeypatch, **kw):
+    for k in ("EXABEAM_MCP_URL", "EXABEAM_API_KEY", "EXABEAM_API_SECRET"):
+        monkeypatch.delenv(k, raising=False)
+    for k, v in kw.items():
+        monkeypatch.setenv(k, v)
+
+
+def _write_env(path, *lines):
+    path.write_text("\n".join(lines) + "\n")
+    return str(path)
+
+
+def test_the_environment_supplies_credentials_when_there_is_no_file(monkeypatch, tmp_path):
+    _env_only(monkeypatch, EXABEAM_MCP_URL="https://api.us-west.exabeam.cloud/mcp",
+              EXABEAM_API_KEY="k", EXABEAM_API_SECRET="s")
+    cfg = B.load_env(str(tmp_path / "does-not-exist"))
+    assert cfg == {"EXABEAM_MCP_URL": "https://api.us-west.exabeam.cloud/mcp",
+                   "EXABEAM_API_KEY": "k", "EXABEAM_API_SECRET": "s"}
+    assert set(B.CREDENTIAL_ORIGIN.values()) == {"environment"}
+
+
+def test_the_environment_wins_over_the_file(monkeypatch, tmp_path):
+    """Deliberate, and #295 asked for the choice to be deliberate: a broker must be authoritative.
+
+    If the file won, a stale ~/.exabeam-mcp.env left from an earlier install would silently override
+    a live broker -- and it would be invisible, because both paths produce a working bridge pointed
+    at different credentials.
+    """
+    f = _write_env(tmp_path / "env",
+                   "EXABEAM_MCP_URL=https://file.exabeam.cloud/mcp",
+                   "EXABEAM_API_KEY=filekey",
+                   "EXABEAM_API_SECRET=filesecret")
+    _env_only(monkeypatch, EXABEAM_API_KEY="envkey")
+    cfg = B.load_env(f)
+    assert cfg["EXABEAM_API_KEY"] == "envkey", "the environment must win"
+    assert cfg["EXABEAM_API_SECRET"] == "filesecret", "the file fills what the environment did not"
+    assert B.CREDENTIAL_ORIGIN == {"EXABEAM_API_KEY": "environment",
+                                   "EXABEAM_MCP_URL": "file", "EXABEAM_API_SECRET": "file"}
+
+
+def test_an_empty_environment_variable_does_not_blank_out_a_working_file(monkeypatch, tmp_path):
+    """`EXABEAM_API_KEY=` in a shell profile is not a credential. Treating it as one would break an
+    install that was working, which is the one thing this change must not do."""
+    f = _write_env(tmp_path / "env", "EXABEAM_API_KEY=filekey")
+    _env_only(monkeypatch, EXABEAM_API_KEY="   ")
+    assert B.load_env(f)["EXABEAM_API_KEY"] == "filekey"
+    assert B.CREDENTIAL_ORIGIN["EXABEAM_API_KEY"] == "file"
+
+
+def test_an_existing_install_is_unchanged(monkeypatch, tmp_path):
+    """With nothing in the environment, load_env returns exactly what it always did -- including the
+    non-credential keys a file may carry, the comment lines, and the inline-comment stripping."""
+    f = _write_env(tmp_path / "env",
+                   "EXABEAM_MCP_URL=https://api.eu.exabeam.cloud/mcp   # the region slug",
+                   "EXABEAM_API_KEY=k",
+                   "# a comment line",
+                   "",
+                   "SOMETHING_ELSE=v")
+    _env_only(monkeypatch)
+    assert B.load_env(f) == {"EXABEAM_MCP_URL": "https://api.eu.exabeam.cloud/mcp",
+                             "EXABEAM_API_KEY": "k", "SOMETHING_ELSE": "v"}
+
+
+def test_only_the_credential_triple_is_read_from_the_environment(monkeypatch, tmp_path):
+    """Not every key a file may carry becomes an environment override. The precedence covers the
+    credential triple and nothing else."""
+    _env_only(monkeypatch)
+    monkeypatch.setenv("SOMETHING_ELSE", "from-env")
+    f = _write_env(tmp_path / "env", "SOMETHING_ELSE=from-file")
+    assert B.load_env(f)["SOMETHING_ELSE"] == "from-file"
+
+
+def test_the_origin_summary_names_sources_and_never_values(monkeypatch, tmp_path):
+    """#295's paired ask: an operator must be able to confirm the broker is being used rather than a
+    stale file. The two are otherwise indistinguishable from the outside."""
+    f = _write_env(tmp_path / "env", "EXABEAM_API_SECRET=filesecret")
+    _env_only(monkeypatch, EXABEAM_MCP_URL="https://api.us-west.exabeam.cloud/mcp",
+              EXABEAM_API_KEY="supersecretkey")
+    B.load_env(f)
+    summary = B.credential_origin_summary(f)
+    assert "environment: EXABEAM_MCP_URL, EXABEAM_API_KEY" in summary
+    assert "file: EXABEAM_API_SECRET" in summary
+    assert "supersecretkey" not in summary and "filesecret" not in summary
+
+
+def test_the_summary_says_so_when_nothing_was_found(monkeypatch, tmp_path):
+    _env_only(monkeypatch)
+    missing = str(tmp_path / "nope")
+    B.load_env(missing)
+    assert "no credentials found" in B.credential_origin_summary(missing)
