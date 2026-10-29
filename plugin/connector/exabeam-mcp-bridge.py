@@ -38,11 +38,12 @@ from urllib.parse import urlparse
 
 import certifi
 import httpx
+import tenants
 from mcp import ClientSession, McpError
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent
+from mcp.types import TextContent, Tool
 
 _VERIFY = ssl.create_default_context(cafile=certifi.where())
 _token = {"value": None, "exp": 0.0}
@@ -205,7 +206,45 @@ def credential_origin_summary(path="~/.exabeam-mcp.env") -> str:
 
 
 CFG = load_env()
-URL = CFG.get("EXABEAM_MCP_URL", "")
+
+# ---- which tenant (#TBD: multi-tenant) -------------------------------------------------------------
+# URL/KEY/SECRET stay module globals because every consumer reads them by name at call time, so one
+# rebind moves the whole bridge. They are no longer bound to one plaintext file:
+# tenants.resolve_tenant reads the non-secret registry (~/.raffkin/config.json) for which tenants
+# exist and where each one's gateway is, and takes the credential from the OS credential store.
+# With no registry it returns exactly what load_env() produced, so an operator who has not opted
+# in sees no change at all.
+# Resolution can fail at IMPORT (a locked or corrupt credential store, a malformed registry). Raising
+# here gives a raw traceback instead of main()'s one-line reason (#297 review, 6), so the error is
+# carried and reported by main() alongside everything else it checks.
+TENANT_ERROR = None
+try:
+    TENANT = tenants.resolve_tenant(load_env=load_env)
+except tenants.TenantError as _e:
+    TENANT_ERROR = str(_e)
+    TENANT = tenants.Tenant(name="unresolved", api_server="", key="", secret="")
+URL = TENANT.api_server
+
+
+def credential_source() -> str:
+    """Where this process's credentials came from, for the startup line (#297 review, 6).
+
+    A registry with no `default_tenant` and no RAFFKIN_TENANT silently falls back to the old
+    single-tenant file under the name "default". That is reasonable behavior and a confusing
+    silence: an operator who just wrote a registry has no way to tell it was ignored. Say it.
+    """
+    if TENANT_ERROR:
+        return "unresolved"
+    if TENANT.name == "default":
+        try:
+            has_registry = bool(tenants.load_registry().get("tenants"))
+        except tenants.TenantError:
+            has_registry = False
+        if has_registry:
+            return (f"~/.exabeam-mcp.env (a registry exists at {tenants.registry_path()} but neither "
+                    "default_tenant nor RAFFKIN_TENANT names a tenant in it, so it was not used)")
+        return "~/.exabeam-mcp.env"
+    return f"tenant {TENANT.name!r} from {tenants.registry_path()} + the OS credential store"
 
 
 def _is_loopback(host):
@@ -238,8 +277,53 @@ def url_transport_problem(url):
                 f"(the value must start with https://)")
     return (f"EXABEAM_MCP_URL={url!r} uses {scheme}://, which would send the client id, secret and bearer token "
             f"in the clear; only https:// is accepted (plain http is allowed to a loopback host only)")
-KEY = CFG.get("EXABEAM_API_KEY", "")
-SECRET = CFG.get("EXABEAM_API_SECRET", "")
+
+
+#: Hosts a tenant credential may be sent to. `api_server` decides the DESTINATION of the client id and
+#: secret, so it is a security control, not configuration. Default: the vendor's own domain, plus
+#: loopback for a local mock. A custom deployment opts out explicitly.
+API_HOST_SUFFIX = ".exabeam.cloud"
+ALLOW_ANY_API_HOST_ENV = "RAFFKIN_ALLOW_ANY_API_HOST"
+
+
+def allow_any_api_host():
+    """True when the operator has explicitly opted out of the host allowlist."""
+    return (os.environ.get(ALLOW_ANY_API_HOST_ENV) or "").strip().lower() in ("1", "true", "yes")
+
+
+def url_host_problem(url):
+    """Why this host must not receive the credentials, or None if it may (review of #297, blocking 2).
+
+    `url_transport_problem` answers *how* the credentials travel; this answers *where to*. They are
+    separate checks because only this one has an opt-out: https to an attacker's host is still https.
+
+    The exposure it closes: `switch()` re-reads the registry on every call, so before this check
+    anything able to edit that file could redirect a tenant's client id and secret to any https host
+    while the approval prompt said only "switch to <name>". The operator approved a NAME and got a
+    DESTINATION they never saw, with no restart required -- which is what made it worse than the
+    pre-existing env-file equivalent.
+
+    Pure and deterministic. Loopback is allowed on the same reasoning as the transport carve-out:
+    nothing leaves the machine.
+    """
+    if allow_any_api_host():
+        return None
+    try:
+        host = (urlparse((url or "").strip()).hostname or "").lower().rstrip(".")
+    except ValueError:
+        return None          # unparseable is url_transport_problem's error to report, not this one's
+    if not host:
+        return None          # ditto: a missing host is a transport problem, reported there
+    if _is_loopback(host) or host.endswith(API_HOST_SUFFIX):
+        return None
+    return (f"api_server host {host!r} is not under {API_HOST_SUFFIX} and is not loopback, so sending "
+            f"this tenant's client id and secret there is refused. If this is a deliberate custom "
+            f"deployment, set {ALLOW_ANY_API_HOST_ENV}=1 for the bridge process; otherwise check "
+            f"whether the registry has been edited.")
+
+
+KEY = TENANT.key
+SECRET = TENANT.secret
 
 
 def _token_fresh():
@@ -368,6 +452,19 @@ class _UpstreamToolError(Exception):
     error (audited as tool_error, stage upstream_tool) instead of being flattened into a success."""
 
 
+class _TenantSwitched(Exception):
+    """A call was still in flight when ``switch()`` rebound the bridge, so its retry would have gone to a
+    different tenant than the one the question was asked of.
+
+    ``session()`` holds the lock only while it hands out a session; the call itself then runs unlocked, so
+    ``switch()`` can take the lock, drop that session and rebind underneath it. The call fails
+    ``session_lost``, and before this class ``call()`` retried it on the NEW session -- returning tenant B's
+    data as the answer to a tenant-A question. Refusing is the only safe answer: the caller asked about a
+    tenant this process is no longer bound to, and silently answering about another one is worse than an
+    error. Re-ask after the switch if you still want it.
+    """
+
+
 class _Upstream:
     def __init__(self):
         self._session = None
@@ -380,6 +477,7 @@ class _Upstream:
         self._last_summary = ""
         self._last_failed_owner = None
         self._screen = None
+        self._generation = 0          # bumped by switch(): a call may never be retried across a rebind
 
     async def _runner(self, tok, ready, close, err):
         # The session's context managers are entered and exited by THIS task only (anyio requires it).
@@ -437,6 +535,48 @@ class _Upstream:
             except BaseException:  # noqa: BLE001, S110 — teardown is best effort; the session is gone either way
                 pass
         self._task = self._close = self._session = None
+
+    async def switch(self, name):
+        """Point the bridge at another tenant. Returns the new tenant's name.
+
+        Everything that identifies a tenant moves together, under the session lock. That lock does NOT
+        mean no call is in flight: ``session()`` holds it only while it hands a session out, and the call
+        then runs unlocked, so a read can still be running against the old tenant while this rebinds. What
+        protects that read is ``_generation``, bumped below -- ``call()`` records it on entry and refuses to
+        retry across a bump, because the retry would land on the new tenant (``_TenantSwitched``). Under the
+        lock, together:
+
+        * the upstream session is dropped (its DELETE sent) -- a session is authenticated to ONE
+          tenant and can never be reused across a switch;
+        * the cached token is discarded rather than kept per tenant. Keeping tenant A's token warm
+          while working tenant B would mean two tenants' credentials live in the process at once,
+          which is exactly what this change exists to avoid. The cost is one token mint on switch
+          back, roughly 200 ms, against a 4-hour token;
+        * ``ALLOWED_LINK_HOSTS`` is recomputed. This one is a security control, not configuration:
+          it decides which hosts stay clickable in what Raffkin writes back. Leaving it stale would
+          neutralize tenant B's output against tenant A's allowlist. In practice
+          ``tenant_hosts_from_url`` yields exactly one host with no wildcard, so a switch between
+          two tenants in the SAME region does not move it -- only a cross-region switch does. The
+          window is narrow, and it is closed here rather than left to be found.
+
+        The old tenant's key and secret are dropped with the rebind; nothing caches them.
+        """
+        global TENANT, URL, KEY, SECRET, ALLOWED_LINK_HOSTS
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:
+            new = tenants.resolve_tenant(name, load_env=load_env)  # raises before any teardown
+            problem = url_transport_problem(new.api_server) or url_host_problem(new.api_server)
+            if problem:
+                raise tenants.TenantError(f"tenant {new.name!r}: {problem}")
+            await self.drop()
+            _token["value"], _token["exp"] = None, 0.0
+            self._tools = None                          # the tool list is per-session
+            TENANT, URL, KEY, SECRET = new, new.api_server, new.key, new.secret
+            telemetry.set_tenant(new.name)   # every later record names the tenant it reached (#297 review, 4)
+            ALLOWED_LINK_HOSTS = tenant_hosts_from_url(URL)
+            self._generation += 1       # see call(): the bump is what stops a retry crossing tenants
+            return new.name
 
     async def session(self):
         if self._lock is None:
@@ -506,12 +646,30 @@ class _Upstream:
                 sys.stderr.write(f"bridge: {_BREAKER_TRIP} consecutive transport failures — "
                                  f"holding off the remote for {_BREAKER_HOLD:.0f}s\n")
 
+    def _refuse_across_switch(self, gen, what, e):
+        """Raise instead of retrying when switch() rebound the bridge while this call was in flight.
+
+        Called only where a retry WOULD have happened, so a failure that was never going to be retried
+        keeps its own error and its own flags -- `raffkin_sent` among them, which decides upstream whether
+        a write's outcome is unknown (see call_tool). The flag is carried across when it was set.
+        """
+        if self._generation == gen:
+            return
+        err = _TenantSwitched(
+            f"{what} was in flight when the bridge switched tenant, so it cannot be retried: the retry "
+            f"would run against the tenant now bound, not the one this call asked about. Re-ask it if you "
+            f"still want it.")
+        if getattr(e, "raffkin_sent", False):
+            err.raffkin_sent = True
+        raise err from e
+
     async def call(self, op, what, *, retry):
         """Run op(session). Opening/re-opening the session may be retried for any call (the call has not
         been sent yet). Once the call itself has been sent it is retried ONLY when `retry` is true (reads),
         never for a write, whatever the error (#155)."""
         self._breaker_check(what)
         attempt = 0
+        gen = self._generation       # the tenant this call was asked of; a retry may not cross it
         while True:
             try:
                 s, owner = await self.session()
@@ -522,6 +680,7 @@ class _Upstream:
                     _token["exp"] = 0.0
                 self._note(False)
                 if leaf.retryable and attempt < len(_READ_RETRY_DELAYS):
+                    self._refuse_across_switch(gen, what, e)
                     await asyncio.sleep(_READ_RETRY_DELAYS[attempt] + random.uniform(0, 0.3))  # noqa: S311
                     attempt += 1
                     continue
@@ -541,6 +700,7 @@ class _Upstream:
                     await self._drop_if(owner)
                 self._note(False, owner)
                 if retry and (leaf.retryable or leaf.session_lost) and attempt < len(_READ_RETRY_DELAYS):
+                    self._refuse_across_switch(gen, what, e)
                     await asyncio.sleep(_READ_RETRY_DELAYS[attempt] + random.uniform(0, 0.3))  # noqa: S311
                     attempt += 1
                     continue
@@ -1139,11 +1299,38 @@ def _audit_fields(obj, into=None):
     return into
 
 
+# ---- local tenant tools ----------------------------------------------------------------------------
+# Two tools the bridge answers itself rather than forwarding. They exist ONLY when a registry is
+# configured: a single-tenant operator should not be shown a switch for a thing they do not have.
+# Both carry the exabeam_ prefix so the shipped PreToolUse gate matches them like any other tool --
+# switching is classified `ask`, because it changes which tenant every subsequent call reaches.
+_TENANT_TOOLS = [
+    Tool(name="exabeam_list_tenants",
+         description="List the Exabeam tenants this bridge is configured for, and which is active. "
+                     "Read-only; never returns a credential.",
+         inputSchema={"type": "object", "properties": {}}),
+    Tool(name="exabeam_switch_tenant",
+         description="Point the bridge at a different Exabeam tenant for the rest of the session. "
+                     "Drops the current session and token; every later call goes to the new tenant.",
+         inputSchema={"type": "object", "required": ["tenant"],
+                      "properties": {"tenant": {"type": "string",
+                                                "description": "Tenant name from exabeam_list_tenants."}}}),
+]
+
+
+def _multi_tenant():
+    """True when the operator has a registry. Single-tenant installs never see the tenant tools."""
+    try:
+        return bool(tenants.load_registry().get("tenants"))
+    except tenants.TenantError:
+        return False
+
+
 @server.list_tools()
 async def list_tools():
     t0 = time.perf_counter()
     try:
-        return await UPSTREAM.tools()
+        return (await UPSTREAM.tools()) + (_TENANT_TOOLS if _multi_tenant() else [])
     except Exception as e:
         leaf = _Leaf(e)
         if telemetry.enabled():
@@ -1206,9 +1393,62 @@ def _safe_text(text, cap=300):
         return str(text)[:cap]
 
 
+async def _tenant_tool(name, arguments):
+    """Answer the two local tenant tools, or return None to let the call go upstream.
+
+    Handled here, before the upstream path, because there is no upstream tool to forward to. The
+    PreToolUse gate has already run by this point -- it fires on the tool NAME before the call
+    reaches the bridge -- so a switch the analyst declined never arrives.
+
+    Neither tool can return a credential: one lists names, the other returns the name it switched
+    to. The registry they read holds no secrets by construction.
+    """
+    if name == "exabeam_list_tenants":
+        known = tenants.list_tenants()
+        return [TextContent(type="text", text=json.dumps(
+            {"active": TENANT.name, "tenants": known,
+             "note": "Names only. Credentials live in the operator's own secret store."}))]
+    if name == "exabeam_switch_tenant":
+        wanted = (arguments or {}).get("tenant", "")
+        try:
+            now = await UPSTREAM.switch(wanted)
+        except tenants.TenantError as e:
+            # The operator's own configuration is wrong, not the platform: say what to fix, and do
+            # not dress it as an upstream failure.
+            raise ValueError(f"{BRIDGE_REFUSAL_MARK} exabeam_switch_tenant: {e}") from e
+        # Name the DESTINATION, not just the tenant (#297 review, blocking 2). The approval prompt
+        # can only say "switch to <name>"; the host is what the credentials are actually sent to, so
+        # the person reading the result is the last place a redirected registry can be noticed.
+        host = (urlparse(URL).hostname or "") or "(unknown)"
+        sys.stderr.write(f"bridge: active tenant -> {now} ({host})\n")
+        return [TextContent(type="text", text=json.dumps(
+            {"active": now, "api_host": host,
+             "note": f"Session and token dropped; later calls go to this tenant at {host}."}))]
+    return None
+
+
 @server.call_tool()
 async def call_tool(name, arguments):
     t0 = time.perf_counter()
+    if name in ("exabeam_list_tenants", "exabeam_switch_tenant"):
+        # Recorded like any other call (#297 review, 4). These returned before `tool_start`, so a
+        # switch -- the one call that changes which tenant everything after it reaches -- was the
+        # single thing the trail did not show. tool_start FIRST, so a switch that raises still
+        # leaves the attempt in the log.
+        if telemetry.enabled():
+            telemetry.tool_start(name)
+        try:
+            local = await _tenant_tool(name, arguments)
+        except Exception as e:
+            if telemetry.enabled():
+                telemetry.tool_error(name, (time.perf_counter() - t0) * 1000, e, stage="tenant")
+            raise
+        if local is not None:
+            if telemetry.enabled():
+                # The switch is recorded under the tenant it moved TO: set_tenant has already run
+                # inside switch(), so this record and every one after it name the new tenant.
+                telemetry.tool_end(name, (time.perf_counter() - t0) * 1000)
+            return local
     log_on = telemetry.enabled()                                     # decide once; when off, do zero extra work
     if log_on:
         telemetry.tool_start(name)
@@ -1396,16 +1636,33 @@ async def _serve():
 
 
 def main():
-    if not (URL and KEY and SECRET):
+    # A tenant that could not be resolved at import (#297 review, 6): a locked or corrupt credential
+    # store, or a malformed registry. Reported here as one line, not as a traceback from import time.
+    if TENANT_ERROR:
         sys.stderr.write(
-            "exabeam-mcp-bridge: missing credentials. Create ~/.exabeam-mcp.env with "
-            "EXABEAM_MCP_URL, EXABEAM_API_KEY, EXABEAM_API_SECRET "
-            "(see docs/installation.md, section Credentials).\n"
+            f"exabeam-mcp-bridge: refusing to start -- {TENANT_ERROR}\n"
+            f"  Checked: {tenants.registry_path()} and the OS credential store.\n"
+            "  If the store is locked, unlock it and restart the host agent. "
+            "See docs/installation.md, section Credentials.\n"
         )
         sys.exit(1)
-    problem = url_transport_problem(URL)
+    if not (URL and KEY and SECRET):
+        sys.stderr.write(
+            "exabeam-mcp-bridge: missing credentials. Either create ~/.exabeam-mcp.env with "
+            "EXABEAM_MCP_URL, EXABEAM_API_KEY, EXABEAM_API_SECRET (single tenant), or add a tenant "
+            f"to {tenants.registry_path()} with an api_server, and put its credentials in the "
+            "OS store with 'keyring set raffkin/<tenant> client_id' (and client_secret). "
+            "See docs/installation.md, section Credentials.\n"
+        )
+        sys.exit(1)
+    # Scheme first, then destination (#297 blocking 2). Startup is checked as well as switch(): a
+    # credential redirect that merely needs a restart is still a credential redirect, and the
+    # RAFFKIN_ALLOW_ANY_API_HOST opt-out is what a genuine custom deployment uses.
+    problem = url_transport_problem(URL) or url_host_problem(URL)
     if problem:                                   # #174: never post credentials over a scheme we do not trust
-        sys.stderr.write(f"exabeam-mcp-bridge: refusing to start -- {problem}. Fix ~/.exabeam-mcp.env and "
+        where = (f"tenant {TENANT.name!r} in {tenants.registry_path()}"
+                 if TENANT.name != "default" else "~/.exabeam-mcp.env")
+        sys.stderr.write(f"exabeam-mcp-bridge: refusing to start -- {problem}. Fix {where} and "
                          "restart the host agent (preflight.sh checks this too).\n")
         sys.exit(1)
     # Announce loudly. A dry run mistaken for a live one wastes an exercise; a live run mistaken for a
@@ -1413,14 +1670,20 @@ def main():
     if DRY_RUN:
         sys.stderr.write("bridge: DRY RUN is ON (RAFFKIN_DRY_RUN) - every write is refused at the "
                          "bridge; nothing reaches Exabeam\n")
-    # Which source supplied each credential setting (#295). An operator who has wired a broker to
-    # the environment needs to confirm it is being used and not a stale file; the two are otherwise
-    # indistinguishable, because both produce a working bridge.
-    sys.stderr.write(f"bridge: credentials -- {credential_origin_summary()}\n")
+    # Which credentials this process is using, and where they came from (#297 review, 6; #295).
+    # Two different questions, both worth answering: credential_source() names the TENANT and whether
+    # the registry was used -- a registry that exists but was not used is the silence worth breaking.
+    # credential_origin_summary() names the SOURCE of each setting, which only has meaning on the
+    # single-tenant fallback path, because a resolved tenant takes its pair from its own store entry.
+    sys.stderr.write(f"bridge: credentials from {credential_source()}; api host "
+                     f"{urlparse(URL).hostname or '(unknown)'}\n")
+    if TENANT.name == "default":
+        sys.stderr.write(f"bridge: credentials -- {credential_origin_summary()}\n")
     if CREDENTIAL_NOTE:
-        # A store that could not be read is NOT fatal -- the bridge falls through to the file -- but
-        # it must never be silent, or an operator keeps using older credentials and cannot tell.
+        # A store that could not be read is NOT fatal -- the bridge falls through -- but it must
+        # never be silent, or an operator keeps using older credentials and cannot tell.
         sys.stderr.write(f"bridge: {CREDENTIAL_NOTE}\n")
+    telemetry.set_tenant(TENANT.name)    # before the first record, so none is unattributed (#297 review, 4)
     asyncio.run(_check() if "--check" in sys.argv else _serve())
 
 

@@ -52,6 +52,17 @@ always the cause.
 - `exabeam_get_case_details` — full detail for a **case** ID (use when working a case)
 - `exabeam_get_case_notes` — existing notes on a case (read before you add)
 
+## Tenants — which Exabeam you are working
+These two appear only when the operator has configured more than one tenant, and neither can return a
+credential: the registry they read holds none.
+- `exabeam_list_tenants` — the configured tenant names and which is active. Answered by the bridge,
+  not the platform *(allow tier — names only)*.
+- `exabeam_switch_tenant` — point the rest of the session at another tenant. Answered by the bridge,
+  not the platform *(**ask** — it changes which tenant every later call reaches, so the analyst
+  confirms it like any other consequential action)*.
+  The upstream session and the cached token are dropped on switch, so no credential or session outlives
+  the tenant it belonged to.
+
 ## Evidence — gather & correlate (all read-only, run freely)
 - `exabeam_parser_list`, `exabeam_get_parser_details` — parser inventory and detail reads (allow tier).
 - `exabeam_search_events` — **raw log/event search** from the SIEM by user, host, IP, or time.

@@ -53,6 +53,14 @@ class _TextContent:                                     # the bridge builds one 
 _stubs["mcp.types"].TextContent = _TextContent
 
 
+class _Tool:                                            # the bridge declares the local tenant tools with
+    def __init__(self, **kw): self.__dict__.update(kw)  # these; keep them constructible and comparable
+    def __repr__(self): return f"_Tool({self.__dict__.get('name')})"
+
+
+_stubs["mcp.types"].Tool = _Tool
+
+
 class _Server:                                          # identity decorators for @server.list_tools/call_tool
     def __init__(self, *a, **k): pass
     def list_tools(self): return lambda f: f
@@ -587,6 +595,78 @@ def test_main_refuses_to_start_on_a_cleartext_url_before_posting_anything(monkey
     assert e.value.code == 1 and not posted
     err = capsys.readouterr().err
     assert "refusing to start" in err and "in the clear" in err and "traceback" not in err.lower()
+
+
+# ---- #297 review, blocking 2: api_server decides WHERE a credential goes --------------------------------
+#
+# `url_transport_problem` answers how the credentials travel; these answer where to. The exposure:
+# `switch()` re-reads the registry on every call, so anything able to edit that file could redirect a
+# tenant's client id and secret to any https host while the approval prompt said only "switch to <name>".
+
+@pytest.mark.parametrize("url", [
+    "https://api.us-west.exabeam.cloud/mcp",
+    "HTTPS://API.EU.EXABEAM.CLOUD/mcp",              # case-insensitive, like the transport check
+    "  https://api.sg.exabeam.cloud/mcp  ",
+    "https://api.us-west.exabeam.cloud./mcp",        # a trailing root dot is the same host
+    "http://127.0.0.1:8765/mcp",                     # loopback: nothing leaves the machine
+    "http://localhost:8765/mcp",
+    "http://[::1]:8765/mcp",
+])
+def test_api_host_check_accepts_the_vendor_domain_and_loopback(url):
+    assert B.url_host_problem(url) is None
+
+
+@pytest.mark.parametrize("url", [
+    "https://evil.example/mcp",
+    "https://api.us-west.exabeam.cloud.evil.example/mcp",   # suffix-looking prefix is NOT the vendor domain
+    "https://exabeam.cloud.evil.example/mcp",
+    "https://mcp.internal.example:8443/mcp",                # a private deployment must opt in explicitly
+    "https://127.0.0.1.evil.example/mcp",                   # merely starting like loopback is not loopback
+])
+def test_api_host_check_refuses_any_other_destination(url):
+    problem = B.url_host_problem(url)
+    assert problem, f"{url} should have been refused"
+    assert "client id and secret" in problem                 # says what is at stake
+    assert B.ALLOW_ANY_API_HOST_ENV in problem               # and names the opt-out
+
+
+def test_a_malformed_url_is_left_to_the_transport_check():
+    """Two checks, one message. A missing or unparseable host is the transport check's error to
+    report, so the host check stays silent rather than emitting a second, confusing reason."""
+    for url in ("", "api.us-west.exabeam.cloud/mcp", "https://", '"https://api.x.exabeam.cloud/mcp"'):
+        assert B.url_host_problem(url) is None
+        assert B.url_transport_problem(url)                  # the other one does report it
+
+
+def test_the_operator_can_opt_out_for_a_custom_deployment(monkeypatch):
+    bad = "https://mcp.internal.example:8443/mcp"
+    assert B.url_host_problem(bad)                           # refused by default
+    monkeypatch.setenv(B.ALLOW_ANY_API_HOST_ENV, "1")
+    assert B.url_host_problem(bad) is None                   # and allowed once opted in
+
+
+@pytest.mark.parametrize("value, opted_out", [
+    ("1", True), ("true", True), ("TRUE", True), ("yes", True), (" 1 ", True),
+    ("0", False), ("", False), ("no", False), ("maybe", False),
+])
+def test_the_opt_out_only_fires_on_an_explicit_affirmative(monkeypatch, value, opted_out):
+    monkeypatch.setenv(B.ALLOW_ANY_API_HOST_ENV, value)
+    assert B.allow_any_api_host() is opted_out
+
+
+def test_main_refuses_to_start_when_the_host_is_not_allowed(monkeypatch, capsys):
+    """Startup is checked as well as switch(). A redirect that merely needs a restart is still a
+    redirect, and this is the path a tampered ~/.exabeam-mcp.env takes."""
+    monkeypatch.delenv(B.ALLOW_ANY_API_HOST_ENV, raising=False)
+    monkeypatch.setattr(B, "URL", "https://evil.example/mcp")
+    monkeypatch.setattr(B, "KEY", "k"); monkeypatch.setattr(B, "SECRET", "s")
+    posted = []
+    monkeypatch.setattr(B.asyncio, "run", lambda coro: posted.append(coro))
+    with pytest.raises(SystemExit) as e:
+        B.main()
+    assert e.value.code == 1 and not posted
+    err = capsys.readouterr().err
+    assert "refusing to start" in err and "evil.example" in err
 
 
 def test_error_facts_accepts_only_the_platform_code_shape_and_never_prose():

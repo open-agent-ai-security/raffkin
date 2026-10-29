@@ -307,6 +307,39 @@ def spend_write_budget(event, name: str) -> tuple[bool, str]:
         return False, f"Raffkin gate: {name} is an escalation write and the session count could not be read ({type(e).__name__}); asking rather than allowing."
 
 
+def exhaust_write_budget(event) -> tuple[bool, str]:
+    """Spend the whole budget, so the next escalation write in this session asks (#297 review, 3).
+
+    Called when `exabeam_switch_tenant` COMPLETES. The budget exists because one investigation opens
+    at most one case and writes its note -- but that reasoning is per tenant. After a switch the next
+    `create_case_notes` would write tenant A's findings into tenant B under a count earned in A, with
+    no prompt. Resetting to spent makes the first write after a switch ask, which is the moment a
+    person can notice the content does not belong to the tenant it is going to.
+
+    Both counters go to their caps, not just `writes`: `cases` would otherwise let one more case
+    through on the same stale reasoning.
+
+    Returns (done, reason). This runs on PostToolUse, which is a record and never a verdict, so a
+    failure here cannot block anything -- it is reported so the gap is visible in the log rather
+    than silent.
+    """
+    sid = str(event.get("session_id") or "").strip()
+    if not _SESSION_ID.match(sid):
+        return False, "no usable session id, so the write budget could not be spent after a tenant switch"
+    try:
+        d = _state_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / f"{sid}.json", "a+", encoding="utf-8") as fh:
+            if fcntl:
+                fcntl.flock(fh, fcntl.LOCK_EX)
+            fh.seek(0)
+            state = {"writes": WRITE_BUDGET, "cases": CASE_BUDGET, "updated": int(time.time())}
+            fh.truncate(); fh.write(json.dumps(state)); fh.flush()
+        return True, ""
+    except Exception as e:  # noqa: BLE001 — a record, not a decision: report, never raise
+        return False, f"the write budget could not be spent after a tenant switch ({type(e).__name__})"
+
+
 def _prune(d: Path) -> None:
     """Best-effort: drop count files for sessions idle past the TTL. Never raises."""
     try:
@@ -373,6 +406,20 @@ def _post_call(event, tool: str, target: dict, ctx=None) -> int:
               "tool": tool, "decision": outcome, "reason": reason, **ctx}
     if target:
         record["target"] = target
+    # A completed tenant switch spends the escalation-write budget (#297 review, 3), so the first
+    # write after it asks. Done here rather than on the Pre side because only a COMPLETED switch
+    # actually moved the bridge -- an ask the analyst declined never reached the tenant.
+    #
+    # Keyed on the TOOL alone, deliberately, not on `outcome`. Outcome answers "what can the gate
+    # vouch for about consent"; this answers "did the bridge change tenant". Different questions,
+    # and an earlier cut conflated them: it checked for `approved`/`ran_unasked` and so skipped
+    # `ran_despite_deny` and `ran_consent_unconfirmed` -- the latter being every Antigravity
+    # session, where the host reports no permission mode. Those are the cases where the next write
+    # most needs a prompt, not the least. Reaching here already means ask or deny tier; the allow
+    # tier returned above.
+    if bare(tool) == "exabeam_switch_tenant":
+        spent, why = exhaust_write_budget(event)
+        record["write_budget"] = "spent" if spent else f"not_spent: {why}"
     log_decision(record)
     return 0
 

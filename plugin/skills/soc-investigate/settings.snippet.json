@@ -21,15 +21,18 @@
       "mcp__plugin_raffkin_exabeam__exabeam_create_case",
       "mcp__plugin_raffkin_exabeam__exabeam_create_case_notes",
       "mcp__plugin_raffkin_exabeam__exabeam_parser_list",
-      "mcp__plugin_raffkin_exabeam__exabeam_get_parser_details"
+      "mcp__plugin_raffkin_exabeam__exabeam_get_parser_details",
+      "mcp__plugin_raffkin_exabeam__exabeam_list_tenants"
     ],
     "ask": [
       "mcp__plugin_raffkin_exabeam__exabeam_update_alert",
       "mcp__plugin_raffkin_exabeam__exabeam_update_case",
       "mcp__plugin_raffkin_exabeam__exabeam_send_email",
+      "mcp__plugin_raffkin_exabeam__exabeam_switch_tenant",
       "mcp__exabeam__exabeam_update_alert",
       "mcp__exabeam__exabeam_update_case",
-      "mcp__exabeam__exabeam_send_email"
+      "mcp__exabeam__exabeam_send_email",
+      "mcp__exabeam__exabeam_switch_tenant"
     ],
     "deny": [
       "mcp__plugin_raffkin_exabeam__exabeam_isolate_host",

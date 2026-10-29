@@ -145,6 +145,9 @@
       "exabeam_get_parser_details": {
         "approval_mode": "auto"
       },
+      "exabeam_list_tenants": {
+        "approval_mode": "auto"
+      },
       "exabeam_update_alert": {
         "approval_mode": "approve"
       },
@@ -152,6 +155,9 @@
         "approval_mode": "approve"
       },
       "exabeam_send_email": {
+        "approval_mode": "approve"
+      },
+      "exabeam_switch_tenant": {
         "approval_mode": "approve"
       }
     }

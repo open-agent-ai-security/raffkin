@@ -416,6 +416,75 @@ verification stands for your release.
 /distribution-only -->
 
 
+## More than one tenant
+
+The setup above holds one tenant. If you work several — an MSSP book of clients, a partner's
+environments, or demo alongside production — use a **registry**, and keep each tenant's credentials
+in your operating system's credential store.
+
+**The registry** — `~/.<plugin-name>/config.json`, the same directory the gate and the audit
+trail already use. Nothing in it is a credential:
+
+```json
+{
+  "default_tenant": "acme",
+  "tenants": {
+    "acme":   { "api_server": "https://api.us-west.exabeam.cloud/mcp",    "region": "US West" },
+    "globex": { "api_server": "https://api.eu-central.exabeam.cloud/mcp", "region": "EU Central" }
+  }
+}
+```
+
+**The credentials** go in the OS store, two entries per tenant — the same store as the
+single-tenant setup above, under a per-tenant service name:
+
+```bash
+uvx --from keyring==25.7.0 keyring set <plugin-name>/acme client_id
+uvx --from keyring==25.7.0 keyring set <plugin-name>/acme client_secret
+```
+
+`preflight.sh` prints these with `<plugin-name>` filled in for your install. The `uvx` note and the
+macOS first-run note from the single-tenant section apply here unchanged.
+
+**Switching.** With a registry configured, two extra tools appear:
+
+> list the tenants
+
+> switch to globex
+
+`exabeam_switch_tenant` is **gated `ask`** — it changes which tenant every later call reaches, so
+you confirm it like any other consequential action. The result names the **host** it switched to,
+not just the tenant, because the host is where the credentials are actually sent.
+
+On switch the upstream session and the cached token are both dropped: a session belongs to one
+tenant and is never reused across a switch, and two tenants' credentials never live in the process
+at the same time. Switching back re-mints a token, about a fifth of a second against a four-hour
+token.
+
+A read already in flight when you switch is **not** retried against the new tenant — it fails with
+a message telling you to re-ask it. Retrying it would have answered a question about one tenant
+with another tenant's data.
+
+The first case note or new case **after** a switch asks for confirmation, even though those
+normally run unprompted. One investigation opens one case and writes its note; that reasoning is
+per tenant, so the prompt is the moment to notice if the content does not belong to the tenant it
+is going to.
+
+A single environment variable selects the active tenant for a scripted run; `preflight.sh` names it
+for your install. It names a tenant; it never carries a credential.
+
+**Nothing changes if you have one tenant.** With no registry, Raffkin reads the environment, the OS
+store and `~/.exabeam-mcp.env` exactly as described above, and does not offer the tenant tools.
+
+### Where a tenant's credentials may be sent
+
+`api_server` decides where a tenant's client id and secret are posted, so it is a security control
+rather than configuration. Only `*.exabeam.cloud` and loopback are accepted; anything else is
+refused — a switch names only a tenant, so without this check an edit to the registry could redirect
+a credential to a host nobody approved. A genuine custom deployment opts out with one environment
+variable, named in the refusal message itself when you hit it.
+
+
 ## Updating
 
 ```bash
