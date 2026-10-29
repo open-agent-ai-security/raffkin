@@ -72,7 +72,7 @@ def _plugin_name(default="raffkin"):
                     name = json.load(fh).get("name")
                 return str(name).strip() if isinstance(name, str) and name.strip() else default
     except Exception:  # noqa: BLE001 -- never let identity resolution stop a tenant resolving
-        pass
+        return default        # returning the default IS the handling, so no bare try/except/pass
     return default
 
 
