@@ -426,6 +426,35 @@ def test_escalation_writes_run_on_a_budget_then_ask(tmp_path):
     assert _esc("create_case_notes", "s1", d)["permissionDecision"] == "ask"
 
 
+def test_a_completed_tenant_switch_spends_the_write_budget(tmp_path):
+    """#297 review, 3: after a switch, the first escalation write asks.
+
+    The budget's reasoning -- one investigation opens one case and writes its note -- is per tenant.
+    Without this, `create_case_notes` would carry tenant A's findings into tenant B with no prompt,
+    on a count earned in A. The prompt is the moment a person can notice the content does not belong
+    to the tenant it is going to.
+    """
+    d = tmp_path / "state"
+    assert _esc("create_case", "t1", d)["permissionDecision"] == "allow"   # 1 of 2 spent in tenant A
+
+    ev = {"tool_name": "mcp__plugin_raffkin_exabeam__exabeam_switch_tenant", "session_id": "t1",
+          "hook_event_name": "PostToolUse", "tool_input": {"tenant": "acme"}}
+    run_hook(None, stdin=json.dumps(ev), env={"RAFFKIN_GATE_STATE_DIR": str(d)})
+
+    after = _esc("create_case_notes", "t1", d)
+    assert after["permissionDecision"] == "ask", "the first write after a switch must ask"
+
+    # and a different session is untouched -- the budget is per session, not global
+    assert _esc("create_case", "t2", d)["permissionDecision"] == "allow"
+
+
+def test_exhausting_the_budget_without_a_session_id_is_reported_not_silent():
+    """PostToolUse is a record and never a verdict, so a failure here cannot block anything. It must
+    therefore be visible: the reason is returned rather than swallowed."""
+    done, why = gate.exhaust_write_budget({"session_id": "has spaces: not valid"})
+    assert done is False and "session id" in why
+
+
 def test_the_write_budget_never_fails_open(tmp_path):
     """No session id, a malformed one, an unwritable state directory, or a corrupt count file: every one
     of them asks rather than allowing the escalation write."""

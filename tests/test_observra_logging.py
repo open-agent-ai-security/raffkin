@@ -311,3 +311,37 @@ def test_the_explicit_off_switch_is_announced_on_stderr(monkeypatch, capsys, tmp
     if not mod.enabled():
         pytest.skip("observra not installed")
     assert "logging is OFF (RAFFKIN_OBSERVRA=off)" not in capsys.readouterr().err
+
+
+def test_every_record_names_the_tenant_it_reached(monkeypatch, tmp_path):
+    """#297 review, 4: with more than one tenant reachable in a session, a record that does not say
+    which tenant it reached cannot be read afterwards. The name is attached in `_emit`, the single
+    choke point, so it lands on every event type rather than on the ones somebody remembered."""
+    pytest.importorskip("observra")
+    out = tmp_path / "telemetry.jsonl"
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(out)})
+    assert t.enabled() is True
+
+    t.tool_start("exabeam_search_events")                 # before any switch: no tenant known yet
+    t.set_tenant("acme")
+    t.tool_start("exabeam_search_events")
+    t.tool_end("exabeam_search_events", 12.3)
+    t.set_tenant("globex")                                # a switch moves every later record
+    t.tool_end("exabeam_search_events", 4.5)
+    t._shutdown()
+
+    recs = [json.loads(line) for line in out.read_text().splitlines() if line.strip()]
+    seen = [r.get("data", {}).get("tenant") for r in recs]
+    # The four calls, in order; _shutdown() then adds its own record, which correctly carries the
+    # tenant in force at the end -- so assert the prefix rather than a tail of a guessed length.
+    assert seen[:4] == [None, "acme", "acme", "globex"], seen
+    assert seen[-1] == "globex", "the shutdown record belongs to the tenant in force when it ran"
+
+
+def test_naming_the_tenant_never_raises(monkeypatch, tmp_path):
+    """Telemetry is never load-bearing: a bad name must not take down the call it describes."""
+    t = _fresh(monkeypatch, {"RAFFKIN_OBSERVRA": "jsonl", "RAFFKIN_OBSERVRA_PATH": str(tmp_path / "t.jsonl")})
+    for bad in (None, "", 12345, object()):
+        t.set_tenant(bad)                                 # must not raise
+    t.set_tenant("x" * 500)
+    assert len(t._tenant["name"]) <= 80, "a long name is truncated, not stored whole"

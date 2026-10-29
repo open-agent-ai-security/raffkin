@@ -205,11 +205,27 @@ def enabled():
     return bool(_state["on"])
 
 
+#: The tenant this process is currently bound to. Set by the bridge at startup and again on every
+#: switch, so every record says which tenant the call actually reached (#297 review, 4). Kept here
+#: rather than imported from the bridge: telemetry must not depend on the module that calls it.
+_tenant = {"name": ""}
+
+
+def set_tenant(name) -> None:
+    """Name the tenant later records belong to. Never raises; telemetry is never load-bearing."""
+    try:
+        _tenant["name"] = str(name or "")[:80]
+    except Exception:  # noqa: BLE001, S110 -- a bad name must not stop the call it describes
+        pass
+
+
 def _emit(event_type, **data):
     if not enabled():
         return
     try:
         tool = data.pop("tool_name", None)
+        if _tenant["name"] and "tenant" not in data:
+            data["tenant"] = _tenant["name"]
         _state["emit"](event_type, tool_name=tool, framework=FRAMEWORK, agent_name=AGENT,
                        skill_name=SKILL, **data)
     except Exception as e:  # noqa: BLE001 -- a broken emit must never touch the investigation

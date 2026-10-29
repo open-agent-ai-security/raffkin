@@ -29,10 +29,12 @@ jobs:
         # observra + typing_extensions are installed so the audit-log tests (real emit, privacy
         # invariant, rotation bounds) actually RUN here instead of importorskip-ping — otherwise a
         # rotation/emit regression would be invisible in CI.
+        # keyring: the tenant registry's store, installed for the same reason -- the tests use an
+        # in-memory backend, but the module imports the library, so without it they do not collect.
         # mcp/httpx/certifi: the bridge's own transport is tested against a local mock proxy
         # (tests/test_bridge_transport.py) on the same client line the lockfile pins; without them those
         # tests skip, and a skipped transport suite is how the 2026-09-06 failure mode would go unnoticed.
-        run: uv run --with pytest --with jsonschema --with observra --with typing_extensions --with "mcp>=1,<2" --with "httpx>=0.27,<1" --with certifi pytest -q tests/
+        run: uv run --with pytest --with jsonschema --with keyring --with observra --with typing_extensions --with "mcp>=1,<2" --with "httpx>=0.27,<1" --with certifi pytest -q tests/
 
       - name: Eval regression harness (recorded runs, no creds)
         # Grades the committed golden run against its fixture — schema, deterministic
@@ -79,7 +81,7 @@ jobs:
         # scripts/mutation_check.py removes one rule at a time in a scratch copy and runs the
         # neutralizer-facing tests there; a mutation the suite survives fails this job. Add a mutation
         # whenever you add a guard to the control (CONTRIBUTING, "Making a change").
-        run: uv run --with pytest --with jsonschema --with observra --with typing_extensions --with "mcp>=1,<2" --with "httpx>=0.27,<1" --with certifi scripts/mutation_check.py
+        run: uv run --with pytest --with jsonschema --with keyring --with observra --with typing_extensions --with "mcp>=1,<2" --with "httpx>=0.27,<1" --with certifi scripts/mutation_check.py
 
   security:
     name: Security lint + dependency audit
