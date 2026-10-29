@@ -191,17 +191,30 @@ check_credentials() {
   # whatever the environment did not supply. Report WHICH source each one came from -- an operator
   # sourcing from Vault or a keychain helper otherwise cannot tell the broker is being used rather
   # than a stale file, because both produce a working bridge. Names only; never a value.
-  local env_keys="" missing="" k perms url host scheme
+  # Precedence, matching the connector exactly: environment -> OS credential store -> file.
+  local env_keys="" store_keys="" missing="" k entry perms url host scheme
   for k in EXABEAM_MCP_URL EXABEAM_API_KEY EXABEAM_API_SECRET; do
     if [ -n "${!k:-}" ]; then                      # bash indirect expansion; the shebang is bash
       env_keys="$env_keys $k"
+      continue
+    fi
+    # The store holds the secret pair only; the URL is an address, not a credential.
+    case "$k" in
+      EXABEAM_API_KEY)    entry="client_id" ;;
+      EXABEAM_API_SECRET) entry="client_secret" ;;
+      *)                  entry="" ;;
+    esac
+    if [ -n "$entry" ] && [ -n "$PLUGIN_NAME" ] && command -v uvx >/dev/null 2>&1 &&
+       uvx --from keyring==25.7.0 keyring get "$PLUGIN_NAME" "$entry" >/dev/null 2>&1; then
+      store_keys="$store_keys $k"
     elif [ -f "$ENV_FILE" ] && grep -q "^${k}=" "$ENV_FILE" 2>/dev/null; then
       :                                            # supplied by the file, which is the default posture
     else
       missing="$missing $k"
     fi
   done
-  [ -n "$env_keys" ] && ok "Credentials from the environment:$env_keys (these win over $ENV_FILE)"
+  [ -n "$env_keys" ]   && ok "Credentials from the environment:$env_keys (these win over the store and $ENV_FILE)"
+  [ -n "$store_keys" ] && ok "Credentials from the OS credential store ($PLUGIN_NAME):$store_keys"
 
   if [ -n "$missing" ]; then
     if [ ! -f "$ENV_FILE" ] && [ -z "$env_keys" ]; then
@@ -209,6 +222,20 @@ check_credentials() {
     else
       warn "Credentials incomplete — missing from both the environment and $ENV_FILE:$missing"
     fi
+    # The store's service name is this copy's own plugin name, so a re-keyed distribution must not be
+    # told to write the upstream one. Print the command already filled in rather than make the
+    # operator work out what this copy is called.
+    case "$missing" in
+      *EXABEAM_API_KEY*|*EXABEAM_API_SECRET*)
+        if [ -n "$PLUGIN_NAME" ]; then
+          printf '       to use the OS credential store instead of a file:
+'
+          printf '         uvx --from keyring==25.7.0 keyring set %s client_id
+' "$PLUGIN_NAME"
+          printf '         uvx --from keyring==25.7.0 keyring set %s client_secret
+' "$PLUGIN_NAME"
+        fi ;;
+    esac
     return
   fi
 

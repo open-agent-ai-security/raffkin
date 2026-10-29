@@ -695,3 +695,125 @@ def test_the_summary_says_so_when_nothing_was_found(monkeypatch, tmp_path):
     missing = str(tmp_path / "nope")
     B.load_env(missing)
     assert "no credentials found" in B.credential_origin_summary(missing)
+
+
+# ---- OS credential store: the secure default, between the environment and the file ---------------
+
+class _FakeStore:
+    """A keyring backend in memory. Raises on read when `fail` is set, to exercise a locked store."""
+
+    def __init__(self, fail=None):
+        self.items, self.fail = {}, fail
+
+    def get_password(self, service, entry):
+        if self.fail:
+            raise self.fail
+        return self.items.get((service, entry))
+
+    def set_password(self, service, entry, value):
+        self.items[(service, entry)] = value
+
+
+def _store(monkeypatch, pairs=None, fail=None):
+    """Install a fake keyring backend for `_from_os_store`, which imports keyring lazily."""
+    import keyring
+    from keyring.errors import KeyringError
+
+    fake = _FakeStore(fail=fail)
+    for entry, value in (pairs or {}).items():
+        fake.items[(B.KEYRING_SERVICE, entry)] = value
+    monkeypatch.setattr(keyring, "get_password", fake.get_password, raising=False)
+    return fake, KeyringError
+
+
+def test_the_store_supplies_the_secret_pair(monkeypatch, tmp_path):
+    _env_only(monkeypatch)
+    _store(monkeypatch, {"client_id": "storekey", "client_secret": "storesecret"})
+    cfg = B.load_env(str(tmp_path / "no-file"))
+    assert cfg["EXABEAM_API_KEY"] == "storekey"
+    assert cfg["EXABEAM_API_SECRET"] == "storesecret"
+    assert B.CREDENTIAL_ORIGIN["EXABEAM_API_KEY"] == "os-store"
+
+
+def test_the_store_beats_the_file_and_the_environment_beats_the_store(monkeypatch, tmp_path):
+    """One precedence, stated once: environment > OS store > file. The environment stays on top so
+    an operator can override a single run without touching the store."""
+    f = _write_env(tmp_path / "env",
+                   "EXABEAM_MCP_URL=https://file.exabeam.cloud/mcp",
+                   "EXABEAM_API_KEY=filekey",
+                   "EXABEAM_API_SECRET=filesecret")
+    _env_only(monkeypatch, EXABEAM_API_KEY="envkey")
+    _store(monkeypatch, {"client_id": "storekey", "client_secret": "storesecret"})
+    cfg = B.load_env(f)
+    assert cfg["EXABEAM_API_KEY"] == "envkey", "environment beats the store"
+    assert cfg["EXABEAM_API_SECRET"] == "storesecret", "the store beats the file"
+    assert cfg["EXABEAM_MCP_URL"] == "https://file.exabeam.cloud/mcp"
+    assert B.CREDENTIAL_ORIGIN == {"EXABEAM_API_KEY": "environment",
+                                   "EXABEAM_API_SECRET": "os-store",
+                                   "EXABEAM_MCP_URL": "file"}
+
+
+def test_the_url_is_never_read_from_the_secret_store(monkeypatch, tmp_path):
+    """An address is not a credential. Putting it in the store would mean unlocking a keychain to
+    find out where the bridge points."""
+    _env_only(monkeypatch)
+    _store(monkeypatch, {"client_id": "k", "client_secret": "s",
+                         "EXABEAM_MCP_URL": "https://store.exabeam.cloud/mcp"})
+    f = _write_env(tmp_path / "env", "EXABEAM_MCP_URL=https://file.exabeam.cloud/mcp")
+    assert B.load_env(f)["EXABEAM_MCP_URL"] == "https://file.exabeam.cloud/mcp"
+    assert B.CREDENTIAL_ORIGIN["EXABEAM_MCP_URL"] == "file"
+
+
+def test_a_locked_store_degrades_to_the_file_and_says_so(monkeypatch, tmp_path):
+    """Adding this dependency must not break an install that works from a file today. A store that
+    cannot be read is not fatal -- but it is never silent, or the operator keeps using older
+    credentials with no way to tell."""
+    _env_only(monkeypatch)
+    _, KeyringError = _store(monkeypatch, fail=None)
+    _store(monkeypatch, fail=KeyringError("locked"))
+    f = _write_env(tmp_path / "env", "EXABEAM_API_KEY=filekey", "EXABEAM_API_SECRET=filesecret")
+    cfg = B.load_env(f)
+    assert cfg["EXABEAM_API_KEY"] == "filekey"
+    assert B.CREDENTIAL_ORIGIN["EXABEAM_API_KEY"] == "file"
+    assert "could not be read" in B.CREDENTIAL_NOTE
+    assert "older" in B.CREDENTIAL_NOTE, "the note must say what the operator risks, not just that it failed"
+
+
+def test_an_empty_store_is_not_an_error(monkeypatch, tmp_path):
+    """The overwhelmingly common case on an existing install: keyring is importable, the store works,
+    and there is simply nothing in it. That must be silent."""
+    _env_only(monkeypatch)
+    _store(monkeypatch, {})
+    f = _write_env(tmp_path / "env", "EXABEAM_API_KEY=filekey")
+    assert B.load_env(f)["EXABEAM_API_KEY"] == "filekey"
+    assert B.CREDENTIAL_NOTE == "", f"an empty store must not produce a note: {B.CREDENTIAL_NOTE!r}"
+
+
+def test_half_a_pair_in_the_store_is_called_out(monkeypatch, tmp_path):
+    """client_id stored and client_secret not is a half-finished setup. It works -- the file fills the
+    gap -- which is exactly why it needs saying."""
+    _env_only(monkeypatch)
+    _store(monkeypatch, {"client_id": "storekey"})
+    f = _write_env(tmp_path / "env", "EXABEAM_API_SECRET=filesecret")
+    cfg = B.load_env(f)
+    assert cfg["EXABEAM_API_KEY"] == "storekey" and cfg["EXABEAM_API_SECRET"] == "filesecret"
+    assert "client_secret" in B.CREDENTIAL_NOTE
+
+
+def test_a_blank_value_in_the_store_is_treated_as_absent(monkeypatch, tmp_path):
+    _env_only(monkeypatch)
+    _store(monkeypatch, {"client_id": "   ", "client_secret": "storesecret"})
+    f = _write_env(tmp_path / "env", "EXABEAM_API_KEY=filekey")
+    assert B.load_env(f)["EXABEAM_API_KEY"] == "filekey"
+
+
+def test_the_summary_distinguishes_all_three_sources(monkeypatch, tmp_path):
+    f = _write_env(tmp_path / "env", "EXABEAM_MCP_URL=https://file.exabeam.cloud/mcp")
+    _env_only(monkeypatch, EXABEAM_API_KEY="envkey")
+    _store(monkeypatch, {"client_secret": "storesecret"})
+    B.load_env(f)
+    summary = B.credential_origin_summary(f)
+    for expected in ("environment: EXABEAM_API_KEY", "os-store: EXABEAM_API_SECRET",
+                     "file: EXABEAM_MCP_URL"):
+        assert expected in summary, summary
+    assert "envkey" not in summary and "storesecret" not in summary

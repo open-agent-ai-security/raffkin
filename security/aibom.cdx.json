@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-10-23T23:01:20Z"
+    "timestamp": "2026-10-29T13:58:25Z"
   },
   "components": [
     {
@@ -331,6 +331,14 @@
           }
         }
       ]
+    },
+    {
+      "bom-ref": "pkg:pypi/keyring",
+      "type": "library",
+      "name": "keyring",
+      "version": ">=25,<26",
+      "purl": "pkg:pypi/keyring",
+      "description": "Connector dependency (keyring>=25,<26), resolved by uv at runtime (PEP 723)."
     }
   ],
   "services": [
@@ -395,7 +403,8 @@
         "pkg:pypi/httpx",
         "pkg:pypi/certifi",
         "pkg:pypi/observra",
-        "pkg:pypi/typing_extensions"
+        "pkg:pypi/typing_extensions",
+        "pkg:pypi/keyring"
       ]
     },
     {

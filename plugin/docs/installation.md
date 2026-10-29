@@ -139,6 +139,39 @@ Replace `<region>` with your region. The URL must be `https://`. Then restart Cl
 > exposure: backup and sync agents that sweep your home directory, crash dumps, an accidental `cat`
 > or screen share, and home-directory archives taken for support or migration.
 
+> **Or the OS credential store.** If you have no secrets manager, put the key and secret in the
+> platform's own store instead of a plaintext file. The value is prompted for, so it never reaches
+> your command line or shell history:
+>
+> ```bash
+> uvx --from keyring==25.7.0 keyring set <plugin-name> client_id
+> uvx --from keyring==25.7.0 keyring set <plugin-name> client_secret
+> ```
+>
+> `preflight.sh` prints those two commands with `<plugin-name>` already filled in for your install,
+> so you can paste them rather than work out what this copy of the plugin is called.
+>
+> That is Windows Credential Manager (DPAPI), macOS Keychain, or the Linux Secret Service —
+> encrypted at rest and unlocked by your OS login. Raffkin implements no cryptography of its own; it
+> delegates to the platform. `EXABEAM_MCP_URL` is **not** stored there: it is an address, not a
+> credential, and keeping it out means you do not have to unlock a keychain to find out where the
+> bridge points. Leave it in the file or the environment.
+>
+> **Precedence is environment → OS store → file**, per setting. A store that is missing, locked or
+> empty is not an error: the bridge falls through to the file and says so on startup, so adding this
+> cannot break an install that works today.
+>
+> **Why `uvx` and not a bare `keyring`.** The library lives inside the bridge's own locked
+> environment, not on your `PATH`, so a bare `keyring set` is "command not found" on a machine that
+> has never installed it globally. `uvx` runs the same pinned version without installing anything
+> permanently.
+>
+> **macOS, first run.** The item is created by `uvx`'s Python and read later by the bridge's Python.
+> Those are different binaries, so the Keychain may prompt for access the first time the bridge reads
+> it — at import, before the startup banner. Approve once ("Always Allow") and it does not recur. On
+> a headless or SSH session there is nobody to approve it, so do the first read in a logged-in GUI
+> session.
+
 **3. Check the setup.** The plugin ships a read-only diagnostic that tells you what, if anything, is
 missing. It lives in the installed plugin. Run it with the exact version step 1 showed (not a wildcard:
 the cache keeps earlier versions, and a wildcard would run the oldest one):
