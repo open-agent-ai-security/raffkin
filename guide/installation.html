@@ -285,7 +285,10 @@ red-teamed on a Gemini model. Read
 <h2 id="before-you-start">Before you start</h2>
 <ul>
 <li><strong>A host agent:</strong> the <code>claude</code> CLI (Claude Code), the <code>codex</code> CLI (Codex) or the <code>agy</code> CLI
-  (Google Antigravity), signed in.</li>
+  (Google Antigravity), signed in.
+  <strong>Claude Desktop is not a supported host.</strong> The same catalog is browsable from Desktop's <code>/plugin</code>
+  UI, so the plugin installs there and appears healthy — but Desktop never runs steps 2 and 3 below,
+  and the diagnostic in step 3 lives under a Claude Code path. Install from the CLI.</li>
 <li><strong>On Antigravity, two things that have nothing to do with this plugin — check both first.</strong> The plugin,
   the gate and <code>preflight.sh</code> all install and report healthy without a session ever being opened, so
   nothing else in this guide will warn you about either. <code>agy -p "hi"</code> answering is the one test that
@@ -335,7 +338,10 @@ red-teamed on a Gemini model. Read
 <li><strong>Windows:</strong> Raffkin is not supported natively on Windows; use <strong>WSL</strong>. The diagnostics and the safety
   gate are shell scripts and Python, and the credentials file below is protected by Unix file
   permissions, which Git Bash on NTFS does not enforce — so Git Bash can run the scripts but leaves your
-  key and secret unprotected. There is no PowerShell path.</li>
+  key and secret unprotected. There is no PowerShell path.
+  On native Windows <code>python3</code> is a Microsoft Store alias stub rather than an interpreter, so the gate
+  cannot start and fails closed: every Exabeam call is refused, and the hook says on stderr that the
+  gate could not run.</li>
 </ul>
 <!-- community-only -->
 <ul>

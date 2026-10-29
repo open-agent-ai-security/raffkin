@@ -30,6 +30,9 @@ red-teamed on a Gemini model. Read
 
 - **A host agent:** the `claude` CLI (Claude Code), the `codex` CLI (Codex) or the `agy` CLI
   (Google Antigravity), signed in.
+  **Claude Desktop is not a supported host.** The same catalog is browsable from Desktop's `/plugin`
+  UI, so the plugin installs there and appears healthy — but Desktop never runs steps 2 and 3 below,
+  and the diagnostic in step 3 lives under a Claude Code path. Install from the CLI.
 - **On Antigravity, two things that have nothing to do with this plugin — check both first.** The plugin,
   the gate and `preflight.sh` all install and report healthy without a session ever being opened, so
   nothing else in this guide will warn you about either. `agy -p "hi"` answering is the one test that
@@ -78,6 +81,9 @@ red-teamed on a Gemini model. Read
   gate are shell scripts and Python, and the credentials file below is protected by Unix file
   permissions, which Git Bash on NTFS does not enforce — so Git Bash can run the scripts but leaves your
   key and secret unprotected. There is no PowerShell path.
+  On native Windows `python3` is a Microsoft Store alias stub rather than an interpreter, so the gate
+  cannot start and fails closed: every Exabeam call is refused, and the hook says on stderr that the
+  gate could not run.
 <!-- community-only -->
 - **Exabeam customers:** the supported build is delivered through the
   [Exabeam Plug-in Catalog](https://plugins.exabeam.com/), with its own install command. These
