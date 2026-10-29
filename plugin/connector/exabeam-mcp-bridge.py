@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["mcp>=1.0,<2", "httpx>=0.27,<1", "certifi>=2024,<2027", "observra>=1.1,<2", "typing_extensions>=4.7,<5"]
+# dependencies = ["mcp>=1.0,<2", "httpx>=0.27,<1", "certifi>=2024,<2027", "observra>=1.1,<2", "typing_extensions>=4.7,<5", "keyring>=25,<26"]
 # ///
 # Copyright 2026 Exabeam, Inc.
 # SPDX-License-Identifier: Apache-2.0
@@ -49,8 +49,123 @@ _token = {"value": None, "exp": 0.0}
 _token_lock = None                      # created lazily inside the running loop (single-flight refresh)
 
 
+#: The three settings an operator may supply from the environment instead of the file (#295).
+#: Deliberately exactly these: the credential triple, nothing else. RAFFKIN_* settings are read
+#: from os.environ directly where they are used and are not part of this precedence.
+ENV_CREDENTIAL_KEYS = ("EXABEAM_MCP_URL", "EXABEAM_API_KEY", "EXABEAM_API_SECRET")
+
+#: Where each setting came from, for the startup report. Filled by load_env().
+CREDENTIAL_ORIGIN: dict[str, str] = {}
+
+#: A non-fatal problem reading the OS credential store, for the startup report. Empty when fine.
+CREDENTIAL_NOTE: str = ""
+
+def _plugin_name(default="raffkin"):
+    """This plugin's own name, from identity.json beside the connector.
+
+    A re-keyed copy (a vendor catalog shipping this as `soc`) must look in ITS OWN credential store,
+    not the upstream one -- otherwise the install guide tells the operator to write `soc` and the
+    bridge reads `raffkin`, and the credentials are simply not found. Same source the gate and the
+    audit trail already use (observra_logging._agent_name), so the three cannot disagree.
+    """
+    try:
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for base in (here, os.environ.get("CLAUDE_PLUGIN_ROOT") or ""):
+            path = os.path.join(base, "identity.json")
+            if base and os.path.isfile(path):
+                with open(path, encoding="utf-8") as fh:
+                    name = json.load(fh).get("name")
+                return str(name).strip() if isinstance(name, str) and name.strip() else default
+    except Exception:  # noqa: BLE001 -- never let identity resolution stop the bridge starting
+        return default        # returning the default IS the handling, so no bare try/except/pass
+    return default
+
+
+#: The OS credential store's service name. Windows Credential Manager (DPAPI), macOS Keychain or the
+#: Linux Secret Service -- encrypted at rest, unlocked by the OS login. Raffkin implements no
+#: cryptography of its own; it delegates to the platform. Derived, never hardcoded: see _plugin_name.
+KEYRING_SERVICE = _plugin_name()
+
+#: Entry names inside that service. They are the platform's own vocabulary for the credential pair,
+#: not EXABEAM_API_KEY/SECRET, because what goes in the store is an API client id and secret.
+KEYRING_ENTRIES = {"EXABEAM_API_KEY": "client_id", "EXABEAM_API_SECRET": "client_secret"}
+
+
+def _from_os_store() -> tuple[dict, str]:
+    """(credentials, note) from the OS credential store. Never raises.
+
+    Only the SECRET pair: `EXABEAM_MCP_URL` is an address, not a credential, and putting it in a
+    secret store would mean an operator had to unlock the keychain to find out where the bridge
+    points.
+
+    **A store that is missing, locked or empty is not an error.** Adding this dependency must not
+    break an install that works from a file today, so every failure degrades to "nothing from the
+    store" plus a note the caller can print. The note matters: a locked store silently falling
+    through to a stale file is the same class of problem the environment precedence exists to
+    prevent, so it is reported rather than swallowed.
+    """
+    try:
+        import keyring
+        from keyring.errors import KeyringError
+    except Exception:  # noqa: BLE001 -- not installed, or no backend on this platform
+        return {}, ""
+    found, note = {}, ""
+    try:
+        for setting, entry in KEYRING_ENTRIES.items():
+            value = keyring.get_password(KEYRING_SERVICE, entry)
+            if value and value.strip():
+                found[setting] = value.strip()
+    except KeyringError as e:
+        return {}, (f"the OS credential store could not be read ({type(e).__name__}); falling back "
+                    f"to the environment and {'~/.exabeam-mcp.env'}. If you put credentials in the "
+                    "store, unlock it and restart -- otherwise the bridge is using older ones.")
+    except Exception as e:  # noqa: BLE001 -- a backend that raises something of its own
+        return {}, f"the OS credential store raised {type(e).__name__}; it was not used."
+    if len(found) == 1:
+        missing = next(s for s in KEYRING_ENTRIES if s not in found)
+        note = (f"the OS credential store holds {KEYRING_ENTRIES[next(iter(found))]!r} but not "
+                f"{KEYRING_ENTRIES[missing]!r}; the missing one falls through to the file.")
+    return found, note
+
+
 def load_env(path="~/.exabeam-mcp.env"):
+    """The credential triple: environment first, then the file for whatever it did not supply (#295).
+
+    **Environment wins, deliberately.** #295 raised the precedence as a real question, so it is
+    answered here rather than left incidental. The point of the feature is to let an operator feed
+    the bridge from Vault, AWS Secrets Manager, SOPS or a keychain helper at process start. If the
+    file won, a stale `~/.exabeam-mcp.env` left behind from an earlier install would silently
+    override a live broker -- the exact failure the issue exists to prevent, and one that would be
+    invisible because both paths produce a working bridge pointed at the wrong credentials.
+
+    No new dependency, and no behavior change for an existing install: with none of the three set in
+    the environment this returns exactly what it always did. An empty-string variable counts as
+    unset, so `EXABEAM_API_KEY=` in a shell profile does not blank out a working file.
+
+    This does NOT make the environment safer than the file in general -- both are readable by
+    anything running as the same user, which is why #102 was closed as accepted risk. What it
+    removes is the file-at-rest exposure: backup and sync agents, crash dumps, an accidental `cat`
+    or screen share, and home-directory archives for support or migration.
+
+    **Then the OS credential store, then the file.** The store is the durable secure default; the
+    environment still wins over it so an operator can override one run without touching the store.
+    A store that is missing, locked or empty degrades to the file with a note -- adding the
+    dependency must not break an install that works from a file today.
+    """
     cfg = {}
+    CREDENTIAL_ORIGIN.clear()
+    global CREDENTIAL_NOTE
+    CREDENTIAL_NOTE = ""
+    for k in ENV_CREDENTIAL_KEYS:
+        v = os.environ.get(k)
+        if v is not None and v.strip():
+            cfg[k] = v.strip()
+            CREDENTIAL_ORIGIN[k] = "environment"
+    stored, CREDENTIAL_NOTE = _from_os_store()
+    for k, v in stored.items():
+        if k not in cfg:                       # the environment already won it
+            cfg[k] = v
+            CREDENTIAL_ORIGIN[k] = "os-store"
     p = os.path.expanduser(path)
     if not os.path.exists(p):
         return cfg
@@ -59,8 +174,34 @@ def load_env(path="~/.exabeam-mcp.env"):
         if not s.strip() or s.lstrip().startswith("#") or "=" not in s:
             continue
         k, v = s.split("=", 1)
-        cfg[k.strip()] = re.sub(r"\s+#.*$", "", v).strip()
+        k = k.strip()
+        if k in cfg:
+            continue                      # the environment already supplied this one
+        cfg[k] = re.sub(r"\s+#.*$", "", v).strip()
+        if k in ENV_CREDENTIAL_KEYS:
+            CREDENTIAL_ORIGIN[k] = "file"
     return cfg
+
+
+def credential_origin_summary(path="~/.exabeam-mcp.env") -> str:
+    """One line naming where each credential setting came from (#295's paired ask).
+
+    An operator who has wired up a broker needs to be able to confirm it is actually being used
+    rather than a stale file. Names the settings, never a value.
+    """
+    if not CREDENTIAL_ORIGIN:
+        return (f"no credentials found in the environment, the OS credential store "
+                f"({KEYRING_SERVICE}) or {path}")
+    by_source: dict[str, list[str]] = {}
+    for key in ENV_CREDENTIAL_KEYS:
+        src = CREDENTIAL_ORIGIN.get(key)
+        if src:
+            by_source.setdefault(src, []).append(key)
+    parts = [f"{src}: {', '.join(keys)}" for src, keys in by_source.items()]
+    missing = [k for k in ENV_CREDENTIAL_KEYS if k not in CREDENTIAL_ORIGIN]
+    if missing:
+        parts.append(f"not set: {', '.join(missing)}")
+    return "; ".join(parts)
 
 
 CFG = load_env()
@@ -1272,6 +1413,14 @@ def main():
     if DRY_RUN:
         sys.stderr.write("bridge: DRY RUN is ON (RAFFKIN_DRY_RUN) - every write is refused at the "
                          "bridge; nothing reaches Exabeam\n")
+    # Which source supplied each credential setting (#295). An operator who has wired a broker to
+    # the environment needs to confirm it is being used and not a stale file; the two are otherwise
+    # indistinguishable, because both produce a working bridge.
+    sys.stderr.write(f"bridge: credentials -- {credential_origin_summary()}\n")
+    if CREDENTIAL_NOTE:
+        # A store that could not be read is NOT fatal -- the bridge falls through to the file -- but
+        # it must never be silent, or an operator keeps using older credentials and cannot tell.
+        sys.stderr.write(f"bridge: {CREDENTIAL_NOTE}\n")
     asyncio.run(_check() if "--check" in sys.argv else _serve())
 
 
