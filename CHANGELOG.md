@@ -11,6 +11,11 @@ governance model (feature → `dev`, release `dev` → `main`).
 ## [Unreleased]
 
 ### Added
+- **`intel-sweep` worked example** — `reference/examples/safepay-advisory-sweep.md`: a real run of CISA
+  AA26-293A (SafePay) against a live tenant on 2026-11-19, masked. Four of the advisory's nine
+  "intrusion" IPs resolved on the tenant's own rows to `github.com`, `githubusercontent.com`, a
+  Cloudflare-fronted SaaS and a Google range; the run produced the shared-infrastructure rule below.
+  No write was made to the tenant.
 - **`intel-sweep`** — *"have we been hit by this advisory?"* Takes an external threat
   report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
   anything runs, checks whether they are already a context table, establishes what is visible on the
@@ -41,6 +46,13 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- `intel-sweep` step 5: **an IP hit whose own rows name shared infrastructure is not attributable** —
+  when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's
+  label is not evidence; the entity is reported as such and kept out of bands 2 and 3. Band 3 now reads
+  "on attributable infrastructure".
+- `indicator-taxonomy.md`: `file_name` is tokenised on dots (`1.exe` matched every
+  `am_delta_patch_1.*.exe`) — use `==` for exact; `threat_name` is not a field; `IN` against the
+  Exabeam-source threat-intelligence IP table fails server-side through the MCP.
 - `search-cookbook.md`'s `result` warning now points at the measured verdict map.
 
 ## [1.1.0] — 2026-10-23

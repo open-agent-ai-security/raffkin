@@ -36,7 +36,7 @@ map, and extend it with what you find.
 | **File hash — MD5** | `hash_md5` | CrowdStrike Falcon (process-create, dll-load; absent on app-activity rows) | Exact, lower-case. | as above |
 | **File hash — SHA-1** | `hash_sha1` | **Zeek** (file-read: files observed on the wire, e.g. Windows Update payloads) | Exact, lower-case. Zeek is observe-only, so a SHA-1 hit is OBSERVED: the file crossed the network. | OBSERVED |
 | | `file_hash` | **empty tenant-wide**, although the cookbook's vocabulary lists it | Do not query. | — |
-| **File name** | `file_name` | CrowdStrike Falcon (process-create, file-write, dll-load) | Exact or regex. Weak on its own (`sh.exe`, `svchost.exe` are ubiquitous) — pair with a hash or a path. | — |
+| **File name** | `file_name` | CrowdStrike Falcon (process-create, file-write, dll-load) | **`==` for exact** — `file_name:"1.exe"` and `file_name = "1.exe"` are tokenised on dots and matched every `am_delta_patch_1.*.exe` on the tenant (500 rows); `nxc` matched `*.nxc.ps1`. Regex via `RGX()`. Weak on its own (`sh.exe`, `svchost.exe` are ubiquitous) — pair with a hash or a path. | — |
 | **Process / command** | `process_name`, `process`, `command`, `parent_process` | endpoint sources (see `search-cookbook.md`) | Regex; see the cookbook's rare-process recipe. | — |
 | **Email sender / recipient** | `sender`, `recipient` | **empty tenant-wide** | **Not searchable in events on this tenant.** Proofpoint rows in the window are `app-notification` with nothing mail-specific parsed. Check the mail IOC context tables (§3) and report the type as *not visible in events*. | — |
 | **Email subject** | — | — | **There is no mail-subject field.** The CIM `subject` field is the event's subject *class* (`network`, `http`, `process`, `endpoint`, `app`), never a message subject. Do not query it for a subject indicator. | — |
@@ -96,6 +96,10 @@ columns.
 
 **Column conventions seen on this tenant** — the key column decides the `IN` form
 (`search-cookbook.md`: key field → `IN "Table"`, non-key → `IN "Table"."Column"`):
+Measured 2026-11-19: `dest_ip IN "Exabeam Threat Intelligence IPs"` (an Exabeam-source table, 10,696
+items, no `attributeMapping`) returned `500 Internal Application error` on three forms — alone, ANDed
+with a value list, and ORed across `src_ip`/`dest_ip`. Membership in that table is **not checkable
+through the MCP** on this tenant; say so in scope rather than reporting "not present".
 
 | Column id | Carries | Tables (examples) |
 |---|---|---|
@@ -171,4 +175,4 @@ An unknown field name returns `400 Invalid fields value, [<name>]` — that is "
 "empty". Fields confirmed valid here but absent from the MCP's documented list: `hash_sha256`,
 `hash_md5`, `hash_sha1`, `file_hash`, `web_domain`, `dns_query`, `src_translated_ip`,
 `dest_external_ip`, `origin_ip`, `email_address`, `sender`, `recipient`, `subject`, `rawLogs`.
-Confirmed **invalid**: `attachment_name`, `user_email`, `reason`, `status`, `session_end_reason`.
+Confirmed **invalid**: `attachment_name`, `user_email`, `reason`, `status`, `session_end_reason`, `threat_name` (the Palo Alto threat name rides in `alert_name`).

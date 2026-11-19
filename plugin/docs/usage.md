@@ -126,3 +126,6 @@ over-correction: a change that would blind you to real threats is called out, no
   notes written to Exabeam carry the same content, neutralized for safety.
 - **Example.** A real end-to-end run against a staging tenant, with the pivots and the reasoning:
   [worked example — coordinated credential access](../skills/soc-investigate/reference/examples/coordinated-credential-access.md).
+- **Example — an advisory swept.** A real `intel-sweep` run of a CISA ransomware advisory against a live
+  tenant, including the shared-infrastructure call it forced:
+  [worked example — SafePay advisory sweep](../skills/intel-sweep/reference/examples/safepay-advisory-sweep.md).

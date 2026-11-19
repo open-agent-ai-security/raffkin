@@ -147,6 +147,15 @@ product). For a ZPA `close`, pull `rawLogs` for that row (`limit` ≤ 5) and rea
 GCP `ACCEPT` with `outcome: fail`, report the edge decision and the backend `http_response_code` as a
 split outcome. **A hash hit has no mapped EDR disposition** — report it with its `activity_type` and
 treat the verdict as UNDETERMINED until the analyst confirms in the EDR console.
+**An IP hit whose own rows name shared infrastructure is not attributable.** When the matched rows
+carry a `web_domain`, `url` or `app` that resolves the address to a CDN, a code host or a SaaS front
+(GitHub, Cloudflare, Google, a vendor's own hosted product), the advisory's label — "victim intrusion",
+"C2" — is not evidence that *this* traffic was the actor's. Report the entity under Hits as *shared
+infrastructure — not attributable*, quote the domain the tenant's own rows showed, keep it out of
+bands 2 and 3, and recommend the analyst drop the address from any context table they load. Measured
+2026-11-19: four of nine IPs in a CISA ransomware advisory resolved on the tenant to `github.com`,
+`githubusercontent.com`, a Cloudflare-fronted SaaS and a Google range; a literal band-3 read would have
+offered a case on developers pulling from GitHub.
 
 **6 — Band the result per entity, then promote.**
 
@@ -154,7 +163,7 @@ treat the verdict as UNDETERMINED until the analyst confirms in the EDR console.
 |---|---|---|
 | **1** | No hits, with scope stated and the coverage read attached | Report. Offer the emailed record. |
 | **2** | Hits, and **every** hit for the entity is BLOCKED | Targeted; the control held. Report, name the control and field, offer a deeper look. **No case.** |
-| **3** | Any hit ALLOWED or OBSERVED, or any promotion below | Potential impact. **Show the activity plainly, offer to open a case, open it only on a yes**, then hand the entity to `soc-investigate`. |
+| **3** | Any hit ALLOWED or OBSERVED on attributable infrastructure, or any promotion below | Potential impact. **Show the activity plainly, offer to open a case, open it only on a yes**, then hand the entity to `soc-investigate`. |
 
 Three promotions from 2 to 3 are mechanical, because a tired analyst misses them: **a success after
 the blocks** against the same entity (an ALLOWED or OBSERVED row later than the BLOCKED rows); **a
