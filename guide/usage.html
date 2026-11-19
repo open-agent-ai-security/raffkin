@@ -262,12 +262,12 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html" class="active">Using the skills</a><ul class="docs-subnav"><li><a href="#the-three-skills-and-how-to-call-them">The three skills, and how to call them</a></li><li><a href="#what-an-investigation-does">What an investigation does</a></li><li><a href="#what-it-will-ask-you">What it will ask you</a></li><li><a href="#reading-the-report">Reading the report</a></li><li><a href="#triage-and-tuning">Triage and tuning</a></li><li><a href="#practical-notes">Practical notes</a></li></ul></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html" class="active">Using the skills</a><ul class="docs-subnav"><li><a href="#the-skills-and-how-to-call-them">The skills, and how to call them</a></li><li><a href="#what-an-investigation-does">What an investigation does</a></li><li><a href="#what-it-will-ask-you">What it will ask you</a></li><li><a href="#reading-the-report">Reading the report</a></li><li><a href="#triage-and-tuning">Triage and tuning</a></li><li><a href="#practical-notes">Practical notes</a></li></ul></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="using-the-skills">Using the skills</h1>
 <p>What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 <a href="installation.html">installation</a> — credentials in place. The human-in-the-loop gate ships on, on both hosts.</p>
-<h2 id="the-three-skills-and-how-to-call-them">The three skills, and how to call them</h2>
+<h2 id="the-skills-and-how-to-call-them">The skills, and how to call them</h2>
 <p>You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.</p>
 <table>
@@ -293,6 +293,11 @@ picks itself up from what you ask; you never invoke one by name unless you want 
 <td>"find noisy rules", "what's generating false positives", "tune detections"</td>
 <td><strong>rule-tuning</strong></td>
 <td>The rules that are <em>noisy</em> (high volume, low precision — not merely loud) and a specific, least-invasive tuning proposal for each.</td>
+</tr>
+<tr>
+<td>"have we been hit by this advisory", "does this affect us", "check these indicators against our data"</td>
+<td><strong>intel-sweep</strong></td>
+<td>Whether an external threat report has already touched this environment: the indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope — no hits, hits a control blocked, hits that succeeded. Recommends a case; never creates one.</td>
 </tr>
 </tbody>
 </table>

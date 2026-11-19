@@ -262,7 +262,7 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html" class="active">Overview</a><ul class="docs-subnav"><li><a href="#where-to-start">Where to start</a></li><li><a href="#the-three-skills">The three skills</a></li><li><a href="#how-raffkin-works-in-90-seconds">How Raffkin works (in 90 seconds)</a></li><li><a href="#the-guardrails-in-brief">The guardrails, in brief</a></li><li><a href="#quick-reference">Quick reference</a></li></ul></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html" class="active">Overview</a><ul class="docs-subnav"><li><a href="#where-to-start">Where to start</a></li><li><a href="#the-skills">The skills</a></li><li><a href="#how-raffkin-works-in-90-seconds">How Raffkin works (in 90 seconds)</a></li><li><a href="#the-guardrails-in-brief">The guardrails, in brief</a></li><li><a href="#quick-reference">Quick reference</a></li></ul></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html">Using the skills</a></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="raffkin-documentation">Raffkin Documentation</h1>
 <p><strong>Raffkin</strong> is an agentic SOC analyst for <strong>Exabeam New-Scale</strong>, delivered as a plugin for Claude Code,
@@ -317,7 +317,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 </tr>
 </tbody>
 </table>
-<h2 id="the-three-skills">The three skills</h2>
+<h2 id="the-skills">The skills</h2>
 <table>
 <thead>
 <tr>
@@ -341,6 +341,11 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 <td><strong><code>rule-tuning</code></strong></td>
 <td><em>"Which rules waste our time?"</em> · <em>"Reduce alert noise."</em></td>
 <td>Separates loud rules from noisy ones and proposes specific tuning mapped to real Exabeam mechanics — a context table, an exclusion, the rule's own settings. Proposes; never changes a rule.</td>
+</tr>
+<tr>
+<td><strong><code>intel-sweep</code></strong></td>
+<td><em>"Have we been hit by this advisory?"</em> · <em>"Does this CVE affect us?"</em></td>
+<td>Takes an external threat report by URL or paste, extracts and types the indicators, checks whether they are already a context table, establishes what is visible, searches the tenant across the indicators' validity window and returns a three-band verdict with explicit scope. Read-only; recommends a case for <code>soc-investigate</code>, never creates one.</td>
 </tr>
 </tbody>
 </table>
@@ -372,7 +377,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 <ul>
 <li>Install: <code>claude plugin marketplace add open-agent-ai-security/plugins</code> then <code>claude plugin install raffkin@open-agent-ai-security</code> (Codex: <code>codex plugin marketplace add open-agent-ai-security/plugins</code> then <code>codex plugin add raffkin@open-agent-ai-security</code>; Antigravity: see <a href="installation.html#quick-start-google-antigravity">Installation</a>)</li>
 <li>Credentials: <code>~/.exabeam-mcp.env</code> — the Exabeam MCP URL, API key and secret; see <a href="installation.html">Installation</a></li>
-<li>Skills: <code>soc-investigate</code> · <code>triage-cases</code> · <code>rule-tuning</code></li>
+<li>Skills: <code>soc-investigate</code> · <code>triage-cases</code> · <code>rule-tuning</code> · <code>intel-sweep</code></li>
 <li>Audit trail: <code>~/.raffkin/telemetry.jsonl</code> — see <a href="logging.html">Audit logging</a></li>
 <li>Check your setup: <code>preflight.sh</code> in the installed plugin — see <a href="installation.html">Installation</a></li>
 <li>Windows: not supported natively — use WSL (Git Bash cannot protect the credentials file)</li>

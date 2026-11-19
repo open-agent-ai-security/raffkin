@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate Raffkin's AI Bill of Materials (CycloneDX 1.6) from the repo's own sources.
 
-Raffkin is an AI *agent/application*, not a model: a plugin of three skills (prompt + methodology) plus a
+Raffkin is an AI *agent/application*, not a model: a plugin of skills (prompt + methodology) plus a
 small MCP connector, running on a hosted foundation model the host agent picks (Claude on Claude Code, an
 OpenAI model on Codex, a Gemini model on Google Antigravity) and calling the Exabeam New-Scale
 MCP. Model-card AI-BOM tools (which ingest a Hugging Face model id) can't describe that, so we assemble
@@ -203,7 +203,7 @@ def build_bom(timestamp):
             "bom-ref": "artifact:soc-investigate-methodology",
             "type": "data",
             "name": "skill methodology (system prompts + reference corpus)",
-            "description": ("The agent's instructions: the three skills' SKILL.md (" + ", ".join(skills) + " — "
+            "description": ("The agent's instructions: the skills' SKILL.md (" + ", ".join(skills) + " — "
                             "investigation methodology, queue sweep, rule tuning; governance; output discipline) "
                             "plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, "
                             "triage taxonomy, containment list, worked examples). This prompt corpus — not a "

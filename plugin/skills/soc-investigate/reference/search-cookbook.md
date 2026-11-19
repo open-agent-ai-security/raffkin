@@ -182,7 +182,10 @@ Canonical CIM names. These are the ones triage actually turns on — filter and 
 > `Group Policy Allow` and bare `1`; Palo Alto NGFW omits the field entirely on `network-session` rows.
 > Deciding "was this blocked or did it succeed?" needs the vendor's own vocabulary, and for some
 > vendors needs `activity_type` instead. `result` is also missing from the MCP tool's documented field
-> list while being perfectly valid in `fields`.
+> list while being perfectly valid in `fields`. **The measured per-vendor map — which field carries the
+> verdict for each product, every value seen, and the rule for values not on it — is
+> `reference/result-normalization.md`. Read a hit's blocked/succeeded status from that file, never from
+> `outcome`, which is the parser's event-type suffix and was measured wrong on three enforcement products.**
 
 **Event classification**
 `activity_type` · `activity` · `app` · `product` · `vendor` · `platform` · `time`.

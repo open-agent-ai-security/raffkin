@@ -8,7 +8,7 @@
 What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 [installation](installation.md) — credentials in place. The human-in-the-loop gate ships on, on both hosts.
 
-## The three skills, and how to call them
+## The skills, and how to call them
 
 You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.
@@ -18,6 +18,7 @@ picks itself up from what you ask; you never invoke one by name unless you want 
 | "investigate alert `<id>`", "work case `<id>`", "is this a real threat?" | **soc-investigate** | A written investigation of one alert or case: evidence, timeline, MITRE mapping, verdict, and the action it took or is asking you to approve. |
 | "triage the queue", "what should I look at", "morning triage" | **triage-cases** | A short "start here" list from the open case queue, clustered by attack shape and ranked by corroborated signal — plus the noise clusters worth tuning. |
 | "find noisy rules", "what's generating false positives", "tune detections" | **rule-tuning** | The rules that are *noisy* (high volume, low precision — not merely loud) and a specific, least-invasive tuning proposal for each. |
+| "have we been hit by this advisory", "does this affect us", "check these indicators against our data" | **intel-sweep** | Whether an external threat report has already touched this environment: the indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope — no hits, hits a control blocked, hits that succeeded. Recommends a case; never creates one. |
 
 You can also hand an alert ID, a case ID, or a pasted alert payload straight in. If you paste one, remember
 that pasted text is treated as untrusted — the skill will still go and query Exabeam for the evidence

@@ -8,6 +8,32 @@
 Notable changes to Raffkin (named socxen before 1.0). Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
 governance model (feature → `dev`, release `dev` → `main`).
 
+## [Unreleased]
+
+### Added
+- **`intel-sweep`** — a fourth skill: *"have we been hit by this advisory?"* Takes an external threat
+  report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
+  anything runs, checks whether they are already a context table, establishes what is visible on the
+  tenant, searches across the indicators' validity window and returns a three-band verdict with scope —
+  no hits, hits a control blocked, hits that succeeded — with the three band-2→3 promotions hard-coded.
+  Read-only and propose-only: recommends a case for `soc-investigate`, never creates one; the emailed
+  record stays behind the ask gate.
+- Three shared references under `soc-investigate/reference/`, each measured against a live tenant on
+  2026-11-17: **`result-normalization.md`** (which of `action` / `result` / `outcome` carries the
+  blocked-or-allowed verdict per vendor, every value seen, and the rule that an unmapped value is
+  undetermined and never band 2 — `outcome` is the parser's event-type suffix and was measured wrong on
+  three enforcement products); **`indicator-taxonomy.md`** (IOC type → populated field → match form,
+  including the two-shape domain match forced by `web_domain` being an FQDN on some vendors and a
+  registrable domain on Palo Alto, and the types not searchable in events); **`coverage-read.md`** (the
+  `get_mitre_coverage` payload shape and the three-way split of a "no hits" result).
+- Routing stubs for **`detection-coverage`** and **`threat-briefing`** — designed, described, routed
+  by the corpus test, and not yet built: each tells the analyst so and hands off. The routing test
+  settled the skill count at three.
+- 14 routing-corpus cases for the three new skills.
+
+### Changed
+- `search-cookbook.md`'s `result` warning now points at the measured verdict map.
+
 ## [1.1.0] — 2026-10-23
 
 **Raffkin runs on Google Antigravity.** A third host, beside Claude Code and Codex: the plugin's skills,

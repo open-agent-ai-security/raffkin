@@ -16,7 +16,7 @@
 > installation, your first investigation, security, logging and support. This file is the same guide's
 > front door for readers arriving from the plugin itself.
 
-Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Three
+Raffkin gives your AI coding agent the job of a SOC analyst on an Exabeam New-Scale tenant. Four
 skills work the tenant through the Exabeam MCP — one case, the whole queue, or the rules behind it —
 each named for the person whose job it does. No server, no database, no approval queue: the analyst at
 the terminal is the human in the loop, and dismissing or closing anything is held behind **two locks** —
@@ -24,15 +24,16 @@ a gate the plugin ships and your host enforces, and the skill asking you first. 
 hosts; what differs on Antigravity is that no release has been red-teamed on a Gemini model, so see
 [What is different on this host](docs/installation.md#what-is-different-on-this-host) before you run there.
 
-## The three skills
+## The skills
 
 | Skill | Whose work it is | What it does |
 |---|---|---|
 | **`soc-investigate`** | the analyst | One alert or case, first look to written verdict: gathers the evidence itself, pivots on the entities, weighs a benign explanation against a malicious one, and acts — opens or updates a case, writes notes, escalates. Asks you before any dismiss or close. |
 | **`triage-cases`** | the shift lead | The open queue rather than one case: clusters by attack shape, ranks by corroborated signal, hands back a short "start here" list. Read-only across the sweep. |
 | **`rule-tuning`** | the detection engineer | Finds rules that are *noisy*, not merely loud, and proposes the specific change mapped to real Exabeam mechanics. Propose-only: the skill never calls a rule-write tool, and the host gate refuses them on every host. |
+| **`intel-sweep`** | the intel analyst | An external threat report — advisory, vendor writeup, article, CVE — checked against this tenant's own data: indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope. Read-only; recommends a case, never creates one. |
 
-Each hands off to the others: a single case to `soc-investigate`, a noise cluster to `rule-tuning`.
+Each hands off to the others: a single case to `soc-investigate`, a noise cluster to `rule-tuning`, an advisory's touched entity from `intel-sweep` to `soc-investigate`.
 
 ## What it does
 
