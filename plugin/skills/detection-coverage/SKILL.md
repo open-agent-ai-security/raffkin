@@ -75,7 +75,7 @@ when the source gives them. Record the source and its date — it is part of the
 **2 — Read the coverage model.** `exabeam_get_mitre_coverage` — the data behind **Outcomes
 Navigator** (no arguments; ~93 KB, spills to a file — read it from there with a script, never paste
 it). For each technique id, classify: *not in the model* (absent); *not covered* (`hasEnabledRules:
-false`); **enabled but unsatisfied** (rank `None` **with** `hasEnabledRules: true` — detection logic is
+false`); *unscored* (a dotted id: the `subTechniques` map carries no score and no flag on any of its 479 entries — the parent's score stands in, and sub-technique content is found by name in the rule lists, never inferred from the parent); **enabled but unsatisfied** (rank `None` **with** `hasEnabledRules: true` — detection logic is
 on and very likely cannot fire because its data source is not ingested; 17 techniques on the measured
 tenant, and the disagreement never runs the other way); or *covered* (quote `score.rank`,
 `score.value`, `hasEnabledRules`). Record `lastUpdateTimestamp`: it is the age of the platform's
@@ -83,10 +83,13 @@ opinion. Point the analyst at Outcomes Navigator for the per-rule unsatisfied li
 does not carry.
 
 **3 — Name the rules where you can.** The coverage payload carries no rule names.
-`exabeam_analytics_rule_list` and `exabeam_correlation_rule_list` (both no-arg, both large — read
-only the fields you need from the spill file) do; where a listed rule carries a technique mapping,
-match it to the ids in scope and note enabled state. Where the lists carry no mapping, say the rule
-names are not available through this surface rather than guessing which rule covers what.
+`exabeam_analytics_rule_list` and `exabeam_correlation_rule_list` (both large — pass `limit` high enough that `hasNext` is false, and read only the fields you need from
+the spill file) do. Analytics rules carry `mitre[].techniqueKey`: match it to the ids in scope and note
+`isEnabled`. Correlation rules carry the technique id only inside `name`, with `enabled`,
+`timesTriggered` and `lastTriggeredAt` beside it — the "has it ever fired" answer for free. Where no rule
+names an id, say the rule names are not available through this surface rather than guessing which rule
+covers what. Resolve renamed keys both ways (`T1685` is the model's *Disable or Modify Tools*; the
+legacy `T1562.001` survives only in correlation-rule names).
 `exabeam_get_use_case_score` adds the use-case-level score where the techniques fall under one of
 the platform's use cases.
 

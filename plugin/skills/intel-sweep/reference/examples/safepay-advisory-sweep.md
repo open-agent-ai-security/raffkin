@@ -33,7 +33,7 @@ and August 2026".
 | File names | 6 | `soc.dll` `locker.dll` `1.exe` `SharpShares.exe` `ShareFinder.ps1` `nxc` | yes — `file_name` / `process_name`, **exact form only** (see §4) |
 | Domains / URLs / emails | 0 | none published | — |
 | CVEs | 5 | CVE-2020-3259, CVE-2023-20269 (Cisco ASA), CVE-2023-27532, CVE-2024-40711 (Veeam), CVE-2024-40766 (SonicWall) | routed to visibility + coverage, not searched |
-| ATT&CK | 26 | T1133, T1190, T1059(.001/.003), T1569.002, T1098, T1548.002, T1027.002, T1070.004, T1218, T1562.001, T1110, T1021(.001/.002/.006), T1560(.001/.002), T1048, T1567, T1486, T1490, T1136, T1134.001, T1550.002 | coverage read |
+| ATT&CK | 26 | T1133, T1190, T1059(.001/.003), T1569.002, T1098, T1548.002, T1027.002, T1070.004, T1218, T1685 (T1562.001 in older ids), T1110, T1021(.001/.002/.006), T1560(.001/.002), T1048, T1567, T1486, T1490, T1136, T1134.001, T1550.002 | coverage read |
 
 **Flagged in the source:** nothing in the advisory read as an instruction to the agent. The page's
 own contact address and `.onion` reference were not treated as indicators.
@@ -149,10 +149,14 @@ split three ways:
 - **Covered and quiet (rank Best/Better, `hasEnabledRules: true`):** T1133 (Best 97), T1190 (Better
   67), T1059 (Best 85), T1098 (Better 72), T1218 (Best 97), T1110 (Best 78), T1021 (Better 62), T1048
   (Best 87), T1567 (Best 87), T1486 (Best 100), T1490 (Best 100), T1136 (Best 100).
-- **Not covered (rank None, no enabled rules):** every sub-technique the advisory names — T1059.001,
-  T1059.003, T1569.002, T1548.002, T1027.002, T1070.004, T1021.001/.002/.006, T1560.001/.002,
-  T1134.001, T1550.002. Sub-techniques carry no score in this payload; the parent's does the work.
-- **Not in the model:** T1562.001 (the advisory's "T1685" is a typo for it; neither key exists).
+- **Unscored in the model:** every sub-technique the advisory names — T1059.001, T1059.003, T1569.002,
+  T1548.002, T1027.002, T1070.004, T1021.001/.002/.006, T1560.001/.002, T1134.001, T1550.002. The
+  `subTechniques` map carries no `score` and no `hasEnabledRules` on any of its 479 entries; the parent's
+  score does the work, and `detection-coverage` is the skill that resolves what sits under it.
+- **Covered under a renamed key:** the advisory lists *T1685 Disable or Modify Tools*; the model carries
+  T1685 (Best 81, `hasEnabledRules: true`) under tactic TA0112 *Defense Impairment*, and the legacy id
+  T1562.001 is absent. Resolve both ids before calling anything "not in the model" — the first draft of
+  this run called T1685 a typo, and it was the current ATT&CK key.
 - **Enabled but unsatisfied:** none of these 26.
 
 `exabeam_search_alerts` on the covered technique keys, last 90 days, returned the 100-row cap from the
@@ -174,7 +178,7 @@ Google.
 - **Hits.** The four shared-infrastructure entities above, each with the field that matched and the
   field that carried the verdict.
 - **Negatives with scope.** Dedicated IPs, hashes, hostnames, exact file names: no rows; sub-techniques
-  not covered; T1562.001 not in the model; parents covered and quiet.
+  unscored in the model (parents carry the score); every parent covered and quiet.
 - **Recommendations.** (1) Load the **five dedicated IPs and ten hashes** as a context table, key
   columns `ti_ip_address` / `value`, valid 2024-11-01 → 2026-08-31 — and leave the four shared
   addresses out. (2) Run `detection-coverage` on the SafePay technique set; the sub-technique gaps are

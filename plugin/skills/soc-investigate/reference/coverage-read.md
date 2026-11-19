@@ -37,7 +37,7 @@ techniques   { "T1078":  { name, externalId,
                             score: { value: 0–100, rank: "None" | "Good" | "Better" | "Best" },
                             hasEnabledRules: true | false,
                             subTechniques: [ { name, externalId, score } … ] | null } … }   227 techniques
-subTechniques{ "T1071.004": { name, externalId, score } … }   479 sub-techniques (score was null on the ones inspected)
+subTechniques{ "T1071.004": { name, externalId, score } … }   479 sub-techniques (`score` null and no `hasEnabledRules` on **all 479** — sub-techniques are unscored; measured 2026-11-19)
 ```
 
 Measured distribution (this tenant, this date):
@@ -89,6 +89,15 @@ never collapse them into one word. Rank is the platform's scored opinion of dete
 6. **Check the context tables the rules depend on.** A rule keyed on a watchlist that is `Error`, or
    `Healthy` with zero items, is a rule that cannot fire. Nineteen such tables were measured on one
    tenant. Name them.
+   Two traps measured on 2026-11-19. **Renamed keys:** the model follows current ATT&CK — *Disable or
+   Modify Tools* is `T1685` under tactic `TA0112` *Defense Impairment* (Best 81 on the tenant), and the
+   legacy `T1562.001` is absent; look both ids up before calling anything "not in the model". **Dotted
+   ids are unscored:** a sub-technique present in `subTechniques` carries no `score` and no
+   `hasEnabledRules`, so it is neither covered nor not-covered in this payload — the parent's score stands
+   in, and sub-technique content shows up only by name in the rule lists (`exabeam_analytics_rule_list`
+   carries `mitre[].techniqueKey` on 717 of 951 enabled rules; `exabeam_correlation_rule_list` carries the
+   id only inside `name`, plus `enabled`, `timesTriggered` and `lastTriggeredAt`, which answer "has it ever
+   fired" without a search).
 
 ---
 

@@ -129,3 +129,6 @@ over-correction: a change that would blind you to real threats is called out, no
 - **Example — an advisory swept.** A real `intel-sweep` run of a CISA ransomware advisory against a live
   tenant, including the shared-infrastructure call it forced:
   [worked example — SafePay advisory sweep](../skills/intel-sweep/reference/examples/safepay-advisory-sweep.md).
+- **Example — a technique set assessed.** The same advisory's 26 techniques through `detection-coverage`,
+  including what the coverage model does not score:
+  [worked example — SafePay technique set](../skills/detection-coverage/reference/examples/safepay-technique-set.md).
