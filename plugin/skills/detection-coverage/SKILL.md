@@ -32,7 +32,10 @@ indicators. When the analyst's question is really "have we been hit", hand it th
 
 Confirm you can see `exabeam_*` tools (`exabeam_get_mitre_coverage`, `exabeam_parser_list`,
 `exabeam_context_table_list`). If not, **stop** — do not answer from general knowledge of Exabeam
-content. Give the analyst the setup note in `soc-investigate`'s Preflight and wait.
+content. Give the analyst the setup note in `soc-investigate`'s Preflight and wait. Record which
+server each result came from and the payload's `subscriptionCode`: a bundled bridge and a hosted
+connector can expose the same tool names against different tenants, and an assessment is about one
+tenant. If the server drops mid-run, stop and say which steps completed.
 
 ## Operating principles (shared spine)
 
@@ -75,7 +78,7 @@ when the source gives them. Record the source and its date — it is part of the
 **2 — Read the coverage model.** `exabeam_get_mitre_coverage` — the data behind **Outcomes
 Navigator** (no arguments; ~93 KB, spills to a file — read it from there with a script, never paste
 it). For each technique id, classify: *not in the model* (absent); *not covered* (`hasEnabledRules:
-false`); *unscored* (a dotted id: the `subTechniques` map carries no score and no flag on any of its 479 entries — the parent's score stands in, and sub-technique content is found by name in the rule lists, never inferred from the parent); **enabled but unsatisfied** (rank `None` **with** `hasEnabledRules: true` — detection logic is
+false`); *unscored* (a dotted id: the `subTechniques` map carries no score and no flag on any of its 479 entries — the parent's score stands in, and sub-technique content is found by name in the rule lists, never inferred from the parent); **enabled but unsatisfied** (rank the string `"None"` **with** `hasEnabledRules: true` — detection logic is
 on and very likely cannot fire because its data source is not ingested; 17 techniques on the measured
 tenant, and the disagreement never runs the other way); or *covered* (quote `score.rank`,
 `score.value`, `hasEnabledRules`). Record `lastUpdateTimestamp`: it is the age of the platform's

@@ -34,6 +34,14 @@ Confirm you can see `exabeam_*` tools (`exabeam_search_events`, `exabeam_context
 alone. Give the analyst the setup note in `soc-investigate`'s Preflight (credentials in
 `~/.exabeam-mcp.env`, `uv` installed, restart the agent) and wait until the tools are available.
 
+Preflight does not end at the start. A hosted connector can drop mid-run (measured 2026-11-19: a
+socket reset after a clean preflight, every reconnect refused for twenty minutes), and a second server
+can expose the **same tool names against a different tenant** (a bundled bridge beside a hosted
+connector). So: record which server each result came from, read `subscriptionCode` from the first
+coverage or use-case payload and compare it before combining any two results, and if the server is
+lost mid-run, **stop and say which steps completed** rather than silently finishing on the other server.
+A sweep is only ever about one tenant.
+
 ## Operating principles (shared spine)
 
 - **Evidence over assertion.** Every finding ties to a tool result you called this run. An
@@ -154,7 +162,12 @@ this tenant does not ingest."*
 them, the advisory's dates otherwise) intersected with retention. Slice under 90 days per
 context-table query; expect long slices to time out and **retry narrower** rather than report the
 timeout as "no hits". If validity lies entirely before retention: **unanswerable**, stop searching,
-say so.
+say so. Read the advisory's own footnotes on its dates: a "last seen" that the source defines as a
+**WHOIS expiry** (measured 2026-11-19: 80 of 218 domains in one CISA advisory, flagged with a star,
+dated 2026–2027) is a registration claim, not an observation, and does not extend the window; use the
+unstarred observation dates, and if a domain has none, treat its window as the advisory's. Approximate
+dates ("late 2024 to 2026") take the publication date as the upper bound and retention as the lower,
+and the scope sentence says "approximate".
 
 **4 — Search, per type, with the field named.** Build each query from the taxonomy: exact match on
 IPs (IPv6 expanded) and hashes; the two-shape domain match with label-boundary anchoring; regex on URLs
@@ -206,6 +219,7 @@ a detection engineer, not someone who has read this file.
 
 | Band | Meaning | Say it as | Terminal action |
 |---|---|---|---|
+| **0** | Nothing was searched: the advisory publishes no indicators, or every indicator's validity predates retention | *Not assessable from indicators* (then why, then what the behavioural check and the coverage read did show) | Report. Never say "no evidence" for a search that did not run. |
 | **1** | No hits, with scope stated and the coverage read attached | *No evidence this activity reached the environment* (then the scope sentence) | Report. Offer the emailed record. |
 | **2** | Hits, and **every** hit for the entity is BLOCKED | *Attempted, and blocked by <control>* | Targeted; the control held. Report, name the control and field, offer a deeper look. **No case.** |
 | **3** | Any hit ALLOWED or OBSERVED on attributable infrastructure, or any promotion below | *Activity from this actor got through at <entity>* | Potential impact. **Show the activity plainly, offer to open a case, open it only on a yes**, then hand the entity to `soc-investigate`. |
@@ -328,3 +342,12 @@ rule and the 90-day / 7-day caps are in `reference/search-cookbook.md`; aggregat
 unusable (group-by keys are stripped), so enumerate with plain filters and exclusion, never with a
 pipe. Unknown field names return `400 Invalid fields value` — that is "not a CIM field", not "empty";
 the taxonomy lists the fields confirmed valid and invalid.
+
+**Query budget.** The connector is the scarce resource, not the tenant. Measured 2026-11-19: three
+spill-sized reads (coverage, analytics rules, use-case score) fired in one turn beside three parallel
+sweeps reset the hosted connector, and it stayed down for the rest of the run. So: one spill-sized read
+at a time, each read once per run and re-read from its file; indicator searches in batches of at most 50
+values per `IN` clause and 90 days per slice, `limit` 500, only the fields the report needs; alert
+searches by technique over 90-day slices, never the whole retention in one call; and never more than
+one parallel reader on the same connector. A timeout is retried once, narrower, then recorded in the
+ledger as a timeout, never as "no hits".

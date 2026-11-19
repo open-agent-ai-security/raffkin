@@ -34,7 +34,7 @@ subscriptionCode        string
 lastUpdateTimestamp     "2026-11-17T04:35:40.341"   — when the platform last recomputed coverage
 tactics      { "TA0001": { name, externalId, techniques: ["T1078", …], score } … }   12 tactics
 techniques   { "T1078":  { name, externalId,
-                            score: { value: 0–100, rank: "None" | "Good" | "Better" | "Best" },
+                            score: { value: 0–100, rank: "None" | "Good" | "Better" | "Best" },   — rank is the **string** "None", never JSON null
                             hasEnabledRules: true | false,
                             subTechniques: [ { name, externalId, score } … ] | null } … }   227 techniques
 subTechniques{ "T1071.004": { name, externalId, score } … }   479 sub-techniques (`score` null and no `hasEnabledRules` on **all 479** — sub-techniques are unscored; measured 2026-11-19)
@@ -130,6 +130,12 @@ for tid in wanted:
     if t is None:            print(tid, "not in the model")
     else:                    print(tid, t["name"], t["score"]["rank"], round(t["score"]["value"]), "enabled:", t.get("hasEnabledRules"))
 ```
+
+`rank` is the string `"None"`, not a null: a check written `t["score"]["rank"] is None` finds zero
+*enabled but unsatisfied* techniques where the tenant has seventeen (measured 2026-11-19 on a second
+tenant with 35). Compare against the string. The payload also carries `subscriptionCode`; record it, and
+compare it before combining this read with any other result in the same run — two servers can expose the
+same tool names against different tenants.
 
 Record `lastUpdateTimestamp` in the report: it is the date of the coverage opinion, and it may be
 older than the sweep.

@@ -54,6 +54,17 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- **Intel skills survive a dropped connector and a second tenant.** Three agent runs on 2026-11-19 lost
+  the hosted Exabeam connector mid-sweep (socket reset after a clean preflight, every reconnect refused
+  for twenty minutes) and finished on the plugin's bundled bridge, which exposes the same tool names
+  against a different tenant. `intel-sweep` and `detection-coverage` preflight now says: record which
+  server each result came from, compare `subscriptionCode` before combining results, and stop and say
+  which steps completed rather than silently finishing on the other server. `intel-sweep` gains a
+  **query budget** (one spill-sized read at a time, 50 values per `IN`, 90-day slices, one reader per
+  connector), a **band 0** *Not assessable from indicators* for advisories that publish none, and a
+  window rule for a source "last seen" that its own footnote defines as a WHOIS expiry (80 of 218
+  domains in one CISA advisory). `coverage-read.md` states that `score.rank` is the string `"None"`,
+  not a null — a null check finds zero *enabled but unsatisfied* techniques where the tenant has 17.
 - **Intel skills write for the reader, not the skill.** `intel-sweep` output and emailed record open
   with two headings, *Impacted?* and *Positioned to detect?*, each answered in one plain sentence;
   band numbers never appear without the plain phrase (*no evidence this activity reached the
