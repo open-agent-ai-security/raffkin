@@ -20,6 +20,10 @@ governance model (feature → `dev`, release `dev` → `main`).
   advisory's 26 techniques assessed on the live tenant. Found that the coverage model scores no
   sub-technique at all (479 of 479 unscored) while correlation rules carry content for seven of them by
   name, and that *Data Encrypted for Impact* at Best 100 rests on one behavioural rule.
+- **`threat-briefing` worked example** — `reference/examples/kev-window-2026-11.md`: 38 KEV entries from
+  the 30-day window ranked against the live tenant for a US software company; three *Act this week*,
+  19 dropped. The emailed copy was refused because the analyst's own address is not on the tenant's
+  roster — now a documented outcome, not a workaround.
 - **`intel-sweep`** — *"have we been hit by this advisory?"* Takes an external threat
   report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
   anything runs, checks whether they are already a context table, establishes what is visible on the
@@ -54,6 +58,9 @@ governance model (feature → `dev`, release `dev` → `main`).
   when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's
   label is not evidence; the entity is reported as such and kept out of bands 2 and 3. Band 3 now reads
   "on attributable infrastructure".
+- `threat-briefing`: download and filter the KEV JSON rather than page-read it (a page fetch truncates the
+  1.8 MB file at 100 KB); a vendor-only match drops an item one band; an inferred technique class is
+  marked *inferred*; the roster refusal and the 8,000-character body are stated outcomes.
 - `coverage-read.md` and `detection-coverage` step 2–3: **unscored** is its own class for dotted ids
   (the `subTechniques` map carries no score or flag); `T1685`/`TA0112` are the model's current keys for
   *Disable or Modify Tools* and legacy `T1562.001` is absent, so resolve both; analytics rules carry

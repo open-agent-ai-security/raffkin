@@ -72,6 +72,13 @@ line every time** and treat "which feeds" as the analyst's call. Fetch the feed 
 pages that entries link onward to unless an item's rank depends on a detail only that page carries,
 and then say which page. Window: the analyst's, else the last 30 days, stated.
 
+The KEV JSON is about 1.8 MB and a page-reading fetch truncates it at the first 100 KB — measured
+2026-11-19, the truncated read showed the window's entries only because the file happens to run newest
+first, and nothing past the cut was checked. Download the file to a scratch directory and filter it with
+a short script (`python3 -I`) instead: that gives the exact `count`, `catalogVersion`, `dateReleased` and
+the full set of `dateAdded` in the window, which the scope line quotes. The alerts index is paginated
+(ten items a page); read as many pages as the window needs and say which.
+
 ## The briefing loop
 
 **0 — Establish the organisation.** Sector, geography, business model, and — the part a feed cannot
@@ -112,6 +119,14 @@ Bands: **Act this week** (exploited, in our stack, techniques uncovered or expos
 (sector- or geography-relevant, not in the observed stack). Say which factor put an item in its band,
 and when a factor is *unknown*, show the word.
 
+*Product-line precision* moves an item down one band: a **vendor-only** match (Cisco present as IOS and
+ISE, the entry on BroadWorks) is not "in our stack", and treating it so would have put every Microsoft,
+Google and Cisco entry in the top band on 2026-11-19. A product present on the tenant's own event rows
+(`product == "VMware ESXi"`, `process_name == "chrome.exe"` on the EDR feed) is a product match even when
+no parser or table carries the name — say which rows showed it. Where the feed gives no technique, say
+the class you inferred from the entry's own description (an unauthenticated RCE → T1190) and mark the
+coverage factor *inferred*; it is still not *unknown*, but the reader should see it was yours.
+
 **6 — Report, then the terminal action.**
 
 ## Output — the briefing
@@ -140,7 +155,13 @@ link. The source URL of an advisory is cited defanged too; the analyst can refan
 A briefing usually goes to someone not at the terminal. Offer it: "Email this briefing to <who>?
 (yes / no)". Only on a clear yes: `exabeam_send_email` with `arg1: {recipients, subject, body}`.
 Recipients come from the analyst, never from a feed; the tool restricts them to the subscription's
-own roster and rejects anything else — never work around that. **The body is built from the tenant
+own roster and rejects anything else — never work around that. **The analyst's own address may not be on
+it:** measured 2026-11-19, "email me" from the terminal was refused because the analyst was not a user of
+the tenant, and the refusal returned the full roster. Show that roster to the analyst, let them pick a
+member or stop, and record a refused send as *not sent* — a briefing with no recipient on the roster is
+still a finished briefing. The body limit of 8,000 characters is enforced; with the mandated inline
+styles that is roughly ten table rows of three columns, so the table carries the top ten and the
+narrative says how many candidates there were. **The body is built from the tenant
 reads and your ranking** — the items, their factors, the coverage values — and names feed entries by
 id and date, with advisory links **by defanged URL only**. HTML fragment, inline styles, under 8000
 characters. Show recipients and the full body before the call; the host's gate asks again; if no

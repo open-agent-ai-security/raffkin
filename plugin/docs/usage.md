@@ -132,3 +132,6 @@ over-correction: a change that would blind you to real threats is called out, no
 - **Example — a technique set assessed.** The same advisory's 26 techniques through `detection-coverage`,
   including what the coverage model does not score:
   [worked example — SafePay technique set](../skills/detection-coverage/reference/examples/safepay-technique-set.md).
+- **Example — a briefing ranked.** A 30-day CISA KEV window through `threat-briefing` for a software company,
+  down to the roster refusal on the emailed copy:
+  [worked example — KEV window, November 2026](../skills/threat-briefing/reference/examples/kev-window-2026-11.md).
