@@ -60,6 +60,27 @@ Vendor presence for the exploited edge products, last 30 days: `vendor:"SonicWal
 Security only (web/DNS security, not ASA). **The advisory's initial-access vector is not visible on
 this tenant.** That is a scope statement, not a negative.
 
+**Visibility ledger** (added when the ledger became a step, from the same day's `exabeam_get_use_case_score`
+read — `datasourceCategories` with `enabled` products; `enabled` is configured, not emitting):
+
+| Stage / indicator type | Category that would carry it | Enabled products | Searched |
+|---|---|---|---|
+| SSL-VPN entry (SonicWall, Cisco ASA) | `vpn` · `firewall` | 4 · 4 (Citrix Gateway, OpenVPN, GlobalProtect, ZPA; Cisco, Huawei, IPTables, Palo Alto) — **not the advisory's vendors** | IPs yes; vendor rows 0 |
+| Veeam exploitation | `backup & recovery` | **none** | not searchable |
+| Credential access, account creation | `endpoint auditing` (Windows Security) · `directory service auditing` | 14 · **none** — AD events arrive through Windows Security | techniques → coverage |
+| RDP / SMB lateral movement | `endpoint auditing` · `edr` | 14 · 1 (Falcon) | techniques → coverage |
+| C2 and hosting IPs | `firewall` · `security services edge` · `network analyzer` | 4 · 3 · 6 | yes |
+| Hostnames | `network analyzer` (DNS, Zeek) · `edr` | 6 · 1 | yes |
+| Hashes, file names | `edr` · `endpoint auditing` | 1 · 14 | yes |
+| Exfiltration (web, FTP) | `security services edge` · `dlp` · `file transfer` | 3 · **none** · 1 | techniques → coverage |
+| Impact (shadow copies, encryption) | `edr` · `endpoint auditing` | 1 · 14 | techniques → coverage |
+
+Reading: every stage that carries an *indicator* lands in a category with enabled products, so the
+searches below mean something. The one visibility hole is `backup & recovery` — a Veeam exploitation
+stage would be invisible here. SonicWall and ASA are **exposure notes** inside present categories: the
+tenant can see VPN authentication, just not from the appliances this actor exploits. `directory service
+auditing` and `dlp` empty are noted; the former is served by Windows Security on this tenant.
+
 ## 3 — The window
 
 Indicator validity November 2024 → August 2026 reaches before retention, so the search ran over what is
@@ -186,9 +207,13 @@ Google.
   tenant cannot see those products. (4) Fix the three `Error` context tables found at step zero.
 - **Flagged.** Nothing in the advisory, the records or the events read as an instruction. The
   advisory's own IOC labels were the thing most likely to mislead, and were treated as data.
-- **Confidence: Medium.** Every indicator type was searchable and the verdict fields were mapped, but
-  validity exceeds retention, the initial-access products are not ingested, and the TI-table check
-  failed.
+- **Visibility ledger.** §2: every indicator-carrying stage has an enabled category; `backup &
+  recovery` has none (a Veeam stage would be invisible); SonicWall and Cisco ASA are exposure notes
+  inside present `vpn` / `firewall` categories.
+- **Confidence: Medium.** Trigger: validity exceeds retention (nine months searched of a 22-month
+  validity) and the TI-table check failed. Not Low: the stages that carry the campaign's indicators are
+  all in categories with enabled products; the one empty category, `backup & recovery`, carries a
+  single stage.
 
 **Terminal action:** the emailed record was offered and not sent (ask tier, analyst absent). No write
 of any kind was made to the tenant.

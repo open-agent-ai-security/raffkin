@@ -58,6 +58,12 @@ governance model (feature → `dev`, release `dev` → `main`).
   when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's
   label is not evidence; the entity is reported as such and kept out of bands 2 and 3. Band 3 now reads
   "on attributable infrastructure".
+- `intel-sweep` step 2: a **visibility ledger keyed on telemetry category, not vendor** — each advisory
+  stage and indicator type mapped to the tenant's own `datasourceCategories` with its enabled products —
+  and a confidence ladder (High / Medium / Low / Unanswerable) computed from it before any search. A
+  vendor absent inside a present category is an exposure note; a category with no enabled product is a
+  visibility hole, and when it carries the campaign's dominant stage, confidence is Low and leads the
+  verdict line. The SafePay example carries the ledger.
 - `threat-briefing`: download and filter the KEV JSON rather than page-read it (a page fetch truncates the
   1.8 MB file at 100 KB); a vendor-only match drops an item one band; an inferred technique class is
   marked *inferred*; the roster refusal and the 8,000-character body are stated outcomes.
