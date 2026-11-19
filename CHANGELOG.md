@@ -16,8 +16,9 @@ governance model (feature → `dev`, release `dev` → `main`).
   anything runs, checks whether they are already a context table, establishes what is visible on the
   tenant, searches across the indicators' validity window and returns a three-band verdict with scope —
   no hits, hits a control blocked, hits that succeeded — with the three band-2→3 promotions hard-coded.
-  Read-only and propose-only: recommends a case for `soc-investigate`, never creates one; the emailed
-  record stays behind the ask gate.
+  Read-only across the sweep; on a band-3 hit it shows exactly what was found, offers to open a case
+  and opens one only on the analyst's yes, then hands to `soc-investigate`; the emailed record stays
+  behind the ask gate.
 - Three shared references under `soc-investigate/reference/`, each measured against a live tenant on
   2026-11-17: **`result-normalization.md`** (which of `action` / `result` / `outcome` carries the
   blocked-or-allowed verdict per vendor, every value seen, and the rule that an unmapped value is

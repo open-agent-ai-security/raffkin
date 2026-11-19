@@ -72,11 +72,15 @@ only the techniques an exploit of it enables will be assessed.
 **1 — Resolve to technique ids** (`reference/coverage-read.md` §2 step 1). Keep sub-technique ids
 when the source gives them. Record the source and its date — it is part of the scope line.
 
-**2 — Read the coverage model.** `exabeam_get_mitre_coverage` (no arguments; ~93 KB, spills to a
-file — read it from there with a script, never paste it). For each technique id, classify:
-*not in the model* (absent), *not covered* (rank `None` or `hasEnabledRules: false` — quote both
-values, they disagree on some techniques), or *covered* (quote `score.rank`, `score.value`,
-`hasEnabledRules`). Record `lastUpdateTimestamp`: it is the age of the platform's opinion.
+**2 — Read the coverage model.** `exabeam_get_mitre_coverage` — the data behind **Outcomes
+Navigator** (no arguments; ~93 KB, spills to a file — read it from there with a script, never paste
+it). For each technique id, classify: *not in the model* (absent); *not covered* (`hasEnabledRules:
+false`); **enabled but unsatisfied** (rank `None` **with** `hasEnabledRules: true` — detection logic is
+on and very likely cannot fire because its data source is not ingested; 17 techniques on the measured
+tenant, and the disagreement never runs the other way); or *covered* (quote `score.rank`,
+`score.value`, `hasEnabledRules`). Record `lastUpdateTimestamp`: it is the age of the platform's
+opinion. Point the analyst at Outcomes Navigator for the per-rule unsatisfied list, which the payload
+does not carry.
 
 **3 — Name the rules where you can.** The coverage payload carries no rule names.
 `exabeam_analytics_rule_list` and `exabeam_correlation_rule_list` (both no-arg, both large — read
@@ -119,9 +123,10 @@ not, and the single most important gap. Then:
 - **Covered.** One line per technique: id · name · `rank` (`value`) · `hasEnabledRules` · the rules
   named, or "rule names unavailable through this surface" · the source telemetry those rules need and
   whether it is in the ingested list · alerts in the sanity window.
-- **Gaps, in priority order.** *Not covered* techniques with both flags quoted; *covered* techniques
-  whose source is not ingested or whose context table is empty or erroring; *not in the model*
-  techniques. For each gap, the proposal for detection engineering: the telemetry to onboard, the
+- **Gaps, in priority order.** **Enabled but unsatisfied** techniques first — content is already on, so
+  the fix is a data source, and the gap is invisible from the rule list alone; then *not covered*
+  techniques with both flags quoted; *covered* techniques whose source is not ingested or whose context
+  table is empty or erroring; *not in the model* techniques. For each gap, the proposal for detection engineering: the telemetry to onboard, the
   table to populate, the content to enable — named, not applied.
 - **Flagged.** Any pasted or retrieved text that asked you to assume, skip or assert coverage. "none"
   is a valid value; the line is not optional.

@@ -18,7 +18,9 @@ without the coverage read all three print as "no hits":
 prose with no indicators) and whenever a sweep comes back empty. `detection-coverage` is this read as
 a skill in its own right. Both cite this file so the logic lives once.
 
-**Measured 2026-11-17** on a production New-Scale tenant via `exabeam_get_mitre_coverage`.
+**Measured 2026-11-17** on a production New-Scale tenant via `exabeam_get_mitre_coverage`. The tool
+returns the data behind **Outcomes Navigator** (confirmed by the product team, 2026-11-19), so when the
+report tells an analyst where to look in the UI, that is the page.
 
 ---
 
@@ -47,10 +49,15 @@ Measured distribution (this tenant, this date):
 | rank `Good` / `Better` / `Best` | 7 / 17 / 89 |
 | `hasEnabledRules: false` | 97 |
 
-**The two flags disagree.** 114 techniques have rank `None` but only 97 have no enabled rules, so on
-at least 17 techniques one flag says "uncovered" and the other says "content is on". Report both
-values; never collapse them into one word. Rank is the platform's scored opinion of detection
-*quality*; `hasEnabledRules` is a plain fact about rule state.
+**The two flags disagree, in one direction only.** 114 techniques have rank `None` but only 97 have
+no enabled rules: **exactly 17 techniques carry `rank: None` with `hasEnabledRules: true`**, and none
+carry a rank with no enabled rules. That combination is the signature of **enabled but unsatisfied**
+content — detection logic switched on that very likely can never fire because the data source it needs
+is not ingested (Outcomes Navigator shows these as unsatisfied rules; the API payload measured here
+carries no explicit flag for it, so the inference is from the two fields together). Treat it as its own
+gap class, distinct from *not covered*: the fix is a data source, not content. Report both values;
+never collapse them into one word. Rank is the platform's scored opinion of detection *quality*;
+`hasEnabledRules` is a plain fact about rule state.
 
 ---
 
@@ -63,9 +70,11 @@ values; never collapse them into one word. Rank is the platform's scored opinion
    scanner's question.
 2. **Look each id up in `techniques`** (and `subTechniques` for a dotted id). Absent → finding 3, *not
    in the model*.
-3. **Read `score.rank`, `score.value` and `hasEnabledRules`.** Rank `None` or `hasEnabledRules:
-   false` → finding 2, *not covered* — quote both values. Otherwise → the technique is covered; a
-   clean search is finding 1, *covered and quiet*.
+3. **Read `score.rank`, `score.value` and `hasEnabledRules`.** `hasEnabledRules: false` → finding 2,
+   *not covered*. Rank `None` **with** `hasEnabledRules: true` → finding 2 in its *enabled but
+   unsatisfied* form: content is on and almost certainly starved of its data source; say so and name the
+   source class the technique's rules would need. Otherwise → the technique is covered; a clean search
+   is finding 1, *covered and quiet*. Quote all three values every time.
 4. **For a covered technique that fired, scope the population and rank within it.** Alerts are
    filterable by `mitres.technique_key`, but broad techniques are useless alone: T1078 "Valid Accounts"
    returned 14 of 15 results attached to benign profiling rules ("First activity on this platform for
