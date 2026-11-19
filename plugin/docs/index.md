@@ -41,6 +41,8 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 | **`triage-cases`** | *"What should I look at first?"* · *"Morning triage."* | Sweeps the open queue, clusters cases by attack shape, ranks them by corroborated signal, and returns a short "start here" list plus the noise clusters worth tuning. Read-only. |
 | **`rule-tuning`** | *"Which rules waste our time?"* · *"Reduce alert noise."* | Separates loud rules from noisy ones and proposes specific tuning mapped to real Exabeam mechanics — a context table, an exclusion, the rule's own settings. Proposes; never changes a rule. |
 | **`intel-sweep`** | *"Have we been hit by this advisory?"* · *"Does this CVE affect us?"* | Takes an external threat report by URL or paste, extracts and types the indicators, checks whether they are already a context table, establishes what is visible, searches the tenant across the indicators' validity window and returns a three-band verdict with explicit scope. Read-only; recommends a case for `soc-investigate`, never creates one. |
+| **`detection-coverage`** | *"Would we detect Scattered Spider?"* · *"Are we covered against T1078?"* | Resolves the threat to ATT&CK techniques at runtime, reads per-technique coverage and enabled-rule state, and cross-checks the ingested sources and context-table health the rules depend on. Answers *would we see it*, never *are we patched*. Read-only; gaps are proposed to detection engineering, never applied. |
+| **`threat-briefing`** | *"What should I be watching this week?"* | Recent threats from authoritative feeds fetched now, ranked against this organisation by shown factors — exploited in the wild, in our stack, exposure, and what this tenant has built detection for — with a handoff offer on every item. Never from model memory. Read-only. |
 
 ## How Raffkin works (in 90 seconds)
 
@@ -73,7 +75,7 @@ Details, how it is tested, and what these do not cover: [Security](security-guar
 
 - Install: `claude plugin marketplace add open-agent-ai-security/plugins` then `claude plugin install raffkin@open-agent-ai-security` (Codex: `codex plugin marketplace add open-agent-ai-security/plugins` then `codex plugin add raffkin@open-agent-ai-security`; Antigravity: see [Installation](installation.md#quick-start--google-antigravity))
 - Credentials: `~/.exabeam-mcp.env` — the Exabeam MCP URL, API key and secret; see [Installation](installation.md)
-- Skills: `soc-investigate` · `triage-cases` · `rule-tuning` · `intel-sweep`
+- Skills: `soc-investigate` · `triage-cases` · `rule-tuning` · `intel-sweep` · `detection-coverage` · `threat-briefing`
 - Audit trail: `~/.raffkin/telemetry.jsonl` — see [Audit logging](logging.md)
 - Check your setup: `preflight.sh` in the installed plugin — see [Installation](installation.md)
 - Windows: not supported natively — use WSL (Git Bash cannot protect the credentials file)

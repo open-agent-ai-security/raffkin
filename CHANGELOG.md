@@ -11,7 +11,7 @@ governance model (feature → `dev`, release `dev` → `main`).
 ## [Unreleased]
 
 ### Added
-- **`intel-sweep`** — a fourth skill: *"have we been hit by this advisory?"* Takes an external threat
+- **`intel-sweep`** — *"have we been hit by this advisory?"* Takes an external threat
   report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
   anything runs, checks whether they are already a context table, establishes what is visible on the
   tenant, searches across the indicators' validity window and returns a three-band verdict with scope —
@@ -26,9 +26,17 @@ governance model (feature → `dev`, release `dev` → `main`).
   including the two-shape domain match forced by `web_domain` being an FQDN on some vendors and a
   registrable domain on Palo Alto, and the types not searchable in events); **`coverage-read.md`** (the
   `get_mitre_coverage` payload shape and the three-way split of a "no hits" result).
-- Routing stubs for **`detection-coverage`** and **`threat-briefing`** — designed, described, routed
-  by the corpus test, and not yet built: each tells the analyst so and hands off. The routing test
-  settled the skill count at three.
+- **`detection-coverage`** — *"would we detect X?"* Resolves an actor, technique set or CVE to ATT&CK
+  techniques at runtime (never from model memory), reads per-technique coverage and enabled-rule state,
+  cross-checks the ingested sources and context-table health the rules depend on, and splits every
+  negative three ways: covered and quiet, not covered, not in the model. Says *detectable*, never
+  *patched*. Read-only; gaps are proposed to detection engineering, never applied.
+- **`threat-briefing`** — *"what should I be watching?"* Recent threats from feeds fetched now (CISA KEV
+  by default plus any the analyst names), filtered to the observed stack, ranked by shown factors —
+  exploited in the wild, in our stack, product precision, exposure, our coverage, recency — into three
+  ordinal bands, every item ending in a handoff offer. Never from model memory; asks when sector,
+  geography and business model are missing. Read-only; the emailed briefing stays behind the ask gate.
+- The routing corpus test settled the skill count at three (29 cases, no collisions).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed

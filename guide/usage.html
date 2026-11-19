@@ -299,6 +299,16 @@ picks itself up from what you ask; you never invoke one by name unless you want 
 <td><strong>intel-sweep</strong></td>
 <td>Whether an external threat report has already touched this environment: the indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope — no hits, hits a control blocked, hits that succeeded. Recommends a case; never creates one.</td>
 </tr>
+<tr>
+<td>"would we detect Scattered Spider", "are we covered against T1078", "what's our detection coverage"</td>
+<td><strong>detection-coverage</strong></td>
+<td>Whether this environment would <em>see</em> a given actor, technique set or exploit: techniques resolved at runtime, per-technique coverage and rule state read from the tenant, cross-checked against the ingested sources and context-table health the rules depend on. Says <em>detectable</em>, never <em>patched</em>. Read-only.</td>
+</tr>
+<tr>
+<td>"what should I be watching", "what threats matter to us", "threat landscape briefing"</td>
+<td><strong>threat-briefing</strong></td>
+<td>A short ranked list of recent threats that matter to this organisation, from feeds fetched now and ranked by shown factors including what this tenant has built detection for. Every item ends in a handoff offer. Read-only.</td>
+</tr>
 </tbody>
 </table>
 <p>You can also hand an alert ID, a case ID, or a pasted alert payload straight in. If you paste one, remember

@@ -20,7 +20,7 @@
 ---
 
 Raffkin gives an AI coding agent — **Claude Code or OpenAI Codex** — the job of a SOC analyst on an
-Exabeam New-Scale tenant, with the guardrails and governance that make that safe to do. Four skills,
+Exabeam New-Scale tenant, with the guardrails and governance that make that safe to do. Six skills,
 named for the person whose work they do:
 
 | Skill | Whose work | What it does |
@@ -29,6 +29,8 @@ named for the person whose work they do:
 | **`triage-cases`** | the shift lead | the open queue — clustered by attack shape, ranked by corroborated signal, a "start here" list; read-only across the sweep |
 | **`rule-tuning`** | the detection engineer | the rules quietly wasting analyst attention, with the specific fix proposed — never applied |
 | **`intel-sweep`** | the intel analyst | an external threat report checked against the tenant's own data — indicators typed and shown first, the context tables consulted before any search, visibility established, then a three-band verdict with scope; recommends a case, never creates one |
+| **`detection-coverage`** | the detection engineer, asked a forward question | whether this environment would *see* a given actor or technique set — resolved at runtime, coverage and rule state read from the tenant, cross-checked against ingested sources and context-table health; says *detectable*, never *patched* |
+| **`threat-briefing`** | the intel analyst | recent threats from feeds fetched now, ranked against this organisation by shown factors including what the tenant has built detection for; every item ends in a handoff offer |
 
 **Dismissing an alert or closing a case is held behind two locks**: a gate the plugin ships and the
 host enforces (a bundled hook on Claude Code, tool-approval policy on Codex), and the skill asking you
