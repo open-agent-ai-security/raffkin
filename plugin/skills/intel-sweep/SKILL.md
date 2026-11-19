@@ -138,9 +138,12 @@ being absent ("this campaign exploits FortiGate; there is no FortiGate here") is
 and belongs to `detection-coverage` and the briefing. What caps *this* verdict is whether the **kind of
 telemetry** that would record each stage exists at all: an attack detectable through IAM data is
 invisible on a tenant with no IAM source, whatever the vendor. `exabeam_get_use_case_score` (no
-arguments, spills) carries the tenant's own vocabulary for this — `datasourceCategories[].name`
-(`vpn`, `firewall`, `edr`, `access management`, `directory service auditing`, `backup & recovery`, about
-sixty in all) with the `enabled` products under each. For every indicator type and every advisory
+arguments, spills, about 1 MB) carries the tenant's own vocabulary for this. The path is
+`useCases[i].datasourceCategories[].datasources[].products[].enabled`, repeated per use case (22 of
+them), so **union the categories across every use case** — a parse that reads only the first finds
+nothing enabled anywhere (two agent runs made that mistake on 2026-11-19). The names (`vpn`, `firewall`,
+`edr`, `access management`, `directory service auditing`, `backup & recovery`, about sixty in all)
+carry the `enabled` products under each. For every indicator type and every advisory
 stage, write one row: *stage · category that would carry it · enabled products in that category (or
 none) · searched here?*. `enabled` means configured, not emitting — for a category that decides the
 verdict, confirm with a presence row in the window. Measured 2026-11-19: SafePay's SSL-VPN entry point
@@ -159,9 +162,11 @@ band 1: the campaign's network stage (four of six indicator types) lives in fire
 this tenant does not ingest."*
 
 **3 — Set the window.** Indicator validity (`ti_valid_from` / `ti_valid_until` where the table has
-them, the advisory's dates otherwise) intersected with retention. Slice under 90 days per
-context-table query; expect long slices to time out and **retry narrower** rather than report the
-timeout as "no hits". If validity lies entirely before retention: **unanswerable**, stop searching,
+them, the advisory's dates otherwise) intersected with retention. Measure retention rather than assume
+it: an empty-filter, `limit` 5, seven-day probe stepping back a quarter at a time finds the floor in
+four or five calls (one tenant's floor was a bulk-stamped `T00:00:00Z` day). Try the whole window in one
+call first; on a timeout **retry narrower** (90-day slices) rather than report the timeout as "no hits".
+Context-table `IN` and pipe queries keep the 90-day cap regardless. If validity lies entirely before retention: **unanswerable**, stop searching,
 say so. Read the advisory's own footnotes on its dates: a "last seen" that the source defines as a
 **WHOIS expiry** (measured 2026-11-19: 80 of 218 domains in one CISA advisory, flagged with a star,
 dated 2026–2027) is a registration claim, not an observation, and does not extend the window; use the
@@ -188,7 +193,9 @@ Measured 2026-11-19: the indicator search on a ransomware advisory was empty for
 behavioural check found the advisory's shadow-copy-deletion stage firing monthly on two servers under
 one service account — an "impacted?" answer that stops at indicators would have missed it. Two traps
 from the same run: a nine-month window on one technique **timed out** where a 90-day slice answered in
-seconds, so slice as step 3 slices; and `total` **caps at `limit`**, so a broad technique (*Command and
+seconds, so slice as step 3 slices — on timeout, not pre-emptively (a smaller tenant answered 19-month
+windows in under ten seconds, and slicing it blindly would have tripled the call count); and `total`
+**caps at `limit`** (on events too: `totalRows` 50 from a 50-row probe means *at least 50*), so a broad technique (*Command and
 Scripting Interpreter*, *Remote Services*) comes back "100 of 100" generic anomaly rules — report that
 as *at least 100, generic, not attributable*, never as a count, and spend the attention on the narrow
 techniques whose alert names describe the advisory's stage.
@@ -347,7 +354,7 @@ the taxonomy lists the fields confirmed valid and invalid.
 spill-sized reads (coverage, analytics rules, use-case score) fired in one turn beside three parallel
 sweeps reset the hosted connector, and it stayed down for the rest of the run. So: one spill-sized read
 at a time, each read once per run and re-read from its file; indicator searches in batches of at most 50
-values per `IN` clause and 90 days per slice, `limit` 500, only the fields the report needs; alert
-searches by technique over 90-day slices, never the whole retention in one call; and never more than
-one parallel reader on the same connector. A timeout is retried once, narrower, then recorded in the
+values per `IN` clause, `limit` 500, only the fields the report needs (drop `rules` from alert
+searches: 13 KB for two alerts); the whole window in one call first and 90-day slices only after a
+timeout; and never more than one parallel reader on the same connector. A timeout is retried once, narrower, then recorded in the
 ledger as a timeout, never as "no hits".

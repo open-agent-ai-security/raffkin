@@ -61,7 +61,10 @@ governance model (feature → `dev`, release `dev` → `main`).
   server each result came from, compare `subscriptionCode` before combining results, and stop and say
   which steps completed rather than silently finishing on the other server. `intel-sweep` gains a
   **query budget** (one spill-sized read at a time, 50 values per `IN`, 90-day slices, one reader per
-  connector), a **band 0** *Not assessable from indicators* for advisories that publish none, and a
+  connector; the whole window in one call first and 90-day slices only after a timeout, since a
+  smaller tenant answered 19-month windows in seconds; a measured retention floor instead of an assumed
+  one; the real `useCases[i].datasourceCategories[]` path, unioned across use cases), a **band 0**
+  *Not assessable from indicators* for advisories that publish none, and a
   window rule for a source "last seen" that its own footnote defines as a WHOIS expiry (80 of 218
   domains in one CISA advisory). `coverage-read.md` states that `score.rank` is the string `"None"`,
   not a null — a null check finds zero *enabled but unsatisfied* techniques where the tenant has 17.
