@@ -54,6 +54,21 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- **Intel skills write for the reader, not the skill.** `intel-sweep` output and emailed record open
+  with two headings, *Impacted?* and *Positioned to detect?*, each answered in one plain sentence;
+  band numbers never appear without the plain phrase (*no evidence this activity reached the
+  environment* / *attempted, and blocked by …* / *activity from this actor got through at …*), a match
+  on shared infrastructure is never called a hit, and the visibility ledger moves below the findings as
+  the evidence behind the confidence word. `detection-coverage` leads with *Positioned to detect?*;
+  `threat-briefing` defines *Act this week / Watch / Note* where they first appear in the report and the
+  mail. Audience: management or a detection engineer who has not read the source.
+- **`intel-sweep` step 4b, the behavioural check.** Indicators rotate; tradecraft does not. Alerts by
+  ATT&CK technique key over the sweep window, reported as *observed activity* (never an indicator hit,
+  never a band) and handed to `soc-investigate`. Measured 2026-11-19 on the SafePay advisory: nine months
+  of indicator searches were empty while the advisory's shadow-copy-deletion stage had fired nine
+  CRITICAL alerts on two servers under one service account. Two traps recorded: a nine-month window on
+  one technique times out where a 90-day slice answers, and `total` caps at `limit`, so broad techniques
+  read "at least 100, generic, not attributable". The SafePay example carries the re-run.
 - `intel-sweep` step 5: **an IP hit whose own rows name shared infrastructure is not attributable** —
   when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's
   label is not evidence; the entity is reported as such and kept out of bands 2 and 3. Band 3 now reads

@@ -117,8 +117,11 @@ profiling noise (`reference/coverage-read.md` §2 step 4).
 
 ## Output — the coverage assessment
 
-Lead with one sentence: how many techniques were in scope, how many are detectable here, how many are
-not, and the single most important gap. Then:
+Lead with the question as a heading — **Positioned to detect?** — and one plain sentence under it: how
+many techniques were in scope, how many are detectable here, how many are not, and the single most
+important gap. The reader is management or a detection engineer; define every term of art on first use
+(*enabled but unsatisfied* → "detection logic is on but its data source is not ingested"; *Best 97* →
+"scored Best, 97 of 100"). Then:
 
 - **Scope.** The threat as resolved (source and date of the technique list), the tenant's ingested
   stack as observed (partial), the coverage model's `lastUpdateTimestamp`, and the sentence: *this

@@ -131,7 +131,11 @@ coverage factor *inferred*; it is still not *unknown*, but the reader should see
 
 ## Output — the briefing
 
-Lead with the band-one items in one sentence each. Then:
+Lead with the band-one items in one sentence each. The reader is management or a detection engineer,
+so the three band names are **defined where they first appear**, in the report and in the mail, in one
+line: *Act this week — exploited, in our stack, and either not covered or internet-facing; Watch —
+exploited and in our stack but covered, or in our stack and not yet exploited; Note — relevant to the
+sector, not in the observed stack.* A rank word never appears without its number. Then:
 
 - **Scope.** The organisation as understood (sector, geography, business model, which were assumed),
   the feeds fetched with time and window, the observed stack (partial), the coverage model's

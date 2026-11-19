@@ -180,40 +180,67 @@ split three ways:
   this run called T1685 a typo, and it was the current ATT&CK key.
 - **Enabled but unsatisfied:** none of these 26.
 
-`exabeam_search_alerts` on the covered technique keys, last 90 days, returned the 100-row cap from the
-last eleven hours alone: 93 generic *Multiple Anomalies*, two inbound-TOR detections, three first-DLL
-rules. None references an advisory indicator. The population is large; it is not evidence either way.
+## 7b — The behaviour, not the indicators
+
+The indicator search answers "did this actor's infrastructure touch us"; it does not answer "did the
+thing this actor does happen here". `exabeam_search_alerts` with `mitres.technique_key:"<id>"` for each
+of the 13 parent ids, 2026-02-19 → 2026-11-19, `limit` 100, fields `name`, `priority`,
+`creation_timestamp`, `src_host`, `user`:
+
+| Technique | Window answered | Result | Reading |
+|---|---|---|---|
+| **T1490 Inhibit System Recovery** | nine months **timed out**; 90-day slice answered | **9 alerts, all CRITICAL**, 2026-08-27 → 2026-11-14, one service account, two servers (`<server-1>`, `<server-2>`), every alert name "shadow copy deletion via vssadmin.exe", three of them bundled with host enumeration, permission modification or registry changes | **Observed activity.** The advisory's impact stage, monthly, on servers. Not an indicator hit, not attributable to SafePay — handed to `soc-investigate` |
+| T1685 Disable or Modify Tools | 90-day slice | 67: *Disable history collection* on developer workstations, two `setenforce` SELinux disables, two `auditd` disables | Developer behaviour on Linux endpoints; the two SELinux and two auditd rows are the ones worth a look |
+| T1486, T1059, T1021, T1098, T1136, T1048, T1567, T1110, T1218, T1133, T1190 | nine months | **100 of 100 each** — `total` caps at `limit`; mostly *Multiple Anomalies* and generic volume rules (*Abnormal number of unique files written*, *Abnormal number of PowerShell executions*, *First successful RDP connection*) | At least 100 each, generic, not attributable. The population is large; it is not evidence either way, and the 100-row sample is the latest eleven hours, not the window |
+
+The T1490 row is what the first draft of this run missed: nine months of empty indicator searches were
+reported as the "impacted?" answer while the advisory's own impact behaviour was firing CRITICAL on two
+servers. Whether it is a backup job, a misconfigured agent or an intrusion is `soc-investigate`'s
+question (the same alerts, from the `detection-coverage` run, are already with it); the sweep's job is
+to say it is there.
 
 ## Report, as handed back
 
-**Band 1 with four shared-infrastructure hits.** None of the advisory's attributable indicators —
-five dedicated IPs, ten hashes, four hostnames, six file names — appears in nine months of retained
-telemetry; the four IP hits are the tenant's own traffic to GitHub, a Cloudflare-fronted SaaS and
-Google.
+Written for a manager or a detection engineer; no band numbers, every term defined where it appears.
+
+**Impacted?** No evidence this actor's infrastructure reached the environment: none of the advisory's
+attributable indicators — five dedicated IPs, ten hashes, four hostnames, six file names — appears in
+nine months of retained telemetry, and the four addresses that did match are the tenant's own traffic
+to GitHub, a Cloudflare-fronted SaaS and Google, which is shared infrastructure and not attributable.
+**One behaviour the advisory describes was observed:** shadow-copy deletion with `vssadmin.exe` by a
+service account on two servers, nine CRITICAL alerts between 2026-08-27 and 2026-11-14, handed to
+investigation. Confidence **Medium**: the indicators are valid over 22 months and only nine are
+retained here, and the threat-intelligence table could not be checked.
+
+**Positioned to detect?** From the `detection-coverage` run on the same advisory: all 13 parent
+techniques are detectable here, 12 scored *Best* or *Better* out of a four-step scale; the content for
+seven sub-techniques lives in correlation rules; six sub-techniques have no content; the initial-access
+stage (SonicWall, Veeam, Cisco ASA) is not ingested at all; and *Data Encrypted for Impact*'s top score
+rests on a single rule.
 
 - **Scope.** Source `hxxps://www.cisa[.]gov/news-events/cybersecurity-advisories/aa26-293a`. Window
   2026-02-19 → 2026-11-19 in 90-day slices (validity reaches before retention). Stack partial: 21 custom
   parsers plus Palo Alto, Zscaler ZPA/ZIA, CrowdStrike, NetMon, Zeek seen on the rows. SonicWall, Veeam,
   Cisco ASA **not ingested** — the exploited products are invisible here. Context tables: no SafePay
   table; TI-table membership unqueryable (server 500).
-- **Hits.** The four shared-infrastructure entities above, each with the field that matched and the
-  field that carried the verdict.
+- **What matched.** Four addresses, all shared infrastructure, each with the field that matched and the
+  field that carried the verdict (§5). Not attributable; no case recommended.
+- **Behaviour observed.** §7b: nine shadow-copy deletions on two servers under one service account;
+  67 Linux tool-disable alerts, mostly developer history-collection toggles; the eleven broad
+  techniques at the 100-row cap with generic anomaly rules, not evidence either way.
 - **Negatives with scope.** Dedicated IPs, hashes, hostnames, exact file names: no rows; sub-techniques
-  unscored in the model (parents carry the score); every parent covered and quiet.
-- **Recommendations.** (1) Load the **five dedicated IPs and ten hashes** as a context table, key
-  columns `ti_ip_address` / `value`, valid 2024-11-01 → 2026-08-31 — and leave the four shared
-  addresses out. (2) Run `detection-coverage` on the SafePay technique set; the sub-technique gaps are
-  the question. (3) Patch exposure on the five CVEs is the vulnerability scanner's question; this
-  tenant cannot see those products. (4) Fix the three `Error` context tables found at step zero.
+  unscored in the model (parents carry the score); every parent covered.
+- **Recommendations.** (1) `soc-investigate` on the service account and the two servers — the first
+  pivot is whether a backup product owns the account. (2) Load the **five dedicated IPs and ten hashes**
+  as a context table, key columns `ti_ip_address` / `value`, valid 2024-11-01 → 2026-08-31 — and leave
+  the four shared addresses out. (3) Patch exposure on the five CVEs is the vulnerability scanner's
+  question; this tenant cannot see those products. (4) Fix the three `Error` context tables found at
+  step zero.
 - **Flagged.** Nothing in the advisory, the records or the events read as an instruction. The
   advisory's own IOC labels were the thing most likely to mislead, and were treated as data.
-- **Visibility ledger.** §2: every indicator-carrying stage has an enabled category; `backup &
-  recovery` has none (a Veeam stage would be invisible); SonicWall and Cisco ASA are exposure notes
-  inside present `vpn` / `firewall` categories.
-- **Confidence: Medium.** Trigger: validity exceeds retention (nine months searched of a 22-month
-  validity) and the TI-table check failed. Not Low: the stages that carry the campaign's indicators are
-  all in categories with enabled products; the one empty category, `backup & recovery`, carries a
-  single stage.
+- **Visibility ledger.** §2: every indicator-carrying stage has an enabled telemetry category;
+  `backup & recovery` has none (a Veeam stage would be invisible); SonicWall and Cisco ASA are
+  exposure notes inside present `vpn` / `firewall` categories.
 
 **Terminal action:** the emailed record was offered and not sent (ask tier, analyst absent). No write
 of any kind was made to the tenant.
@@ -222,5 +249,9 @@ of any kind was made to the tenant.
 
 - `SKILL.md` step 5: the shared-infrastructure rule, and band 3 qualified to *attributable*
   infrastructure.
+- `SKILL.md` step 4b: the behavioural check — alerts by technique key, reported as observed activity
+  — after this run's first draft answered "impacted?" from indicators alone while the advisory's
+  impact stage was firing on two servers.
+- `SKILL.md` Output: the two questions first, in plain words, for a reader who has not read the skill.
 - `indicator-taxonomy.md`: `file_name` tokenises on dots — use `==` for an exact match; `threat_name`
   is not a field; `IN "<Exabeam TI table>"` fails server-side through the MCP on this tenant.
