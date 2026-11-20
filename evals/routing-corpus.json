@@ -14,6 +14,20 @@
     {"ask": "why is this rule so loud", "expect": "rule-tuning"},
     {"ask": "find noisy rules", "expect": "rule-tuning"},
     {"ask": "reduce alert noise", "expect": "rule-tuning"},
-    {"ask": "which rules waste our time", "expect": "rule-tuning"}
+    {"ask": "which rules waste our time", "expect": "rule-tuning"},
+    {"ask": "have we been hit by this advisory", "expect": "intel-sweep"},
+    {"ask": "CISA just published AA26-097A, does this affect us", "expect": "intel-sweep"},
+    {"ask": "are we impacted by CVE-2026-1234", "expect": "intel-sweep"},
+    {"ask": "are we affected by this Scattered Spider writeup", "expect": "intel-sweep"},
+    {"ask": "check these indicators against our data", "expect": "intel-sweep"},
+    {"ask": "would we detect Scattered Spider", "expect": "detection-coverage"},
+    {"ask": "would we catch a Kerberoasting attack", "expect": "detection-coverage"},
+    {"ask": "are we covered against T1078", "expect": "detection-coverage"},
+    {"ask": "do we have coverage for ransomware precursors", "expect": "detection-coverage"},
+    {"ask": "what's our detection coverage for lateral movement", "expect": "detection-coverage"},
+    {"ask": "what should I be watching this week", "expect": "threat-briefing"},
+    {"ask": "what threats matter to us in finance", "expect": "threat-briefing"},
+    {"ask": "what recent advisories are relevant to a North American B2C bank", "expect": "threat-briefing"},
+    {"ask": "give me a threat landscape briefing", "expect": "threat-briefing"}
   ]
 }

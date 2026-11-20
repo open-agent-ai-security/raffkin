@@ -8,7 +8,7 @@
 What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 [installation](installation.md) — credentials in place. The human-in-the-loop gate ships on, on both hosts.
 
-## The three skills, and how to call them
+## The skills, and how to call them
 
 You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.
@@ -18,6 +18,9 @@ picks itself up from what you ask; you never invoke one by name unless you want 
 | "investigate alert `<id>`", "work case `<id>`", "is this a real threat?" | **soc-investigate** | A written investigation of one alert or case: evidence, timeline, MITRE mapping, verdict, and the action it took or is asking you to approve. |
 | "triage the queue", "what should I look at", "morning triage" | **triage-cases** | A short "start here" list from the open case queue, clustered by attack shape and ranked by corroborated signal — plus the noise clusters worth tuning. |
 | "find noisy rules", "what's generating false positives", "tune detections" | **rule-tuning** | The rules that are *noisy* (high volume, low precision — not merely loud) and a specific, least-invasive tuning proposal for each. |
+| "have we been hit by this advisory", "does this affect us", "check these indicators against our data" | **intel-sweep** | Whether an external threat report has already touched this environment: the indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope — no hits, hits a control blocked, hits that succeeded. On a hit that succeeded it shows you what was found, offers to open a case, and opens one only if you say yes. |
+| "would we detect Scattered Spider", "are we covered against T1078", "what's our detection coverage" | **detection-coverage** | Whether this environment would *see* a given actor, technique set or exploit: techniques resolved at runtime, per-technique coverage and rule state read from the tenant, cross-checked against the ingested sources and context-table health the rules depend on. Says *detectable*, never *patched*. Read-only. |
+| "what should I be watching", "what threats matter to us", "threat landscape briefing" | **threat-briefing** | A short ranked list of recent threats that matter to this organisation, from feeds fetched now and ranked by shown factors including what this tenant has built detection for. Every item ends in a handoff offer. Read-only. |
 
 You can also hand an alert ID, a case ID, or a pasted alert payload straight in. If you paste one, remember
 that pasted text is treated as untrusted — the skill will still go and query Exabeam for the evidence
@@ -123,3 +126,12 @@ over-correction: a change that would blind you to real threats is called out, no
   notes written to Exabeam carry the same content, neutralized for safety.
 - **Example.** A real end-to-end run against a staging tenant, with the pivots and the reasoning:
   [worked example — coordinated credential access](../skills/soc-investigate/reference/examples/coordinated-credential-access.md).
+- **Example — an advisory swept.** A real `intel-sweep` run of a CISA ransomware advisory against a live
+  tenant, including the shared-infrastructure call it forced:
+  [worked example — SafePay advisory sweep](../skills/intel-sweep/reference/examples/safepay-advisory-sweep.md).
+- **Example — a technique set assessed.** The same advisory's 26 techniques through `detection-coverage`,
+  including what the coverage model does not score:
+  [worked example — SafePay technique set](../skills/detection-coverage/reference/examples/safepay-technique-set.md).
+- **Example — a briefing ranked.** A 30-day CISA KEV window through `threat-briefing` for a software company,
+  down to the roster refusal on the emailed copy:
+  [worked example — KEV window, November 2026](../skills/threat-briefing/reference/examples/kev-window-2026-11.md).

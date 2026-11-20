@@ -262,12 +262,12 @@ img { max-width: 100%; display: block; }
   </div>
 </header>
 <div class="docs-shell">
-  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html" class="active">Using the skills</a><ul class="docs-subnav"><li><a href="#the-three-skills-and-how-to-call-them">The three skills, and how to call them</a></li><li><a href="#what-an-investigation-does">What an investigation does</a></li><li><a href="#what-it-will-ask-you">What it will ask you</a></li><li><a href="#reading-the-report">Reading the report</a></li><li><a href="#triage-and-tuning">Triage and tuning</a></li><li><a href="#practical-notes">Practical notes</a></li></ul></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
+  <aside class="docs-sidebar"><nav class="docs-nav"><div class="docs-nav-title">Documentation</div><ul><li><a href="index.html">Overview</a></li><li><a href="installation.html">Installation &amp; setup</a></li><li><a href="usage.html" class="active">Using the skills</a><ul class="docs-subnav"><li><a href="#the-skills-and-how-to-call-them">The skills, and how to call them</a></li><li><a href="#what-an-investigation-does">What an investigation does</a></li><li><a href="#what-it-will-ask-you">What it will ask you</a></li><li><a href="#reading-the-report">Reading the report</a></li><li><a href="#triage-and-tuning">Triage and tuning</a></li><li><a href="#practical-notes">Practical notes</a></li></ul></li><li><a href="example.html">Example investigation</a></li><li><a href="security-guardrails.html">Security</a></li><li><a href="logging.html">Audit logging</a></li><li><a href="support.html">Support</a></li></ul></nav></aside>
   <main class="docs-main">
     <article class="prose"><h1 id="using-the-skills">Using the skills</h1>
 <p>What to say, what happens, and what Raffkin will ask you before it acts. This assumes you have finished
 <a href="installation.html">installation</a> — credentials in place. The human-in-the-loop gate ships on, on both hosts.</p>
-<h2 id="the-three-skills-and-how-to-call-them">The three skills, and how to call them</h2>
+<h2 id="the-skills-and-how-to-call-them">The skills, and how to call them</h2>
 <p>You talk to Raffkin in plain language inside your coding agent (Claude Code or Codex). The right skill
 picks itself up from what you ask; you never invoke one by name unless you want to.</p>
 <table>
@@ -293,6 +293,21 @@ picks itself up from what you ask; you never invoke one by name unless you want 
 <td>"find noisy rules", "what's generating false positives", "tune detections"</td>
 <td><strong>rule-tuning</strong></td>
 <td>The rules that are <em>noisy</em> (high volume, low precision — not merely loud) and a specific, least-invasive tuning proposal for each.</td>
+</tr>
+<tr>
+<td>"have we been hit by this advisory", "does this affect us", "check these indicators against our data"</td>
+<td><strong>intel-sweep</strong></td>
+<td>Whether an external threat report has already touched this environment: the indicators typed and shown first, step zero against the context tables, what was visible, then a three-band verdict with scope — no hits, hits a control blocked, hits that succeeded. On a hit that succeeded it shows you what was found, offers to open a case, and opens one only if you say yes.</td>
+</tr>
+<tr>
+<td>"would we detect Scattered Spider", "are we covered against T1078", "what's our detection coverage"</td>
+<td><strong>detection-coverage</strong></td>
+<td>Whether this environment would <em>see</em> a given actor, technique set or exploit: techniques resolved at runtime, per-technique coverage and rule state read from the tenant, cross-checked against the ingested sources and context-table health the rules depend on. Says <em>detectable</em>, never <em>patched</em>. Read-only.</td>
+</tr>
+<tr>
+<td>"what should I be watching", "what threats matter to us", "threat landscape briefing"</td>
+<td><strong>threat-briefing</strong></td>
+<td>A short ranked list of recent threats that matter to this organisation, from feeds fetched now and ranked by shown factors including what this tenant has built detection for. Every item ends in a handoff offer. Read-only.</td>
 </tr>
 </tbody>
 </table>
@@ -398,6 +413,15 @@ over-correction: a change that would blind you to real threats is called out, no
   notes written to Exabeam carry the same content, neutralized for safety.</li>
 <li><strong>Example.</strong> A real end-to-end run against a staging tenant, with the pivots and the reasoning:
   <a href="example.html">worked example — coordinated credential access</a>.</li>
+<li><strong>Example — an advisory swept.</strong> A real <code>intel-sweep</code> run of a CISA ransomware advisory against a live
+  tenant, including the shared-infrastructure call it forced:
+  <a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/skills/intel-sweep/reference/examples/safepay-advisory-sweep.md">worked example — SafePay advisory sweep</a>.</li>
+<li><strong>Example — a technique set assessed.</strong> The same advisory's 26 techniques through <code>detection-coverage</code>,
+  including what the coverage model does not score:
+  <a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/skills/detection-coverage/reference/examples/safepay-technique-set.md">worked example — SafePay technique set</a>.</li>
+<li><strong>Example — a briefing ranked.</strong> A 30-day CISA KEV window through <code>threat-briefing</code> for a software company,
+  down to the roster refusal on the emailed copy:
+  <a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/skills/threat-briefing/reference/examples/kev-window-2026-11.md">worked example — KEV window, November 2026</a>.</li>
 </ul></article>
     <p class="docs-edit"><a href="https://github.com/open-agent-ai-security/raffkin/blob/main/plugin/docs/usage.md" target="_blank" rel="noopener">Edit this page on GitHub ↗</a></p>
   </main>

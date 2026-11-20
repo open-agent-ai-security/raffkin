@@ -8,6 +8,106 @@
 Notable changes to Raffkin (named socxen before 1.0). Versions track `plugin/.claude-plugin/plugin.json`; releases follow the dev→main
 governance model (feature → `dev`, release `dev` → `main`).
 
+## [Unreleased]
+
+### Added
+- **`intel-sweep` worked example** — `reference/examples/safepay-advisory-sweep.md`: a real run of CISA
+  AA26-293A (SafePay) against a live tenant on 2026-11-19, masked. Four of the advisory's nine
+  "intrusion" IPs resolved on the tenant's own rows to `github.com`, `githubusercontent.com`, a
+  Cloudflare-fronted SaaS and a Google range; the run produced the shared-infrastructure rule below.
+  No write was made to the tenant.
+- **`detection-coverage` worked example** — `reference/examples/safepay-technique-set.md`: the same
+  advisory's 26 techniques assessed on the live tenant. Found that the coverage model scores no
+  sub-technique at all (479 of 479 unscored) while correlation rules carry content for seven of them by
+  name, and that *Data Encrypted for Impact* at Best 100 rests on one behavioural rule.
+- **`threat-briefing` worked example** — `reference/examples/kev-window-2026-11.md`: 38 KEV entries from
+  the 30-day window ranked against the live tenant for a US software company; three *Act this week*,
+  19 dropped. The emailed copy was refused because the analyst's own address is not on the tenant's
+  roster — now a documented outcome, not a workaround.
+- **`intel-sweep`** — *"have we been hit by this advisory?"* Takes an external threat
+  report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
+  anything runs, checks whether they are already a context table, establishes what is visible on the
+  tenant, searches across the indicators' validity window and returns a three-band verdict with scope —
+  no hits, hits a control blocked, hits that succeeded — with the three band-2→3 promotions hard-coded.
+  Read-only across the sweep; on a band-3 hit it shows exactly what was found, offers to open a case
+  and opens one only on the analyst's yes, then hands to `soc-investigate`; the emailed record stays
+  behind the ask gate.
+- Three shared references under `soc-investigate/reference/`, each measured against a live tenant on
+  2026-11-17: **`result-normalization.md`** (which of `action` / `result` / `outcome` carries the
+  blocked-or-allowed verdict per vendor, every value seen, and the rule that an unmapped value is
+  undetermined and never band 2 — `outcome` is the parser's event-type suffix and was measured wrong on
+  three enforcement products); **`indicator-taxonomy.md`** (IOC type → populated field → match form,
+  including the two-shape domain match forced by `web_domain` being an FQDN on some vendors and a
+  registrable domain on Palo Alto, and the types not searchable in events); **`coverage-read.md`** (the
+  `get_mitre_coverage` payload shape and the three-way split of a "no hits" result).
+- **`detection-coverage`** — *"would we detect X?"* Resolves an actor, technique set or CVE to ATT&CK
+  techniques at runtime (never from model memory), reads per-technique coverage and enabled-rule state,
+  cross-checks the ingested sources and context-table health the rules depend on, and splits every
+  negative three ways: covered and quiet, not covered, not in the model. Says *detectable*, never
+  *patched*. Read-only; gaps are proposed to detection engineering, never applied.
+- **`threat-briefing`** — *"what should I be watching?"* Recent threats from feeds fetched now (CISA KEV
+  by default plus any the analyst names), filtered to the observed stack, ranked by shown factors —
+  exploited in the wild, in our stack, product precision, exposure, our coverage, recency — into three
+  ordinal bands, every item ending in a handoff offer. Never from model memory; asks when sector,
+  geography and business model are missing. Read-only; the emailed briefing stays behind the ask gate.
+- The routing corpus test settled the skill count at three (29 cases, no collisions).
+- 14 routing-corpus cases for the three new skills.
+
+### Changed
+- intel-sweep and the indicator taxonomy absorb the rest of the 2026-11-19 agent runs as probes rather than facts: mail fields are probe-gated (empty on one tenant, populated on another); parser presence is not field presence (print values, junk counts as empty); `context_table_list` is inline below ~100 tables and `status` has a third value, `Processing`; TI-feed membership is settled only by `get_context_table_records`; dotted technique keys return 0 on alerts (query parents); `rules` left out of alert fields and camelCase response keys mapped; new taxonomy rows for account names and messenger IDs; intake searches every spelling, fetches STIX downloads as data, and lists non-ATT&CK ids (ATLAS) as not modelled; the scope line names the tenant and calls out demo/lab data; the band-3 offer reads alert details first.
+- intel-sweep's band-3 terminal action now looks for the case that already exists before offering a new one: `exabeam_search_cases` on the entity plus `caseId` on its alerts, then "add this to case N as a note?" — a new case only when nothing is found. Measured on the first band-3 run: the entity already had four open cases on the scenario and the one alert without a `caseId` was the only reason a fifth got opened. `create_case` guidance corrected: `queue` is not required and a queue display name is rejected (`Queue name does not exist`); leave it out. The gate's one-case budget counts attempts, so a rejected create spends it.
+- **Intel skills survive a dropped connector and a second tenant.** Three agent runs on 2026-11-19 lost
+  the hosted Exabeam connector mid-sweep (socket reset after a clean preflight, every reconnect refused
+  for twenty minutes) and finished on the plugin's bundled bridge, which exposes the same tool names
+  against a different tenant. `intel-sweep` and `detection-coverage` preflight now says: record which
+  server each result came from, compare `subscriptionCode` before combining results, and stop and say
+  which steps completed rather than silently finishing on the other server. `intel-sweep` gains a
+  **query budget** (one spill-sized read at a time, 50 values per `IN`, 90-day slices, one reader per
+  connector; the whole window in one call first and 90-day slices only after a timeout, since a
+  smaller tenant answered 19-month windows in seconds; a measured retention floor instead of an assumed
+  one; the real `useCases[i].datasourceCategories[]` path, unioned across use cases), a **band 0**
+  *Not assessable from indicators* for advisories that publish none, and a
+  window rule for a source "last seen" that its own footnote defines as a WHOIS expiry (80 of 218
+  domains in one CISA advisory). `coverage-read.md` states that `score.rank` is the string `"None"`,
+  not a null — a null check finds zero *enabled but unsatisfied* techniques where the tenant has 17.
+- **Intel skills write for the reader, not the skill.** `intel-sweep` output and emailed record open
+  with two headings, *Impacted?* and *Positioned to detect?*, each answered in one plain sentence;
+  band numbers never appear without the plain phrase (*no evidence this activity reached the
+  environment* / *attempted, and blocked by …* / *activity from this actor got through at …*), a match
+  on shared infrastructure is never called a hit, and the visibility ledger moves below the findings as
+  the evidence behind the confidence word. `detection-coverage` leads with *Positioned to detect?*;
+  `threat-briefing` defines *Act this week / Watch / Note* where they first appear in the report and the
+  mail. Audience: management or a detection engineer who has not read the source.
+- **`intel-sweep` step 4b, the behavioural check.** Indicators rotate; tradecraft does not. Alerts by
+  ATT&CK technique key over the sweep window, reported as *observed activity* (never an indicator hit,
+  never a band) and handed to `soc-investigate`. Measured 2026-11-19 on the SafePay advisory: nine months
+  of indicator searches were empty while the advisory's shadow-copy-deletion stage had fired nine
+  CRITICAL alerts on two servers under one service account. Two traps recorded: a nine-month window on
+  one technique times out where a 90-day slice answers, and `total` caps at `limit`, so broad techniques
+  read "at least 100, generic, not attributable". The SafePay example carries the re-run.
+- `intel-sweep` step 5: **an IP hit whose own rows name shared infrastructure is not attributable** —
+  when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's
+  label is not evidence; the entity is reported as such and kept out of bands 2 and 3. Band 3 now reads
+  "on attributable infrastructure".
+- `intel-sweep` step 2: a **visibility ledger keyed on telemetry category, not vendor** — each advisory
+  stage and indicator type mapped to the tenant's own `datasourceCategories` with its enabled products —
+  and a confidence ladder (High / Medium / Low / Unanswerable) computed from it before any search. A
+  vendor absent inside a present category is an exposure note; a category with no enabled product is a
+  visibility hole, and when it carries the campaign's dominant stage, confidence is Low and leads the
+  verdict line. The SafePay example carries the ledger.
+- `threat-briefing`: download and filter the KEV JSON rather than page-read it (a page fetch truncates the
+  1.8 MB file at 100 KB); a vendor-only match drops an item one band; an inferred technique class is
+  marked *inferred*; the roster refusal and the 8,000-character body are stated outcomes.
+- `coverage-read.md` and `detection-coverage` step 2–3: **unscored** is its own class for dotted ids
+  (the `subTechniques` map carries no score or flag); `T1685`/`TA0112` are the model's current keys for
+  *Disable or Modify Tools* and legacy `T1562.001` is absent, so resolve both; analytics rules carry
+  `mitre[].techniqueKey`, correlation rules carry the id only in `name` with `timesTriggered` /
+  `lastTriggeredAt` beside it.
+- `indicator-taxonomy.md`: `file_name` is tokenised on dots (`1.exe` matched every
+  `am_delta_patch_1.*.exe`) — use `==` for exact; `threat_name` is not a field; `IN` against the
+  Exabeam-source threat-intelligence IP table fails server-side through the MCP.
+- `search-cookbook.md`'s `result` warning now points at the measured verdict map.
+
 ## [1.1.0] — 2026-10-23
 
 **Raffkin runs on Google Antigravity.** A third host, beside Claude Code and Codex: the plugin's skills,

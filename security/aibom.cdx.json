@@ -55,7 +55,7 @@
         },
         {
           "name": "ai:skillName",
-          "value": "rule-tuning, soc-investigate, triage-cases"
+          "value": "detection-coverage, intel-sweep, rule-tuning, soc-investigate, threat-briefing, triage-cases"
         }
       ]
     },
@@ -104,7 +104,7 @@
         "value": "security/gen_aibom.py (deterministic, from repo sources)"
       }
     ],
-    "timestamp": "2026-10-23T23:01:20Z"
+    "timestamp": "2026-11-19T08:34:39Z"
   },
   "components": [
     {
@@ -211,7 +211,7 @@
       "bom-ref": "artifact:soc-investigate-methodology",
       "type": "data",
       "name": "skill methodology (system prompts + reference corpus)",
-      "description": "The agent's instructions: the three skills' SKILL.md (rule-tuning, soc-investigate, triage-cases — investigation methodology, queue sweep, rule tuning; governance; output discipline) plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, triage taxonomy, containment list, worked examples). This prompt corpus — not a model — is the primary AI artifact Raffkin ships.",
+      "description": "The agent's instructions: the skills' SKILL.md (detection-coverage, intel-sweep, rule-tuning, soc-investigate, threat-briefing, triage-cases — investigation methodology, queue sweep, rule tuning; governance; output discipline) plus reference/ (tool map, EQL search cookbook, enrichment playbook, report template, triage taxonomy, containment list, worked examples). This prompt corpus — not a model — is the primary AI artifact Raffkin ships.",
       "licenses": [
         {
           "license": {
