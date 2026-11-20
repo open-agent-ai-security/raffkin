@@ -92,9 +92,17 @@ real in-product queries.
   `dns_query = RGX(".*katz-stealer\.com.*")`, `file_path = RGX("\\\.library\\-ms$")`.
 - **Null / exists:** `field:null` (or `= NULL`); exists = `NOT field:null`. `caseId:null` = "not yet
   triaged into a case" (see Queue sweep).
-- **Context-table membership:** `field IN "<Table>"."<Column>"` — the **column qualifier is required**:
-  `src_ip IN "Admin Users"."IP Address"`, `category IN "AI/LLM Proxy Categories"."Key"`. Combine with
-  `AND` to intersect tables.
+- **Context-table membership:** the form depends on whether you match the table's **key** field or one
+  of its other columns (measured 2026-11 against a live tenant):
+  - **Key field — NO qualifier:** `src_ip IN "CISA_AA26-097A_IP_IOCs"`. Adding one fails with **404**
+    *"Context table non-key field : &lt;column&gt; not found"* — and it names a column that really does
+    exist, so the error reads as a missing field when the *form* is what is wrong.
+  - **Non-key column — qualifier required:** `src_ip IN "Admin Users"."IP Address"`,
+    `category IN "AI/LLM Proxy Categories"."Key"`.
+
+  Combine with `AND` to intersect tables. **Context-table queries are capped below 90 days**: a longer
+  span returns **400** *"Context Table does not support time range queries 90 days or more"*, so hunt a
+  long window in sub-90-day slices.
 - **Entity-attribute accessor:** `user(<attr>, "<value>")` pins an identity by a specific attribute
   rather than the loose `user:"…"` — `user(username, "gary.hardin")`,
   `user(email, "gary.hardin@ktenergy.com")`. Nested/derived fields use dotted paths:
@@ -125,6 +133,14 @@ real in-product queries.
 >   `SELECT col, COUNT(col) …` with no GROUP BY and the engine rejects it: **400** *"select list
 >   expression references column(s) which is neither grouped nor aggregated."*
 > - A SQL-style `SELECT … GROUP-BY …` placed in `filter` **500s** through the tool as well.
+> - **The pipe form reaches the engine but is useless for a breakdown** (measured 2026-11). A filter
+>   like `NOT vendor:null | select count(id) as cnt group-by vendor, product` returns **200**, one row
+>   per group — but the response carries **only the aggregate column, with the group-by keys stripped**,
+>   so 81 groups come back as 81 bare `{"cnt": N}` objects naming nothing. It also requires every
+>   referenced column to appear in `fields` (**400** *"Column id not selected in previous query"*), and
+>   it is capped below **7** days (**400** *"Pipe Query does not support time range queries 7 days or
+>   more"*) — a tighter limit than the 90-day cap on context-table queries. Useful only for a total
+>   count you can already attribute; never for discovering *what* the groups are.
 > - Plain searches (`filter` + `fields` + `orderBy` + `limit`) work perfectly.
 > - **The underlying REST `POST /search/v2/events` *does* support full aggregation** (`groupBy`,
 >   `COUNT/SUM/AVG`, `distinct`, SQL-form) — confirmed returning correct counts when called directly.
@@ -157,8 +173,16 @@ Canonical CIM names. These are the ones triage actually turns on — filter and 
 `process` (path) · `process_name` · `process_id` (PID) · `parent_process` · `command` · `file_hash`.
 
 **Auth / outcome**
-`auth_method` · `logon_type` · `mfa` · `action` (allowed/blocked/quarantined…) · `result`
-(succeeded/failed as parsed) · `outcome`.
+`auth_method` · `logon_type` · `mfa` · `action` (allowed/blocked/quarantined…) · `result` · `outcome`.
+
+> ⚠️ **`result` is NOT normalised across vendors — never read it as a verdict without a per-vendor
+> map.** Measured in a single query, 2026-11: Zscaler Internet Access returns `Allowed`; Zscaler
+> **Private** Access returns `open` / `close` / `active`, which is session *state* and not a verdict
+> (`close` does **not** mean blocked); Cisco Network Security returns `allow`, `allow all`,
+> `Group Policy Allow` and bare `1`; Palo Alto NGFW omits the field entirely on `network-session` rows.
+> Deciding "was this blocked or did it succeed?" needs the vendor's own vocabulary, and for some
+> vendors needs `activity_type` instead. `result` is also missing from the MCP tool's documented field
+> list while being perfectly valid in `fields`.
 
 **Event classification**
 `activity_type` · `activity` · `app` · `product` · `vendor` · `platform` · `time`.
@@ -307,7 +331,18 @@ does not *conclude*.
 
 **"What's in this data?" / field discovery** — orient before you filter. Server-side aggregation is
 unreliable (see the tested-reality note), so pull a recent sample and read the `product`/`activity_type`
-spread off the rows:
+spread off the rows.
+
+> ⚠️ **A time-ordered sample under-reports the estate badly.** Measured 2026-11: a 500-row
+> `approxLogTime DESC` sample surfaced **4 distinct vendors where the aggregate counted 81 groups** —
+> the highest-volume sources crowd out everything else, and an `IN`-style hunt later turned up Palo
+> Alto, Cisco, LogRhythm and Zscaler Private Access that the sample never showed. Use this recipe to
+> see *what a busy source looks like*, **never as an inventory of what is ingested**. For a real source
+> inventory read `parser_list` with `type: "Custom"` (the tenant's own parsers, each carrying `vendor`
+> and `product`) plus the context-table names — and still report the list as partial.
+
+The sample query:
+
 ```jsonc
 {"arg0": {"filter": "",
   "fields": ["time","product","vendor","activity_type"],
