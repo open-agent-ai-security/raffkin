@@ -325,13 +325,30 @@ A band-3 finding is the one result of this skill that should persist in Exabeam,
 decides whether it does. Before offering, make the activity **unmistakable**: the entity, the indicator,
 which field matched, the vendor and product, the verdict field and its raw value, the time range, and
 the promotion that put it in band 3 if one did — in plain sentences, not only in the hits table. Then
-ask, in words: *"Open a case on <entity> for <one-line finding>? (yes / no)"* — and **wait**.
+**look for the case that already exists** before offering a new one. The entity a sweep lands on is
+often already under investigation: run `exabeam_search_cases` on the entity (`user:` and the host, last
+30 days, open stages) and read `caseId` on the alerts you pulled for it (`exabeam_search_alerts` returns it
+when the alert is already in a case; sibling alerts on the same entity usually share one). Measured
+2026-11-19: the first band-3 hit found an entity with two open cases on the very scenario, and the one
+alert without a `caseId` was the only reason a fifth case got opened — `exabeam_search_cases` with `user:"<entity>"` over the last 30 days returned all four. Then ask, in words — one of:
 
-- On a clear yes: `exabeam_create_case` (`arg1`; an opening stage or none — never a closed stage or a
-  `closedReason`, which the bridge refuses), then `exabeam_create_case_notes` on that case with the
+- *"<entity> already has open case <number> for <its name>. Add this sweep's findings to it as a note?
+  (yes / no)"* — on yes, `exabeam_create_case_notes` on **that** case; no `create_case` at all.
+- *"Open a case on <entity> for <one-line finding>? (yes / no)"* — only when the search found nothing.
+
+Either way, **wait**.
+
+- On a clear yes to a new case: `exabeam_create_case` (`arg1`: `alertId` and `priority`; an opening stage or
+  none — never a closed stage or a `closedReason`, which the bridge refuses; **leave `queue` out** unless
+  the analyst gives you the tenant's queue identifier — the display name every existing case shows,
+  such as *Tier 1 Analyst*, is rejected with `Queue name does not exist`, and an omitted queue lands the
+  case in *Unassigned* where an analyst re-queues it), then `exabeam_create_case_notes` on that case with the
   sweep's findings — the source by URL, the typed indicators searched, the hits with their fields and
   verdicts, the window and the visibility bounds — defanged. Then hand the case number to
   `soc-investigate`. One case per sweep; several band-3 entities from one advisory belong in one case.
+- The one-case budget is counted by the gate on **attempts**, not on cases that landed: a `create_case`
+  the API rejects (a bad queue, say) still spends it, and the retry is prompted as "case 2". Get the
+  payload right first time — alert id, priority, nothing else — rather than probing the API with it.
 - `create_case` is allow-tier, so the host will not prompt. **That is why you ask.** The absence of a
   prompt is never permission; the analyst's yes is the gate here.
 - On no, or no answer: record "case offered, declined" in the report and stop. No note, no email

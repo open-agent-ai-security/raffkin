@@ -54,6 +54,7 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- intel-sweep's band-3 terminal action now looks for the case that already exists before offering a new one: `exabeam_search_cases` on the entity plus `caseId` on its alerts, then "add this to case N as a note?" — a new case only when nothing is found. Measured on the first band-3 run: the entity already had four open cases on the scenario and the one alert without a `caseId` was the only reason a fifth got opened. `create_case` guidance corrected: `queue` is not required and a queue display name is rejected (`Queue name does not exist`); leave it out. The gate's one-case budget counts attempts, so a rejected create spends it.
 - **Intel skills survive a dropped connector and a second tenant.** Three agent runs on 2026-11-19 lost
   the hosted Exabeam connector mid-sweep (socket reset after a clean preflight, every reconnect refused
   for twenty minutes) and finished on the plugin's bundled bridge, which exposes the same tool names
