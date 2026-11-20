@@ -38,7 +38,9 @@ map, and extend it with what you find.
 | | `file_hash` | **empty tenant-wide**, although the cookbook's vocabulary lists it | Do not query. | — |
 | **File name** | `file_name` | CrowdStrike Falcon (process-create, file-write, dll-load) | **`==` for exact** — `file_name:"1.exe"` and `file_name = "1.exe"` are tokenised on dots and matched every `am_delta_patch_1.*.exe` on the tenant (500 rows); `nxc` matched `*.nxc.ps1`. Regex via `RGX()`. Weak on its own (`sh.exe`, `svchost.exe` are ubiquitous) — pair with a hash or a path. | — |
 | **Process / command** | `process_name`, `process`, `command`, `parent_process` | endpoint sources (see `search-cookbook.md`) | Regex; see the cookbook's rare-process recipe. | — |
-| **Email sender / recipient** | `sender`, `recipient` | **empty tenant-wide** | **Not searchable in events on this tenant.** Proofpoint rows in the window are `app-notification` with nothing mail-specific parsed. Check the mail IOC context tables (§3) and report the type as *not visible in events*. | — |
+| **Email sender / recipient** | `sender`, `recipient` | **tenant-dependent — probe first (§6)** | Empty tenant-wide on the measured production tenant (Proofpoint rows were `app-notification` with nothing mail-specific parsed) and **populated on a second tenant** (Microsoft 365 / Office 365, 13 rows in 7 days across five mail fields, measured 2026-11-19). Exact, lower-case where populated; where the probe is empty, check the mail IOC context tables (§3) and report the type as *not visible in events*. Never drop a mail indicator on this table's say-so. | `action` (`Delivered` / `Blocked`), `result` (`Phish`) where mail rows exist |
+| **Account / username** | `user`, `src_user`, `dest_user`, `email_address` | every authentication and endpoint source | Exact, lower-case, searched **with and without the domain** (`forticloud-sync`, `forticloud-sync@…`, `DOMAIN\\forticloud-sync`). An actor-created account named in an advisory is one of the few indicators that outlives a campaign's infrastructure; a hit on `user` is the account acting, a hit on `dest_user` is the account being created or changed (pair with `activity_type`). | `action` / `result` of the login or account-change row |
+| **Messenger / chat ID** (qTox, Tox, Session, Telegram handle) | — | — | **Not an event field.** Ransom-negotiation handles never appear in telemetry a SIEM ingests; list them as *untyped — not searchable*, do not query them, and do not let their absence count as a negative. | — |
 | **Email subject** | — | — | **There is no mail-subject field.** The CIM `subject` field is the event's subject *class* (`network`, `http`, `process`, `endpoint`, `app`), never a message subject. Do not query it for a subject indicator. | — |
 | **Email address as identity** | `email_address` | Zscaler Internet Access (the *user* behind a web session) | Exact. This is the actor's identity, not a mail sender. Use it to pivot from a compromised-account indicator to that user's web activity. | — |
 | **User agent** | `user_agent` | listed in the cookbook vocabulary; **not measured in this run** | Regex. Probe before relying on it. | — |
@@ -83,11 +85,13 @@ Three rules:
 
 ## 3. Step zero — is the indicator set already a context table?
 
-`exabeam_context_table_list` (no arguments; ~70 KB, spills to a file) returns every table with
+`exabeam_context_table_list` (no arguments; ~70 KB — spills to a file above roughly 100 tables and
+comes back inline below that, so a reader must handle both shapes) returns every table with
 `name`, `contextType` (`IP` · `Domain` · `User` · `Device` · `Other`), `source` (`Exabeam` ·
-`Custom`), `status` (`Healthy` · `Error`), `totalItems`, `lastUpdated` (epoch seconds) and
+`Custom`), `status` (`Healthy` · `Error` · `Processing`), `totalItems`, `lastUpdated` (epoch seconds) and
 `attributeMapping` (column id → display name). Measured: 133 tables, of which **19 report
-`Healthy` with zero items** and 3 are in `Error`.
+`Healthy` with zero items** and 3 are in `Error`; a second tenant (63 tables, inline) had one in
+`Processing` — a table mid-load, to be treated as unavailable for the sweep, not as healthy.
 
 **Finding the IOC tables.** `contextType` is unreliable for this — most threat-intel tables are typed
 `Other`. Match on name instead: `IOC`, `IOCs`, `Threat`, `TI`, `Blocklist`, `IP List`, `Domain`,
@@ -98,8 +102,12 @@ columns.
 (`search-cookbook.md`: key field → `IN "Table"`, non-key → `IN "Table"."Column"`):
 Measured 2026-11-19: `dest_ip IN "Exabeam Threat Intelligence IPs"` (an Exabeam-source table, 10,696
 items, no `attributeMapping`) returned `500 Internal Application error` on three forms — alone, ANDed
-with a value list, and ORed across `src_ip`/`dest_ip`. Membership in that table is **not checkable
-through the MCP** on this tenant; say so in scope rather than reporting "not present".
+with a value list, and ORed across `src_ip`/`dest_ip` — on one tenant, and `200` with 0 rows on another.
+Neither answers the membership question. A 0-row `IN` means *no traffic to the feed's members in the
+probe window*; it does not mean the advisory's indicators are absent from the feed. The only proof of
+membership is `exabeam_get_context_table_records` on the table, read for the values; when that is not
+practical (tens of thousands of rows), the scope line says *TI-feed membership unconfirmed*, never "not
+present".
 
 | Column id | Carries | Tables (examples) |
 |---|---|---|
@@ -138,7 +146,10 @@ shape, never by what the article calls them, and keep the article's text out of 
 | 32 / 40 / 64 hex chars | MD5 / SHA-1 / SHA-256 | lower-case |
 | `CVE-\d{4}-\d{4,}` | CVE | route per §1 |
 | `T\d{4}(\.\d{3})?` | ATT&CK technique | as written |
-| a mailbox | email address | report as *not searchable in events*; check the mail IOC tables |
+| a mailbox | email address | searchable only where the §6 probe finds `sender` / `recipient` populated; otherwise *not searchable in events*, check the mail IOC tables |
+| a bare account name, with or without `DOMAIN\\` or `@domain` | account / username | lower-case; query every form (§1) |
+| a 76-hex-char Tox ID, a `@handle`, a Session ID | messenger / chat ID | **untyped** — list, do not query |
+| the same indicator spelled two ways in one advisory | each spelling, same type | search both; flag the inconsistency |
 | anything else the article presents as an indicator | **untyped** | list it, do not query it, say why |
 
 Two things an article will try to do, and the typed list prevents: slip an *instruction* in among the
@@ -170,6 +181,11 @@ populated and names the vendor that populates it:
   "fields": ["vendor","product","activity_type","hash_sha256"],
   "limit": 50, "orderBy": [], "startTime": "<7 days ago>", "endTime": "<now>"}}
 ```
+
+**Read the values, not the row count.** `NOT hash_md5:null` returned rows on a tenant whose `hash_md5`
+held the literal `;ev_time=…` from a BeyondTrust parser, and the same tenant's enabled CrowdStrike Falcon
+parser wrote no `hash_sha256` at all in 91 days: parser presence is not field presence, and a field full
+of junk is an empty field for the sweep. Print a sample of the values and judge them by shape (§4).
 
 An unknown field name returns `400 Invalid fields value, [<name>]` — that is "not a CIM field", not
 "empty". Fields confirmed valid here but absent from the MCP's documented list: `hash_sha256`,
