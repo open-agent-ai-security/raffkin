@@ -188,9 +188,14 @@ this tenant does not ingest."*
 **3 — Set the window.** Indicator validity (`ti_valid_from` / `ti_valid_until` where the table has
 them, the advisory's dates otherwise) intersected with retention. Measure retention rather than assume
 it: an empty-filter, `limit` 5, seven-day probe stepping back a quarter at a time finds the floor in
-four or five calls (one tenant's floor was a bulk-stamped `T00:00:00Z` day). Try the whole window in one
-call first; on a timeout **retry narrower** (90-day slices) rather than report the timeout as "no hits".
-Context-table `IN` and pipe queries keep the 90-day cap regardless. If validity lies entirely before retention: **unanswerable**, stop searching,
+four or five calls (one tenant's floor was a bulk-stamped `T00:00:00Z` day). Then cut the window into
+**30-day chunks, newest first**, one call per chunk per indicator type; **never send a single query
+longer than 90 days** — on a production tenant with real volume a whole-window search (measured
+2026-11-21: ten months, eight such calls in parallel) timed out every time and then tripped the
+connector's request block, and a 90-day call answered only sometimes. Thirty days answered on every one
+of the first 29 calls of the same run. Context-table `IN` and pipe queries keep the hard 90-day cap
+regardless. A timeout is retried once, alone, then recorded as a timeout for that chunk — never as "no
+hits". If validity lies entirely before retention: **unanswerable**, stop searching,
 say so. Read the advisory's own footnotes on its dates: a "last seen" that the source defines as a
 **WHOIS expiry** (measured 2026-11-19: 80 of 218 domains in one CISA advisory, flagged with a star,
 dated 2026–2027) is a registration claim, not an observation, and does not extend the window; use the
@@ -226,8 +231,9 @@ one service account — an "impacted?" answer that stops at indicators would hav
 the field list (13 KB for two alerts), and map response keys, which come back camelCase (`srcHost`,
 `creationTimestamp`) while the request filter takes snake_case. Two traps
 from the same run: a nine-month window on one technique **timed out** where a 90-day slice answered in
-seconds, so slice as step 3 slices — on timeout, not pre-emptively (a smaller tenant answered 19-month
-windows in under ten seconds, and slicing it blindly would have tripled the call count); and `total`
+seconds — alerts are far sparser than events, so the behavioural check may use windows up to the 90-day
+ceiling, but never past it, and a chunk that times out is retried once and then recorded, not merged
+into a neighbour; and `total`
 **caps at `limit`** (on events too: `totalRows` 50 from a 50-row probe means *at least 50*), so a broad technique (*Command and
 Scripting Interpreter*, *Remote Services*) comes back "100 of 100" generic anomaly rules — report that
 as *at least 100, generic, not attributable*, never as a count, and spend the attention on the narrow
@@ -411,8 +417,12 @@ the taxonomy lists the fields confirmed valid and invalid.
 **Query budget.** The connector is the scarce resource, not the tenant. Measured 2026-11-19: three
 spill-sized reads (coverage, analytics rules, use-case score) fired in one turn beside three parallel
 sweeps reset the hosted connector, and it stayed down for the rest of the run. So: one spill-sized read
-at a time, each read once per run and re-read from its file; indicator searches in batches of at most 50
-values per `IN` clause, `limit` 500, only the fields the report needs (drop `rules` from alert
-searches: 13 KB for two alerts); the whole window in one call first and 90-day slices only after a
-timeout; and never more than one parallel reader on the same connector. A timeout is retried once, narrower, then recorded in the
-ledger as a timeout, never as "no hits".
+at a time, each read once per run and re-read from its file; indicator searches in **30-day chunks and
+never a single query past 90 days** (step 3), `limit` 500, only the fields the report needs (drop `rules`
+from alert searches: 13 KB for two alerts); **one value-list field per call** — `hash_sha256:(…) OR
+hash_md5:(…)` in one filter timed out on 30 days where each list alone answered in seconds, and two
+130-address IP lists merged into one 258-address clause did the same; and at most **two light calls in
+flight** on the same connector (four at once produced two timeouts on a production tenant; a pair
+answered every time). A value list of 130 addresses or 120 domains in one `IN` clause is fine; two
+lists in one filter is not. A timeout is retried once, alone, then recorded in the ledger as a timeout,
+never as "no hits".

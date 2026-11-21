@@ -28,7 +28,7 @@ Field Summary query (last section) rather than guessing.
 | `filter` | ✅ | The query string (grammar below). May be empty `""` to match everything in the window. |
 | `fields` | ✅ | Columns to return. **Always name specific fields.** The tool schema tells you to send `["*"]` (all fields) and to ignore field requests — don't: `["*"]` can return millions of chars in one result and overflow the context window. Name what you need. |
 | `startTime` | ✅ | ISO-8601, e.g. `2024-04-01T00:00:00Z`. |
-| `endTime` | ✅ | ISO-8601. Keep windows tight — search spans years; a wide window is slow and noisy. |
+| `endTime` | ✅ | ISO-8601. Keep windows tight — search spans years; a wide window is slow and noisy. **Never send one query longer than 90 days**; for a hunt across months, step through **30-day chunks**, newest first, one call per chunk (measured 2026-11-21 on a production tenant: ten-month event searches timed out every time, 90-day ones only sometimes, 30-day ones answered on every call). |
 | `limit` | | Max rows. **Always set it explicitly** (REST default is 3000; the MCP events tool's default isn't documented — `search_alerts` documents 10). Low (25–100) while pivoting, high only when counting. |
 | `orderBy` | | e.g. `["time DESC"]`, `["riskScore DESC"]`, `["app ASC"]`. |
 | `groupBy` | | Fields to GROUP BY. **REST only — dropped by the MCP tool** (see the tested-reality note). |

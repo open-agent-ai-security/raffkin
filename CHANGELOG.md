@@ -54,6 +54,7 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- **intel-sweep searches in 30-day chunks and never sends one query longer than 90 days.** Measured 2026-11-21 on a production tenant: every whole-window (ten-month) event search timed out, eight of them in parallel tripped the connector's request block, and 90-day calls answered only sometimes; 30-day chunks answered on all of the first 29 calls. Two more budget rules from the same run: one value-list field per filter (`hash_sha256:(…) OR hash_md5:(…)` timed out on 30 days where each list alone answered; two 130-address IP lists merged into one clause did the same) and at most two light calls in flight on one connector (four at once produced two timeouts). The behavioural check keeps windows at or under 90 days for the same reason. The search cookbook carries the same window rule.
 - intel-sweep and the indicator taxonomy absorb the rest of the 2026-11-19 agent runs as probes rather than facts: mail fields are probe-gated (empty on one tenant, populated on another); parser presence is not field presence (print values, junk counts as empty); `context_table_list` is inline below ~100 tables and `status` has a third value, `Processing`; TI-feed membership is settled only by `get_context_table_records`; dotted technique keys return 0 on alerts (query parents); `rules` left out of alert fields and camelCase response keys mapped; new taxonomy rows for account names and messenger IDs; intake searches every spelling, fetches STIX downloads as data, and lists non-ATT&CK ids (ATLAS) as not modelled; the scope line names the tenant and calls out demo/lab data; the band-3 offer reads alert details first.
 - intel-sweep's band-3 terminal action now looks for the case that already exists before offering a new one: `exabeam_search_cases` on the entity plus `caseId` on its alerts, then "add this to case N as a note?" — a new case only when nothing is found. Measured on the first band-3 run: the entity already had four open cases on the scenario and the one alert without a `caseId` was the only reason a fifth got opened. `create_case` guidance corrected: `queue` is not required and a queue display name is rejected (`Queue name does not exist`); leave it out. The gate's one-case budget counts attempts, so a rejected create spends it.
 - **Intel skills survive a dropped connector and a second tenant.** Three agent runs on 2026-11-19 lost
@@ -62,9 +63,8 @@ governance model (feature → `dev`, release `dev` → `main`).
   against a different tenant. `intel-sweep` and `detection-coverage` preflight now says: record which
   server each result came from, compare `subscriptionCode` before combining results, and stop and say
   which steps completed rather than silently finishing on the other server. `intel-sweep` gains a
-  **query budget** (one spill-sized read at a time, 50 values per `IN`, 90-day slices, one reader per
-  connector; the whole window in one call first and 90-day slices only after a timeout, since a
-  smaller tenant answered 19-month windows in seconds; a measured retention floor instead of an assumed
+  **query budget** (one spill-sized read at a time, 50 values per `IN`, one reader per
+  connector; the window rule below superseded the first draft's "whole window first"; a measured retention floor instead of an assumed
   one; the real `useCases[i].datasourceCategories[]` path, unioned across use cases), a **band 0**
   *Not assessable from indicators* for advisories that publish none, and a
   window rule for a source "last seen" that its own footnote defines as a WHOIS expiry (80 of 218
