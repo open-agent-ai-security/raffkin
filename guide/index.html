@@ -345,7 +345,7 @@ It includes Raffkin, open-source software licensed under the Apache License 2.0.
 <tr>
 <td><strong><code>intel-sweep</code></strong></td>
 <td><em>"Have we been hit by this advisory?"</em> · <em>"Does this CVE affect us?"</em></td>
-<td>Takes an external threat report by URL or paste, extracts and types the indicators, checks whether they are already a context table, establishes what is visible, searches the tenant across the indicators' validity window and returns a three-band verdict with explicit scope. Read-only across the sweep; on a hit that succeeded it shows what was found, offers to open a case, and opens one only on your yes, then hands to <code>soc-investigate</code>.</td>
+<td>Takes an external threat report by URL or paste, extracts and types the indicators, checks whether they are already a context table, establishes what is visible, searches a 30-day window (90 when the notice gives a dated reason, never all retained data) and returns a three-band verdict with explicit scope. Read-only across the sweep; on a hit that succeeded it shows what was found, offers to open a case, and opens one only on your yes, then hands to <code>soc-investigate</code>.</td>
 </tr>
 <tr>
 <td><strong><code>detection-coverage</code></strong></td>

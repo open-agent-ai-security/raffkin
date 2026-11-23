@@ -24,20 +24,29 @@ out of scope for the sweep: exposure is the scanner's question.
 Two things in the source needed a rule. **80 of 218 domains carried a starred last-seen** that the
 appendix defines as the WHOIS registry expiration date (2026–2027): a registration claim, not an
 observation, so it does not extend the window. **Every IP's last-seen was on or before 2025-06-20**,
-most in 2021 to 2024, so only the final five months of a 22-month retention window overlap any IP's
+most in 2021 to 2024, so only the final five months of the 22-month span this run searched overlap any IP's
 validity. Both facts went into the scope line before a search ran.
 
 **Flagged in the source:** nothing read as an instruction to the agent.
 
 ## 1 — The window, and what it cost to get wrong
 
-Retention was taken as reaching at least 2025-02-01; the oldest row the run matched was 2025-02-20.
-The first attempt followed the skill's rule at the time — *whole window in one call, slice on
-timeout* — and sent eight whole-window searches in parallel. **All eight timed out and the hosted
-connector then refused every call with `403 mcp_request_blocked`**, including a one-row probe, until the
-analyst reconnected it. A 90-day call answered sometimes. The analyst's ruling, now step 3 of the skill:
-*never a single query longer than 90 days; 30-day chunks as the working size.* Twenty-two chunks,
-newest first.
+**The window was the run's biggest mistake, and the reason this example exists.** The skill's rule at
+the time was "indicator validity intersected with retention". With indicators dated back to 2021 that
+meant every day the tenant kept: **2025-02-01 → 2026-11-22, 22 months, 22 chunks × 15 field groups, 330
+production BigQuery scans over three hours**, run without the figure ever being said to the analyst.
+When it was — *22 months?!* — the rule was withdrawn on the spot and replaced by the one now at the top
+of step 3: **a 30-day window by default, 90 when the notice gives a dated reason, anything earlier only
+as an analyst-approved window of 30 to 90 days at a stated period, and a flat refusal to search all
+retained data or to derive a window from retention or validity.** The behavioural check, begun over the
+same 22 months, was stopped by the analyst after its first 90-day window. Nothing below should be read
+as a method; the 30-day chunks were the right size for a call, and the wrong number of them.
+
+The first search attempt had already shown the other half of the problem. It followed the rule of the
+time — *whole window in one call, slice on timeout* — and sent eight whole-window searches in parallel.
+**All eight timed out and the hosted connector then refused every call with `403 mcp_request_blocked`**,
+including a one-row probe, until the analyst reconnected it. A 90-day call answered sometimes; 30-day
+calls answered every time.
 
 Three more budget rules came out of the same hour:
 
@@ -57,7 +66,7 @@ connector blocked again, and the report was built from the files.
 ## 2 — What matched
 
 **Domains: nothing.** 218 domains, both fields, all 22 chunks, zero rows. `web_domain` and `dns_query`
-both carry values on this tenant, so this is a real negative for the retained window.
+both carry values on this tenant, so this is a real negative for the span the run searched.
 
 **MD5: nothing. SHA-256: one.** The hash the advisory gives for `wpscan` was written to one user's
 endpoint (CrowdStrike Falcon `file-write`) on 2025-06-16, alongside a second write of a file by the same
@@ -110,9 +119,9 @@ dates, outside the bands, and handed to `soc-investigate` with the first questio
 
 ## 4 — Behaviour, not indicators
 
-The behavioural check ran as alerts by parent technique over the same window in 90-day pieces (alerts
-are sparser than events, and the 90-day ceiling holds). Its result is summarised in the published
-report for this run and is not repeated here; the pattern it showed is the one the SafePay run also
+The behavioural check ran as alerts by parent technique and was stopped by the analyst after the first
+90-day window, which is all the published report uses. Its result is summarised there and is not
+repeated here; the pattern it showed is the one the SafePay run also
 showed — the broad techniques (Command and Scripting Interpreter, External Remote Services, Drive-by)
 return at least 100 alerts per window from generic profiling rules and are not evidence of this actor,
 and the narrow ones are where a human looks.
@@ -124,8 +133,8 @@ to the actor. Seven of 515 addresses matched, each a year or more after the advi
 all in shared or carrier space, all inbound and denied, undetermined or refused. The domains never
 appeared. Three open-source tools the advisory lists in the actor's kit were found on staff endpoints,
 one by exact hash: present, owner's reason unknown, handed to investigation. **Confidence: Medium** —
-most IP indicators stopped being observed before retention begins, so the IP question is answered for
-the last 22 months only.
+most IP indicators stopped being observed before the span this run searched, which was itself far wider
+than the skill now allows.
 
 **Positioned to detect?** Deferred to the `detection-coverage` run of 2026-11-19 on the same advisory,
 linked rather than repeated: nine of eleven parents detectable, Active Scanning not covered, Automated
@@ -138,8 +147,9 @@ success returns a `messageId`).
 
 ## What this run changed
 
-Step 3 and the query budget: 30-day chunks, never one query past 90 days, one value-list field per
-filter, two calls in flight, ledger and hit files written as they arrive because the connector can
-block after a long run. Step 5: the tool-match and stale-shared readings. The taxonomy: NGINX client
+Step 3, rewritten: a 30-day window, 90 with a dated reason, analyst-approved 30-to-90-day windows
+beyond that, and a refusal to search all retained data or to reason from retention at all. The query
+budget: 30-day calls, one value-list field per filter, two calls in flight, ledger and hit files written
+as they arrive because the connector can block after a long run. Step 5: the tool-match and stale-shared readings. The taxonomy: NGINX client
 in `dest_ip`. The normalization reference: the raw Meraki row. `threat-briefing` and the tool map: the
 measured send path.

@@ -27,7 +27,7 @@ governance model (feature → `dev`, release `dev` → `main`).
 - **`intel-sweep`** — *"have we been hit by this advisory?"* Takes an external threat
   report by URL (paste as fallback), extracts and types the indicators as a list the analyst sees before
   anything runs, checks whether they are already a context table, establishes what is visible on the
-  tenant, searches across the indicators' validity window and returns a three-band verdict with scope —
+  tenant, searches a 30-day window (90 when the notice gives a dated reason) and returns a three-band verdict with scope —
   no hits, hits a control blocked, hits that succeeded — with the three band-2→3 promotions hard-coded.
   Read-only across the sweep; on a band-3 hit it shows exactly what was found, offers to open a case
   and opens one only on the analyst's yes, then hands to `soc-investigate`; the emailed record stays
@@ -54,6 +54,7 @@ governance model (feature → `dev`, release `dev` → `main`).
 - 14 routing-corpus cases for the three new skills.
 
 ### Changed
+- **intel-sweep's window is 30 days, 90 at most, and never all retained data.** Step 3 rewritten at the analyst's instruction: a 30-day window by default; 90 when the notice itself gives a dated reason; anything earlier only as an analyst-approved window of 30 to 90 days at a stated period; a flat refusal to search all retained data, to measure or probe retention, or to derive a window from indicator validity. Indicators dated before the window are reported as *older than the window — not searched*. The behavioural check uses the same window. Measured 2026-11-23: the first draft's "validity intersected with retention" turned a 2021-dated advisory into a 22-month, 330-query production sweep. The retention-floor probe is gone from the skill and the taxonomy; both worked examples now mark their long windows as pre-rule.
 - **`intel-sweep` worked example** — `reference/examples/aa26-281a-production-sweep.md`: the AA26-281A run below, masked, kept for the 30-day chunk rule and the two readings it forced.
 - **Production sweep of CISA AA26-281A, 2026-11-21 to 2026-11-23, folded into the skills.** 337 read calls, 0 writes. intel-sweep gains two readings outside the bands: a hash or name that belongs to a publicly available tool is a *tool match* (the one SHA-256 hit of 32 was the public wpscan release on a staff endpoint; two tool names matched with other hashes), and a match months after the advisory's own last-seen in commercial hosting or carrier space is *stale, shared* (seven of 515 IPs, 12 to 43 months late, all inbound and denied, refused or undetermined). threat-briefing and the tool map record the first measured send: `recipients: []` returns the roster without sending, a partial name is rejected without fuzzy matching, and success returns a `messageId`. The taxonomy notes that F5 NGINX access logs put the client address in `dest_ip`; the normalization reference adds the raw Meraki `pattern: 1 all` row.
 - **intel-sweep searches in 30-day chunks and never sends one query longer than 90 days.** Measured 2026-11-21 on a production tenant: every whole-window (ten-month) event search timed out, eight of them in parallel tripped the connector's request block, and 90-day calls answered only sometimes; 30-day chunks answered on all of the first 29 calls. Two more budget rules from the same run: one value-list field per filter (`hash_sha256:(…) OR hash_md5:(…)` timed out on 30 days where each list alone answered; two 130-address IP lists merged into one clause did the same) and at most two light calls in flight on one connector (four at once produced two timeouts). The behavioural check keeps windows at or under 90 days for the same reason. The search cookbook carries the same window rule.
@@ -66,8 +67,7 @@ governance model (feature → `dev`, release `dev` → `main`).
   server each result came from, compare `subscriptionCode` before combining results, and stop and say
   which steps completed rather than silently finishing on the other server. `intel-sweep` gains a
   **query budget** (one spill-sized read at a time, 50 values per `IN`, one reader per
-  connector; the window rule below superseded the first draft's "whole window first"; a measured retention floor instead of an assumed
-  one; the real `useCases[i].datasourceCategories[]` path, unioned across use cases), a **band 0**
+  connector; the window rules below superseded the first draft's "whole window first"; the real `useCases[i].datasourceCategories[]` path, unioned across use cases), a **band 0**
   *Not assessable from indicators* for advisories that publish none, and a
   window rule for a source "last seen" that its own footnote defines as a WHOIS expiry (80 of 218
   domains in one CISA advisory). `coverage-read.md` states that `score.rank` is the string `"None"`,
@@ -82,10 +82,10 @@ governance model (feature → `dev`, release `dev` → `main`).
   mail. Audience: management or a detection engineer who has not read the source.
 - **`intel-sweep` step 4b, the behavioural check.** Indicators rotate; tradecraft does not. Alerts by
   ATT&CK technique key over the sweep window, reported as *observed activity* (never an indicator hit,
-  never a band) and handed to `soc-investigate`. Measured 2026-11-19 on the SafePay advisory: nine months
-  of indicator searches were empty while the advisory's shadow-copy-deletion stage had fired nine
-  CRITICAL alerts on two servers under one service account. Two traps recorded: a nine-month window on
-  one technique times out where a 90-day slice answers, and `total` caps at `limit`, so broad techniques
+  never a band) and handed to `soc-investigate`. Measured 2026-11-19 on the SafePay advisory: the
+  indicator searches were empty while the advisory's shadow-copy-deletion stage had fired nine
+  CRITICAL alerts on two servers under one service account. Two traps recorded: a window past 90 days on
+  one technique times out where 90 answers (the window is now capped there regardless), and `total` caps at `limit`, so broad techniques
   read "at least 100, generic, not attributable". The SafePay example carries the re-run.
 - `intel-sweep` step 5: **an IP hit whose own rows name shared infrastructure is not attributable** —
   when `web_domain` / `url` / `app` resolve the address to a CDN, code host or SaaS front, the advisory's

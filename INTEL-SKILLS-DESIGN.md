@@ -125,8 +125,8 @@ Trigger phrases must not collide with the shipped three, which own:
 > this"**, **"does this affect us"**, **"are we impacted by this advisory"**, or **"check these
 > indicators against our data"**. Extracts and types the indicators (or, for prose with no indicators,
 > the actor and techniques), checks whether they are already loaded as a context table, establishes
-> what is visible before concluding anything, searches the customer's own data across the indicators'
-> validity window, and returns a three-band verdict with explicit scope. Read-only; recommends a case
+> what is visible before concluding anything, searches a 30-day window of the customer's own data (90
+> when the notice gives a dated reason; never all retained data), and returns a three-band verdict with explicit scope. Read-only; recommends a case
 > but never creates one. Requires the Exabeam MCP server.
 
 ### `detection-coverage`
@@ -151,11 +151,14 @@ Trigger phrases must not collide with the shipped three, which own:
 
 Four of these are now corrected in `search-cookbook.md` via **PR #325**. Read that diff first.
 
-**Indicator validity windows drive the hunt window.** Context-table IOC records carry `ti_valid_from`
-and `ti_valid_until`. In the validation run, every indicator in `CISA_AA26-097A_IP_IOCs` had expired
-(latest lapsed 108 days prior). A default 90-day lookback would have covered **none** of their
-validity period and returned a zero that looked identical to a real negative. When validity falls
-entirely outside retention, the honest answer is **"unanswerable"**, not "clean".
+**~~Indicator validity windows drive the hunt window.~~ Withdrawn 2026-11-23.** The first validation
+argued that validity should set the window, because every indicator in `CISA_AA26-097A_IP_IOCs` had
+lapsed 108 days before the run and a 90-day lookback would have missed them. Followed to its end on
+AA26-281A that rule produced a 22-month, 330-query production sweep. The rule now (intel-sweep step 3,
+analyst's instruction): a 30-day window, 90 when the notice gives a dated reason, analyst-approved
+30-to-90-day windows at a stated period beyond that, and a flat refusal to search all retained data or
+to derive a window from retention or validity. Indicators dated before the window are reported as
+*older than the window — not searched*, which is honest without being expensive.
 
 **Context-table `IN` has two forms.** Key field → `IN "Table"` (no qualifier). Non-key column →
 `IN "Table"."Column"`. Wrong form returns `404 Context table non-key field : <col> not found`, naming

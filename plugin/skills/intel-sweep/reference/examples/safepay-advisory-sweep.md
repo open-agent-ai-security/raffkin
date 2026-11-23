@@ -83,9 +83,12 @@ auditing` and `dlp` empty are noted; the former is served by Windows Security on
 
 ## 3 — The window
 
-Indicator validity November 2024 → August 2026 reaches before retention, so the search ran over what is
-retained: **2026-02-19 → 2026-11-19**, in 90-day slices. One nine-month query on five IPs **timed
-out**; the same filter in three slices returned in seconds. Retry narrower, never report the timeout.
+Indicator validity ran November 2024 → August 2026. **This run searched 2026-02-19 → 2026-11-19 — nine
+months — under a rule that no longer exists** ("validity intersected with retention"). Step 3 today
+would run 30 days, or 90 given the advisory's dated activity, and would refuse the nine; the T1490
+finding below (2026-08-27 onward) still falls inside a 90-day window. One nine-month query on five IPs
+also **timed out**, which is the other reason the rule is gone. The figures below are kept as the
+record of what this run did, not as the way to do it.
 
 ## 4 — Search, per type
 
@@ -189,9 +192,9 @@ of the 13 parent ids, 2026-02-19 → 2026-11-19, `limit` 100, fields `name`, `pr
 
 | Technique | Window answered | Result | Reading |
 |---|---|---|---|
-| **T1490 Inhibit System Recovery** | nine months **timed out**; 90-day slice answered | **9 alerts, all CRITICAL**, 2026-08-27 → 2026-11-14, one service account, two servers (`<server-1>`, `<server-2>`), every alert name "shadow copy deletion via vssadmin.exe", three of them bundled with host enumeration, permission modification or registry changes | **Observed activity.** The advisory's impact stage, monthly, on servers. Not an indicator hit, not attributable to SafePay — handed to `soc-investigate` |
+| **T1490 Inhibit System Recovery** | nine months (pre-rule) **timed out**; 90-day slice answered | **9 alerts, all CRITICAL**, 2026-08-27 → 2026-11-14, one service account, two servers (`<server-1>`, `<server-2>`), every alert name "shadow copy deletion via vssadmin.exe", three of them bundled with host enumeration, permission modification or registry changes | **Observed activity.** The advisory's impact stage, monthly, on servers. Not an indicator hit, not attributable to SafePay — handed to `soc-investigate` |
 | T1685 Disable or Modify Tools | 90-day slice | 67: *Disable history collection* on developer workstations, two `setenforce` SELinux disables, two `auditd` disables | Developer behaviour on Linux endpoints; the two SELinux and two auditd rows are the ones worth a look |
-| T1486, T1059, T1021, T1098, T1136, T1048, T1567, T1110, T1218, T1133, T1190 | nine months | **100 of 100 each** — `total` caps at `limit`; mostly *Multiple Anomalies* and generic volume rules (*Abnormal number of unique files written*, *Abnormal number of PowerShell executions*, *First successful RDP connection*) | At least 100 each, generic, not attributable. The population is large; it is not evidence either way, and the 100-row sample is the latest eleven hours, not the window |
+| T1486, T1059, T1021, T1098, T1136, T1048, T1567, T1110, T1218, T1133, T1190 | nine months (pre-rule) | **100 of 100 each** — `total` caps at `limit`; mostly *Multiple Anomalies* and generic volume rules (*Abnormal number of unique files written*, *Abnormal number of PowerShell executions*, *First successful RDP connection*) | At least 100 each, generic, not attributable. The population is large; it is not evidence either way, and the 100-row sample is the latest eleven hours, not the window |
 
 The T1490 row is what the first draft of this run missed: nine months of empty indicator searches were
 reported as the "impacted?" answer while the advisory's own impact behaviour was firing CRITICAL on two
@@ -205,12 +208,13 @@ Written for a manager or a detection engineer; no band numbers, every term defin
 
 **Impacted?** No evidence this actor's infrastructure reached the environment: none of the advisory's
 attributable indicators — five dedicated IPs, ten hashes, four hostnames, six file names — appears in
-nine months of retained telemetry, and the four addresses that did match are the tenant's own traffic
+the nine months this run searched (a span step 3 now refuses), and the four addresses that did match are the tenant's own traffic
 to GitHub, a Cloudflare-fronted SaaS and Google, which is shared infrastructure and not attributable.
 **One behaviour the advisory describes was observed:** shadow-copy deletion with `vssadmin.exe` by a
 service account on two servers, nine CRITICAL alerts between 2026-08-27 and 2026-11-14, handed to
-investigation. Confidence **Medium**: the indicators are valid over 22 months and only nine are
-retained here, and the threat-intelligence table could not be checked.
+investigation. Confidence **Medium**: the indicators are dated over 22 months and the run searched
+nine (today it would search 90 and say which indicators are older than the window), and the
+threat-intelligence table could not be checked.
 
 **Positioned to detect?** From the `detection-coverage` run on the same advisory: all 13 parent
 techniques are detectable here, 12 scored *Best* or *Better* out of a four-step scale; the content for
@@ -219,7 +223,7 @@ stage (SonicWall, Veeam, Cisco ASA) is not ingested at all; and *Data Encrypted 
 rests on a single rule.
 
 - **Scope.** Source `hxxps://www.cisa[.]gov/news-events/cybersecurity-advisories/aa26-293a`. Window
-  2026-02-19 → 2026-11-19 in 90-day slices (validity reaches before retention). Stack partial: 21 custom
+  2026-02-19 → 2026-11-19 in 90-day slices (**pre-rule**; step 3 now caps a window at 90 days). Stack partial: 21 custom
   parsers plus Palo Alto, Zscaler ZPA/ZIA, CrowdStrike, NetMon, Zeek seen on the rows. SonicWall, Veeam,
   Cisco ASA **not ingested** — the exploited products are invisible here. Context tables: no SafePay
   table; TI-table membership unqueryable (server 500).

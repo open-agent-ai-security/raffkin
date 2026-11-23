@@ -9,7 +9,8 @@ description: >-
   against what we have — a report arriving from outside, not an alert or case already in the queue.
   Extracts and types the indicators (or, for prose with no indicators, the actor and techniques),
   checks whether they are already loaded as a context table, establishes what is visible before
-  concluding anything, searches the customer's own data across the indicators' validity window, and
+  concluding anything, searches a 30-day window of the customer's own data (90 with a dated reason, never
+  all retained data), and
   returns a three-band verdict with explicit scope: no hits, hits on blocked activity, or hits on
   activity that succeeded. Read-only across the sweep: on a band-3 hit it shows the analyst exactly
   what was found, offers to open a case, and opens one only on an explicit yes. Requires the Exabeam MCP server to be configured.
@@ -71,8 +72,8 @@ A sweep is only ever about one tenant.
   A result bounded by a 7-day window and two log sources is reported as exactly that.
 - **Calibrate to what was visible.** The verdict strength is capped by the sources ingested, the
   indicator types that are searchable on this tenant (`reference/indicator-taxonomy.md`), and the
-  window retention allows. If the indicators' validity falls entirely outside retention, the answer is
-  **unanswerable**, not "clean".
+  window searched. Indicators whose own dates fall before the window are reported as *older than the
+  window — not searched*, never as "clean".
 - **Know when to hand off.** You establish *whether* and *where* the environment was touched. Working
   the touched entity to a verdict is `soc-investigate`'s job; deciding whether the environment *would*
   detect the actor next time is `detection-coverage`'s. Offer both; do neither here.
@@ -121,7 +122,7 @@ corroboration discriminator (`reference/coverage-read.md` §2 step 4).
 
 **0 — Intake.** Fetch or receive the report. Extract and type (above). Restate the question in one
 sentence: *"Advisory X publishes N indicators of types A/B and names actor Y; the question is whether
-any appear in this tenant's data within their validity window."*
+any appear in this tenant's data within the search window (step 3)."*
 
 **1 — Step zero: are these indicators already a context table?** `exabeam_context_table_list`
 (spills to a file above roughly 100 tables, comes back **inline** below that — a 63-table tenant answered
@@ -134,7 +135,7 @@ says there was no traffic to the table's members in the window, not that the ind
 the feed, and a 500 says nothing at all. If a matching
 table exists: the customer has been detecting continuously since `lastUpdated`, and the headline
 question becomes **"has it matched?"** — search with the `IN` form (key column → `IN "Table"`, non-key
-→ `IN "Table"."Column"`, cookbook) across the table's validity window, and check whether any enabled
+→ `IN "Table"."Column"`, cookbook) across the search window of step 3, and check whether any enabled
 rule references it. If the table is `Error`, or `Healthy` with zero items, that is a live gap and goes
 in the headline. If no table exists, say so and recommend one — never create it.
 
@@ -176,32 +177,37 @@ stage sat in `backup & recovery` with **no product enabled** — the first is ex
 visibility hole, and the ledger is what tells them apart.
 
 **Confidence comes from the ledger, before any search.** *High*: every stage and indicator type has an
-enabled category with a presence row, the window covers validity, and the verdict fields are mapped.
-*Medium*: a minority stage has no category, or validity exceeds retention, or a check failed (a TI
+enabled category with a presence row, every indicator's dates fall inside the window, and the verdict fields are mapped.
+*Medium*: a minority stage has no category, or some indicators' dates fall before the window, or a check failed (a TI
 table that returns 500). *Low*: the stage that dominates the campaign — most of its indicator types or
 techniques — lands in a category with no enabled product; a band-1 result is then a statement about
-the visible minority and must say so. *Unanswerable*: validity entirely outside retention. When
+the visible minority and must say so. *Unanswerable*: every indicator's dates fall before the window
+and the analyst declined to approve an earlier one. When
 confidence is Low or Unanswerable it leads the verdict line, ahead of the band: *"Low confidence,
 band 1: the campaign's network stage (four of six indicator types) lives in firewall and VPN telemetry
 this tenant does not ingest."*
 
-**3 — Set the window.** Indicator validity (`ti_valid_from` / `ti_valid_until` where the table has
-them, the advisory's dates otherwise) intersected with retention. Measure retention rather than assume
-it: an empty-filter, `limit` 5, seven-day probe stepping back a quarter at a time finds the floor in
-four or five calls (one tenant's floor was a bulk-stamped `T00:00:00Z` day). Then cut the window into
-**30-day chunks, newest first**, one call per chunk per indicator type; **never send a single query
-longer than 90 days** — on a production tenant with real volume a whole-window search (measured
-2026-11-21: ten months, eight such calls in parallel) timed out every time and then tripped the
-connector's request block, and a 90-day call answered only sometimes. Thirty days answered on every one
-of the first 29 calls of the same run. Context-table `IN` and pipe queries keep the hard 90-day cap
-regardless. A timeout is retried once, alone, then recorded as a timeout for that chunk — never as "no
-hits". If validity lies entirely before retention: **unanswerable**, stop searching,
-say so. Read the advisory's own footnotes on its dates: a "last seen" that the source defines as a
-**WHOIS expiry** (measured 2026-11-19: 80 of 218 domains in one CISA advisory, flagged with a star,
-dated 2026–2027) is a registration claim, not an observation, and does not extend the window; use the
-unstarred observation dates, and if a domain has none, treat its window as the advisory's. Approximate
-dates ("late 2024 to 2026") take the publication date as the upper bound and retention as the lower,
-and the scope sentence says "approximate".
+**3 — Set the window.** **The sweep searches the last 30 days.** That is the window unless the notice
+itself gives a dated reason to go further — an activity date, a first-seen, an incident date inside the
+last 90 days — in which case the window is **90 days**, and the scope line names the date that justified
+it. **Nothing earlier runs without the analyst's words**, and what the analyst approves is still a
+**window of 30 to 90 days placed at a stated period** ("the 90 days around the advisory's May dates"),
+never a longer span. **Never search all retained data. Never measure retention, probe for its floor, or
+derive a window from it. Never derive a window from indicator validity.** A request to "search
+everything", or any window over 90 days, is refused in words: the sweep states the window it will run
+and why, and offers the next 30-to-90-day window as a separate step the analyst approves. A 90-day
+window runs as **three 30-day calls** per indicator type: a single call past 30 days has timed out on a
+real-volume tenant, and one past 90 is never sent (the context-table cap is 90 days per query in any
+case). Indicators whose own dates fall before the window are listed as *older than the window — not
+searched*: a scope statement, not "clean" and not "unanswerable". The advisory's publication date is not
+an activity date. Undated hashes and tool names take the window as it stands; dwell time beyond it is the
+EDR console's question. Read the advisory's own footnotes on its dates: a "last seen" that the source
+defines as a **WHOIS expiry** (measured 2026-11-19: 80 of 218 domains in one CISA advisory, flagged with
+a star, dated 2026–2027) is a registration claim, not an observation, and is not a reason to widen.
+Measured 2026-11-23: the first draft of this step set the window as "indicator validity intersected
+with retention", which on an advisory with 2021-dated indicators meant every day the tenant kept — 22
+months, 330 production queries, three hours of BigQuery scans — for a question 30 days answers. That
+rule is gone; this one replaced it, at the analyst's instruction.
 
 **4 — Search, per type, with the field named.** Build each query from the taxonomy: exact match on
 IPs (IPv6 expanded) and hashes; the two-shape domain match with label-boundary anchoring; regex on URLs
@@ -223,17 +229,17 @@ with `mitres.technique_key:"<id>"` across the same window, `limit` 100, fields `
 users, first and last time. This is **observed activity**, never an indicator hit and never a band: an
 alert on *Inhibit System Recovery* is a reason to look, not proof of this actor. Report it under its own
 heading, name the entity and the rule in plain words, and hand anything corroborated to `soc-investigate`.
-Measured 2026-11-19: the indicator search on a ransomware advisory was empty for nine months while the
+Measured 2026-11-19: the indicator search on a ransomware advisory was empty while the
 behavioural check found the advisory's shadow-copy-deletion stage firing monthly on two servers under
 one service account — an "impacted?" answer that stops at indicators would have missed it. Query the
 **parent** id only: a dotted sub-technique key returns 0 on alerts (`T1021.001` → 0 where `T1021` →
 100, capped) — not because nothing fired, but because alerts are keyed on parents. Leave `rules` out of
 the field list (13 KB for two alerts), and map response keys, which come back camelCase (`srcHost`,
 `creationTimestamp`) while the request filter takes snake_case. Two traps
-from the same run: a nine-month window on one technique **timed out** where a 90-day slice answered in
-seconds — alerts are far sparser than events, so the behavioural check may use windows up to the 90-day
-ceiling, but never past it, and a chunk that times out is retried once and then recorded, not merged
-into a neighbour; and `total`
+from the same run: the behavioural check runs over **the same window as step 3 and never wider** — one
+call per technique for a 30-day window, three 30-day calls for a 90-day one; a window past 90 days timed
+out where 90 answered, and the window is capped there anyway — and a call that times out is retried
+once and then recorded, not merged into a neighbour; and `total`
 **caps at `limit`** (on events too: `totalRows` 50 from a 50-row probe means *at least 50*), so a broad technique (*Command and
 Scripting Interpreter*, *Remote Services*) comes back "100 of 100" generic anomaly rules — report that
 as *at least 100, generic, not attributable*, never as a count, and spend the attention on the narrow
@@ -278,7 +284,7 @@ a detection engineer, not someone who has read this file.
 
 | Band | Meaning | Say it as | Terminal action |
 |---|---|---|---|
-| **0** | Nothing was searched: the advisory publishes no indicators, or every indicator's validity predates retention | *Not assessable from indicators* (then why, then what the behavioural check and the coverage read did show) | Report. Never say "no evidence" for a search that did not run. |
+| **0** | Nothing was searched: the advisory publishes no indicators, or every indicator's dates fall before the window and the analyst did not approve an earlier one | *Not assessable from indicators* (then why, then what the behavioural check and the coverage read did show) | Report. Never say "no evidence" for a search that did not run. |
 | **1** | No hits, with scope stated and the coverage read attached | *No evidence this activity reached the environment* (then the scope sentence) | Report. Offer the emailed record. |
 | **2** | Hits, and **every** hit for the entity is BLOCKED | *Attempted, and blocked by <control>* | Targeted; the control held. Report, name the control and field, offer a deeper look. **No case.** |
 | **3** | Any hit ALLOWED or OBSERVED on attributable infrastructure, or any promotion below | *Activity from this actor got through at <entity>* | Potential impact. **Show the activity plainly, offer to open a case, open it only on a yes**, then hand the entity to `soc-investigate`. |
@@ -311,7 +317,7 @@ two questions they asked, as headings, each answered in one plain sentence with 
 
 - **Impacted?** One of the three "say it as" phrases from the band table, then what the behavioural
   check (4b) found in plain words — *"no evidence the actor's infrastructure reached the environment in
-  nine months of searches; one behaviour the advisory describes, shadow-copy deletion by a service
+  the last 30 days; one behaviour the advisory describes, shadow-copy deletion by a service
   account on two servers, was observed and is handed to investigation"* — then the confidence word and
   its trigger.
 - **Positioned to detect?** When `detection-coverage` has run on the same source, its lead sentence
@@ -430,8 +436,8 @@ the taxonomy lists the fields confirmed valid and invalid.
 **Query budget.** The connector is the scarce resource, not the tenant. Measured 2026-11-19: three
 spill-sized reads (coverage, analytics rules, use-case score) fired in one turn beside three parallel
 sweeps reset the hosted connector, and it stayed down for the rest of the run. So: one spill-sized read
-at a time, each read once per run and re-read from its file; indicator searches in **30-day chunks and
-never a single query past 90 days** (step 3), `limit` 500, only the fields the report needs (drop `rules`
+at a time, each read once per run and re-read from its file; indicator searches over **the step-3 window only — 30 days by
+default, 90 at most, never all retained data** — in **30-day calls** (step 3), `limit` 500, only the fields the report needs (drop `rules`
 from alert searches: 13 KB for two alerts); **one value-list field per call** — `hash_sha256:(…) OR
 hash_md5:(…)` in one filter timed out on 30 days where each list alone answered in seconds, and two
 130-address IP lists merged into one 258-address clause did the same; and at most **two light calls in
@@ -439,7 +445,8 @@ flight** on the same connector (four at once produced two timeouts on a producti
 answered every time). A value list of 130 addresses or 120 domains in one `IN` clause is fine; two
 lists in one filter is not. A timeout is retried once, alone, then recorded in the ledger as a timeout,
 never as "no hits". **The connector can block the whole session after a long run even when every rule
-above is kept**: measured 2026-11-23, 337 calls over three hours at two in flight, then `403
+above is kept**: measured 2026-11-23 on the 22-month run that step 3 now forbids, 337 calls over three
+hours at two in flight, then `403
 mcp_request_blocked` on every tool including a one-row read, cleared only by the analyst's reconnect. So
 the ledger and every row that matched are written to disk as they arrive, and the report is built from
 those files — a sweep that can be finished only while the connector is up is a sweep that may not

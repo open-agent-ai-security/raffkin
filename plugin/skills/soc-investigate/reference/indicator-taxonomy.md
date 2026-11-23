@@ -117,17 +117,19 @@ present".
 | `hostname` | hostnames — **and URLs**, in `PhantomBlu_URL` | `IT_Management_Servers`, `Axon Host Domains`, `PhantomBlu_URL` |
 | `value` / `key` | **untyped** — IPs, hashes, domains, commands, depending on the table | `NCI TOPS Monthly *`, `EXASOC: IOC Threats Hashes/Filenames`, `Homebrew Threat Commands` |
 | opaque ids (`vTkkUGzaoZ`, `o0VMWLPEei`, `aAytUOFxu8`) | decode via `attributeMapping` | `Interlock IOCs`, `cs_iocs_sha256_high`, `hashes_database`, `MS Malvertising *` |
-| `ti_valid_from`, `ti_valid_until` | **indicator validity window** | `CISA_AA26-097A_IP_IOCs` only, in the measured tenant |
+| `ti_valid_from`, `ti_valid_until` | **indicator validity dates** (they say which indicators the search window covers; they never set it) | `CISA_AA26-097A_IP_IOCs` only, in the measured tenant |
 
 **What a matching table changes.** If the indicators are already loaded, the customer has been
 *detecting continuously* since the table's `lastUpdated`, and the question becomes "has it matched?"
-— search with the `IN` form across the table's own validity window rather than re-typing indicators,
+— search with the `IN` form across the search window (intel-sweep step 3) rather than re-typing indicators,
 and check the rules that reference the table are enabled. If the table is `Error`, or `Healthy` with
 zero items, say so: that is a live gap, and it changes the headline.
 
-**Validity drives the window.** Where `ti_valid_until` exists, the search window is the validity
-window intersected with retention, sliced under 90 days per query (the context-table cap). If every
-indicator's validity ended before retention begins, the honest verdict is **unanswerable**, not clean.
+**Validity does not set the window.** The search window is `intel-sweep` step 3: 30 days, 90 when the
+notice gives a dated reason, an analyst-approved 30-to-90-day window at a stated period beyond that,
+and never all retained data or anything derived from retention. `ti_valid_from` / `ti_valid_until` say
+which indicators that window covers; the ones it does not are reported as *older than the window — not
+searched*, never as clean. (The context-table cap of 90 days per query is a separate, lower bound.)
 
 ---
 
