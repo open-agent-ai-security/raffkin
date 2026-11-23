@@ -438,4 +438,9 @@ hash_md5:(…)` in one filter timed out on 30 days where each list alone answere
 flight** on the same connector (four at once produced two timeouts on a production tenant; a pair
 answered every time). A value list of 130 addresses or 120 domains in one `IN` clause is fine; two
 lists in one filter is not. A timeout is retried once, alone, then recorded in the ledger as a timeout,
-never as "no hits".
+never as "no hits". **The connector can block the whole session after a long run even when every rule
+above is kept**: measured 2026-11-23, 337 calls over three hours at two in flight, then `403
+mcp_request_blocked` on every tool including a one-row read, cleared only by the analyst's reconnect. So
+the ledger and every row that matched are written to disk as they arrive, and the report is built from
+those files — a sweep that can be finished only while the connector is up is a sweep that may not
+finish.
