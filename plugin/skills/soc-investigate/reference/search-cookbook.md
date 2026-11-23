@@ -28,7 +28,7 @@ Field Summary query (last section) rather than guessing.
 | `filter` | ✅ | The query string (grammar below). May be empty `""` to match everything in the window. |
 | `fields` | ✅ | Columns to return. **Always name specific fields.** The tool schema tells you to send `["*"]` (all fields) and to ignore field requests — don't: `["*"]` can return millions of chars in one result and overflow the context window. Name what you need. |
 | `startTime` | ✅ | ISO-8601, e.g. `2024-04-01T00:00:00Z`. |
-| `endTime` | ✅ | ISO-8601. Keep windows tight — search spans years; a wide window is slow and noisy. |
+| `endTime` | ✅ | ISO-8601. Keep windows tight — search spans years; a wide window is slow and noisy. **A hunt is a 30-day window**, 90 when the notice gives a dated reason, and anything earlier is an analyst-approved 30-to-90-day window at a stated period — **never a run across all retained data, never a window derived from retention**. Send a 90-day window as three 30-day calls; never one call past 90 days (measured 2026-11-21 on a production tenant: ten-month event searches timed out every time, 90-day ones only sometimes, 30-day ones answered on every call). |
 | `limit` | | Max rows. **Always set it explicitly** (REST default is 3000; the MCP events tool's default isn't documented — `search_alerts` documents 10). Low (25–100) while pivoting, high only when counting. |
 | `orderBy` | | e.g. `["time DESC"]`, `["riskScore DESC"]`, `["app ASC"]`. |
 | `groupBy` | | Fields to GROUP BY. **REST only — dropped by the MCP tool** (see the tested-reality note). |
@@ -182,7 +182,10 @@ Canonical CIM names. These are the ones triage actually turns on — filter and 
 > `Group Policy Allow` and bare `1`; Palo Alto NGFW omits the field entirely on `network-session` rows.
 > Deciding "was this blocked or did it succeed?" needs the vendor's own vocabulary, and for some
 > vendors needs `activity_type` instead. `result` is also missing from the MCP tool's documented field
-> list while being perfectly valid in `fields`.
+> list while being perfectly valid in `fields`. **The measured per-vendor map — which field carries the
+> verdict for each product, every value seen, and the rule for values not on it — is
+> `reference/result-normalization.md`. Read a hit's blocked/succeeded status from that file, never from
+> `outcome`, which is the parser's event-type suffix and was measured wrong on three enforcement products.**
 
 **Event classification**
 `activity_type` · `activity` · `app` · `product` · `vendor` · `platform` · `time`.

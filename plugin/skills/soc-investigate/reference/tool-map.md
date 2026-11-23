@@ -40,7 +40,7 @@ the most common first-call error:
 Write-tool fields (required in **bold**):
 
 - `exabeam_create_case_notes` → `arg1: {` **`caseId`** `,` **`note`** `}`
-- `exabeam_create_case` → `arg1: {` **`alertId`** `,` **`priority`** `, assignee, stage, queue, supportingReason }` — opens a case: `stage` may only be `NEW`, `MORE DETAILS`, `INVESTIGATION` or `REMEDIATION`, and `closedReason` is not accepted; a create carrying a closing disposition is refused by the bridge (#163) — close through `update_case` after the analyst's yes
+- `exabeam_create_case` → `arg1: {` **`alertId`** `,` **`priority`** `, assignee, stage, queue, supportingReason }` — the tool text calls `queue` required; it is not: a queue **display name** (the `queue` value every existing case shows, e.g. *Tier 1 Analyst*) is rejected with 400 `Queue name does not exist`, and omitting it lands the case in *Unassigned* (measured 2026-11-19). Leave it out unless the analyst supplies the tenant's queue identifier. Opens a case: `stage` may only be `NEW`, `MORE DETAILS`, `INVESTIGATION` or `REMEDIATION`, and `closedReason` is not accepted; a create carrying a closing disposition is refused by the bridge (#163) — close through `update_case` after the analyst's yes
 - `exabeam_update_alert` → `arg1: {` **`alertId`** `, alertStatus (e.g. "DISMISSED"), priority }` — the bridge drops `alertDescription`, `alertName` and `tags` from an update (they replace analyst text; #89) and says so in the reply
 - `exabeam_update_case` → `arg1: {` **`caseId`** `, stage, closedReason (a supported value: "Already Mitigated or Resolved", "False Positive or Duplicate", "Low Risk", "Rule Misconfiguration", "Policy or Setup Issue", "Other"), assignee, priority, queue }` — the bridge drops `supportingReason`, `tags`, `useCases` and the alert fields (the reasoning goes in a case note), and REFUSES the call outright when `closedReason` is not one of the supported values (a close never lands without its disposition)
 
@@ -84,6 +84,9 @@ always the cause.
 - `exabeam_send_email` — send mail from the platform to a person *(ask — human-confirmed on **both** hosts,
   #137)*. Schema (verified via `list_tools`, 2026-09-02): `arg1: {` **`recipients`** `: [email…],` **`subject`**
   `,` **`body`** `}` — `body` is an **HTML fragment** (≤ 8000 chars) rendered as-is into a template, and the MCP
+  server (measured 2026-11-23) answers `recipients: []` with the subscription roster as an error and no send,
+  rejects a partial name (`recipients must contain valid email addresses`) without fuzzy matching, and returns
+  `{messageId, status: "published", topic, recipientCount}` on success — keep the `messageId` as the record; the MCP
   restricts it to content produced by an Exabeam read tool. Do not infer recipients: an empty list makes the
   tool return the subscription's users to choose from. **Recipients are scoped by the MCP service to active
   users of the operator's own subscription** — any other address is rejected (with suggestions), so mail

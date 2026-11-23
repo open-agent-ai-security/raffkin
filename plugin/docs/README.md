@@ -9,7 +9,7 @@ These pages are the user guide, published at
 **[open-agent-ai-security.github.io/raffkin](https://open-agent-ai-security.github.io/raffkin/)**.
 Start with installation; the rest you reach for when you need it.
 
-- **[Overview](index.md)** — what Raffkin is, the three skills, and how it works in 90 seconds.
+- **[Overview](index.md)** — what Raffkin is, the skills, and how it works in 90 seconds.
 - **[Installation & setup](installation.md)** — **start here.** A five-minute quick start for Claude
   Code and for Codex: install, credentials, check, first investigation. Then updating and uninstalling.
 - **[Using the skills](usage.md)** — what to say, what happens, what Raffkin asks you before it acts,

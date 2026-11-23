@@ -258,7 +258,7 @@ above is the one for *this* copy, and the community build has its own.
 
 ### What is different on this host
 
-Raffkin's three skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate is
+Raffkin's skills, the Exabeam connection and the human-in-the-loop gate all work here. The gate is
 the same file as on Claude Code, it reads the same tier file, and every decision lands on the same audit
 trail. Antigravity loads it from `hooks.json` at the plugin root; a fresh install reports it
 (`hooks : 1`), `preflight.sh` makes it refuse a containment call, and it has now been **observed being
