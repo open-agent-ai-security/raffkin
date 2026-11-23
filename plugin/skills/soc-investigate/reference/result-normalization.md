@@ -93,7 +93,7 @@ verdict.
 |---|---|---|---|---|
 | Cisco · Cisco Network Security | network-traffic | `allow` · `allow all` | ALLOWED | Meraki MX firewall syslog (`pattern: allow all`). |
 | | | `deny` · `deny all` · `deny tcp ` *(trailing space)* · `deny ` *(trailing space)* · `blocked` | BLOCKED | Five spellings of one verdict. Filter for all of them. |
-| | | `1` · `0` | **UNDETERMINED** | Meraki numeric `pattern: 1 all` / `pattern: 0 all`. Both are parsed `outcome:fail`; the raw rule-number semantics were **not** verified in this run. Do not read as a verdict until confirmed against the Meraki rule table. |
+| | | `1` · `0` | **UNDETERMINED** | Meraki numeric `pattern: 1 all` / `pattern: 0 all`. Both are parsed `outcome:fail`; the raw rule-number semantics were **not** verified in this run. Do not read as a verdict until confirmed against the Meraki rule table. Seen again 2026-11-23 as `firewall src=… dst=… protocol=tcp sport=… dport=1433 pattern: 1 all`, eight flows in one second across a public /29: a port sweep whose disposition the row does not state. |
 | | network-notification | *(null)* | OBSERVED | Set **complete** for the window (9 non-null values). An earlier run (2026-11, different window) also saw `Group Policy Allow` → ALLOWED. |
 | Google · Google Cloud Platform (Cloud Armor / HTTP LB) | http-session | `ACCEPT` | ALLOWED | The WAF decision. **`outcome:fail` on an `ACCEPT` row means the backend returned 4xx/5xx** (`http_response_code` 401, 503 observed) — a split outcome inside one event: the edge allowed, the application refused. Report both. |
 | | http-session | `DENY` | BLOCKED | |

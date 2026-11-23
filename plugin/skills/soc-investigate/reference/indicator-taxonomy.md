@@ -24,7 +24,7 @@ map, and extend it with what you find.
 
 | Indicator type | Fields that carry it (measured) | Written by | Match form | Verdict field |
 |---|---|---|---|---|
-| **IPv4 / IPv6** | `dest_ip`, `src_ip` | Palo Alto NGFW, LogRhythm NetMon, Cisco Network Security, Zscaler Private Access (and every network source) | Exact. **IPv6 is stored expanded** (`ff02:0000:0000:0000:0000:0000:0000:0016`), so expand a compressed indicator (`ff02::16`) before matching. | `action` / `result` per `result-normalization.md` |
+| **IPv4 / IPv6** | `dest_ip`, `src_ip` | Palo Alto NGFW, LogRhythm NetMon, Cisco Network Security, Zscaler Private Access (and every network source) | Exact. **IPv6 is stored expanded** (`ff02:0000:0000:0000:0000:0000:0000:0016`), so expand a compressed indicator (`ff02::16`) before matching. **F5 NGINX access logs put the client address in `dest_ip`** (measured 2026-11-23: a `GET /` from an advisory IP, HTTP 400, surfaced only on the destination side), so an inbound hunt searches the list against both fields and reads `rawLogs` on a hit before calling the direction. | `action` / `result` per `result-normalization.md` |
 | | `src_translated_ip` | Palo Alto NGFW only | Exact. This is the organisation's own NAT egress address — a hit here means *our* address is on the list, not that we talked to the indicator. Report separately. | — |
 | | `dest_external_ip`, `origin_ip` | **empty tenant-wide** | Do not query; a zero here is a field gap, not a negative. | — |
 | **Domain / FQDN** | `dns_query` | Infoblox BloxOne DDI (dns-request / dns-response) | Exact on the FQDN. Also carries reverse-lookup names (`80.4.151.10.in-addr.arpa`) and bare hostnames. | `action` (Infoblox NIOS `denied`) |

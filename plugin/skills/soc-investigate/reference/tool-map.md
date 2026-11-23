@@ -84,6 +84,9 @@ always the cause.
 - `exabeam_send_email` — send mail from the platform to a person *(ask — human-confirmed on **both** hosts,
   #137)*. Schema (verified via `list_tools`, 2026-09-02): `arg1: {` **`recipients`** `: [email…],` **`subject`**
   `,` **`body`** `}` — `body` is an **HTML fragment** (≤ 8000 chars) rendered as-is into a template, and the MCP
+  server (measured 2026-11-23) answers `recipients: []` with the subscription roster as an error and no send,
+  rejects a partial name (`recipients must contain valid email addresses`) without fuzzy matching, and returns
+  `{messageId, status: "published", topic, recipientCount}` on success — keep the `messageId` as the record; the MCP
   restricts it to content produced by an Exabeam read tool. Do not infer recipients: an empty list makes the
   tool return the subscription's users to choose from. **Recipients are scoped by the MCP service to active
   users of the operator's own subscription** — any other address is rejected (with suggestions), so mail

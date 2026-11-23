@@ -256,6 +256,19 @@ bands 2 and 3, and recommend the analyst drop the address from any context table
 2026-11-19: four of nine IPs in a CISA ransomware advisory resolved on the tenant to `github.com`,
 `githubusercontent.com`, a Cloudflare-fronted SaaS and a Google range; a literal band-3 read would have
 offered a case on developers pulling from GitHub.
+**A hash or name that belongs to a publicly available tool is a tool match, not an actor hit.** Advisories
+list the actor's kit, and much of it is open source (wpscan, sqlmap, Impacket's secretsdump, fscan). A
+match proves the tool was present on that endpoint, not who ran it. Measured 2026-11-23 on a production
+tenant: the one SHA-256 that matched out of 32 was the public wpscan release on one user's endpoint, and
+two more tool names matched with hashes that differed from the advisory's copies. Report these under
+their own heading — *tools from the actor's kit on staff endpoints* — with user, host, `activity_type`
+and dates, outside the bands, and hand them to `soc-investigate` with the first question written out:
+does this user have a reason to run it? **A stale match is the same class.** When the tenant's row is
+months or years after the advisory's own last-seen for that indicator (read the advisory's date
+columns, not the publication date) and the registry puts the address in commercial hosting or consumer
+telecom space (Datacamp, CDN77, DigitalOcean, a national carrier), the address has been reassigned or
+is a VPN exit; same run, seven of 515 IPs matched, every one 12 to 43 months late, every one inbound and
+denied, refused or undetermined. Say *stale, shared* and keep it out of the bands.
 
 **6 — Band the result per entity, then promote.**
 

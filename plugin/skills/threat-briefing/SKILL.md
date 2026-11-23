@@ -163,7 +163,12 @@ own roster and rejects anything else — never work around that. **The analyst's
 it:** measured 2026-11-19, "email me" from the terminal was refused because the analyst was not a user of
 the tenant, and the refusal returned the full roster. Show that roster to the analyst, let them pick a
 member or stop, and record a refused send as *not sent* — a briefing with no recipient on the roster is
-still a finished briefing. The body limit of 8,000 characters is enforced; with the mandated inline
+still a finished briefing. **To resolve a name to an address, call the tool with `recipients: []`:** it
+returns the roster as an error and sends nothing. A partial name in the list is rejected outright
+(`recipients must contain valid email addresses`), despite the tool text's promise of fuzzy matches.
+Measured 2026-11-23 on a production tenant: the empty-list lookup returned 24 members, two were picked
+by the analyst, and the send with their addresses returned `{messageId, status: "published",
+recipientCount: 2}` — that is the only proof of a send; record the `messageId`. The body limit of 8,000 characters is enforced; with the mandated inline
 styles that is roughly ten table rows of three columns, so the table carries the top ten and the
 narrative says how many candidates there were. **The body is built from the tenant
 reads and your ranking** — the items, their factors, the coverage values — and names feed entries by
